@@ -4,6 +4,7 @@
   "words": [
     "probate",
     "Probate",
+    "probatedb",
     "vuetify",
     "pinia",
     "luxon",
@@ -24,7 +25,9 @@
     "aspnetcore",
     "csharpier",
     "fullcalendar",
-    "vite"
+    "vite",
+    "Swashbuckle",
+    "Newtonsoft"
   ],
   "ignorePaths": [
     "node_modules/**",

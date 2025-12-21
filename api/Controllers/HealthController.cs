@@ -12,7 +12,7 @@ namespace Probate.Api.Controllers
         [AllowAnonymous]
         public ActionResult<object> Get()
         {
-            //want to return "Healty at time.now"
+            //want to return "Healthy at time.now"
             return Ok(string.Concat("Healthy - ", System.DateTime.Now.ToString("o")));
         }
     }
