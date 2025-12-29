@@ -5,7 +5,9 @@
       <p class="lead">Manage probate cases efficiently and securely.</p>
       <hr class="my-4" />
       <p>Get started by viewing cases or exploring the system.</p>
-      <router-link to="/cases" class="btn btn-primary btn-lg">View Cases</router-link>
+      <router-link to="/cases" class="btn btn-primary btn-lg"
+        >View Cases</router-link
+      >
     </div>
 
     <div class="row mt-5">
@@ -13,8 +15,12 @@
         <div class="card">
           <div class="card-body">
             <h5 class="card-title">Case Management</h5>
-            <p class="card-text">Create, update, and track probate cases through their lifecycle.</p>
-            <router-link to="/cases" class="btn btn-outline-primary">Manage Cases</router-link>
+            <p class="card-text">
+              Create, update, and track probate cases through their lifecycle.
+            </p>
+            <router-link to="/cases" class="btn btn-outline-primary"
+              >Manage Cases</router-link
+            >
           </div>
         </div>
       </div>
@@ -22,7 +28,9 @@
         <div class="card">
           <div class="card-body">
             <h5 class="card-title">Document Storage</h5>
-            <p class="card-text">Securely store and manage case-related documents.</p>
+            <p class="card-text">
+              Securely store and manage case-related documents.
+            </p>
             <a href="#" class="btn btn-outline-primary">View Documents</a>
           </div>
         </div>
@@ -31,7 +39,9 @@
         <div class="card">
           <div class="card-body">
             <h5 class="card-title">Report</h5>
-            <p class="card-text">Generate comprehensive reports and analytics.</p>
+            <p class="card-text">
+              Generate comprehensive reports and analytics.
+            </p>
             <a href="#" class="btn btn-outline-primary">View Reports</a>
           </div>
         </div>

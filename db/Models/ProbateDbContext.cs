@@ -9,11 +9,12 @@ namespace Probate.Db.Models
     {
         private readonly IHttpContextAccessor _httpContextAccessor;
 
-        public ProbateDbContext()
-        {
-        }
+        public ProbateDbContext() { }
 
-        public ProbateDbContext(DbContextOptions<ProbateDbContext> options, IHttpContextAccessor httpContextAccessor = null)
+        public ProbateDbContext(
+            DbContextOptions<ProbateDbContext> options,
+            IHttpContextAccessor httpContextAccessor = null
+        )
             : base(options)
         {
             _httpContextAccessor = httpContextAccessor;

@@ -20,7 +20,8 @@ namespace Probate.Api.Services
         public async ValueTask<bool> TryHandleAsync(
             HttpContext httpContext,
             Exception exception,
-            CancellationToken cancellationToken)
+            CancellationToken cancellationToken
+        )
         {
             _logger.LogError(exception, "An unhandled exception occurred");
 
@@ -28,7 +29,7 @@ namespace Probate.Api.Services
             {
                 Status = StatusCodes.Status500InternalServerError,
                 Title = "An error occurred while processing your request.",
-                Detail = exception.Message
+                Detail = exception.Message,
             };
 
             httpContext.Response.StatusCode = StatusCodes.Status500InternalServerError;

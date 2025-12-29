@@ -37,15 +37,6 @@ dotnet ef database update <PreviousMigrationName> --project db --startup-project
 dotnet ef migrations remove --project db --startup-project api
 ```
 
-## Database Schema
-
-### Tables
-
-- **cases** - Probate case information
-- **users** - User accounts
-- **documents** - Document metadata associated with cases
-- **data_protection_keys** - ASP.NET Core Data Protection keys
-
 ## Connection String
 
 Default local development connection string:
@@ -76,7 +67,3 @@ SELECT * FROM cases;
 -- Exit
 \q
 ```
-
-## Seeding Data
-
-To add seed data, create a new file in `db/Seeders/` and call it from the `MigrationService`.

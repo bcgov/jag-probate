@@ -18,8 +18,10 @@ namespace Probate.Api
 
             try
             {
-                logger.LogInformation("Application starting in {Environment} environment",
-                    Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT"));
+                logger.LogInformation(
+                    "Application starting in {Environment} environment",
+                    Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT")
+                );
 
                 await RunMigrationsAsync(host, logger);
 
@@ -29,7 +31,10 @@ namespace Probate.Api
             catch (Exception ex)
             {
                 logger.LogCritical(ex, "Application terminated unexpectedly");
-                throw new InvalidOperationException("Application terminated unexpectedly. See inner exception for details.", ex);
+                throw new InvalidOperationException(
+                    "Application terminated unexpectedly. See inner exception for details.",
+                    ex
+                );
             }
         }
 
@@ -44,8 +49,7 @@ namespace Probate.Api
 
             try
             {
-                await migrationService.ExecuteMigrationsAsync()
-                    .WaitAsync(cts.Token);
+                await migrationService.ExecuteMigrationsAsync().WaitAsync(cts.Token);
 
                 logger.LogInformation("Database migrations completed successfully");
             }

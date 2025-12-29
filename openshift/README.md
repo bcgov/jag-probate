@@ -23,7 +23,7 @@ Environment-specific configurations:
 
 ### Secrets Management
 
-Secrets should be managed through OpenShift secrets and not committed to the repository.
+Secrets should be managed through OpenShift secrets **Vault**.
 
 ### Image Streams
 

@@ -1,6 +1,9 @@
 <template>
   <div class="cases">
-    <h2>Probate Cases</h2>
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <h2>Probate Cases</h2>
+      <button class="btn btn-secondary" @click="goBack">← Back to Home</button>
+    </div>
 
     <div v-if="loading" class="text-center my-5">
       <div class="spinner-border" role="status">
@@ -91,6 +94,10 @@ const fetchCases = async () => {
 
 const createCase = () => {
   router.push("/cases/new");
+};
+
+const goBack = () => {
+  router.push("/");
 };
 
 const formatDate = (date: string) => {

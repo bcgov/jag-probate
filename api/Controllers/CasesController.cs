@@ -47,7 +47,7 @@ namespace Probate.Api.Controllers
         public async Task<ActionResult<Case>> Create([FromBody] Case newCase)
         {
             _logger.LogInformation("Creating new case: {CaseNumber}", newCase.CaseNumber);
-            
+
             _dbContext.Cases.Add(newCase);
             await _dbContext.SaveChangesAsync();
 

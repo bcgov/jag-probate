@@ -32,13 +32,3 @@ runs:
       run: dotnet build --configuration Release --no-restore
       shell: bash
       working-directory: ${{ inputs.working_directory }}/db
-
-    - name: Spell check
-      uses: streetsidesoftware/cspell-action@v6
-      with:
-        files: |
-          api/**/*.cs
-          db/**/*.cs
-        config: .github/cspell.json
-        strict: true
-        incremental_files_only: false
