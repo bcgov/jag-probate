@@ -37,6 +37,7 @@
     "eslint": "^9.17.0",
     "eslint-plugin-vue": "^9.31.0",
     "globals": "^15.14.0",
+    "jsdom": "^27.4.0",
     "sass": "^1.83.0",
     "typescript": "^5.7.2",
     "unplugin-vue-components": "^0.27.5",
