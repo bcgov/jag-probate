@@ -1,6 +1,6 @@
 # JAG Probate
 
-Probate Management System for BC Gov
+his repository contains the code for the Probate Management System for BC Gov
 
 ## Project Structure
 
@@ -31,7 +31,7 @@ jag-probate/
 - [Docker Desktop](https://www.docker.com/products/docker-desktop)
 - [s2i (Source-to-Image)](https://github.com/openshift/source-to-image) tool
 
-## Getting Started
+## Getting Started with Docker
 
 ### 1. Clone the repository
 
@@ -104,52 +104,16 @@ Or for development with hot reload:
 
 The project uses PostgreSQL as the database. Entity Framework Core handles migrations automatically on startup.
 
-### Connection String
-```
-Host=db;Port=5432;Database=probatedb;Username=probate;Password=probate123
-```
-
-### Manual Migration Commands
-
-If you need to create migrations manually:
-
-```bash
-# From the root directory
-dotnet ef migrations add InitialCreate --project db --startup-project api
-
-# Apply migrations
-dotnet ef database update --project db --startup-project api
-```
-
-## API Endpoints
-
+## API
 ### Health Check
 - `GET /api/health` - Check API health status
 
-### Cases
-- `GET /api/cases` - Get all cases
-- `GET /api/cases/{id}` - Get case by ID
-- `POST /api/cases` - Create new case
-- `PUT /api/cases/{id}` - Update case
-- `DELETE /api/cases/{id}` - Delete case
 
 ## Environment Variables
 
 Copy `docker/.env.template` to `docker/.env` and customize as needed.
 
-Key variables:
-- `POSTGRESQL_DATABASE` - Database name
-- `POSTGRESQL_USER` - Database user
-- `POSTGRESQL_PASSWORD` - Database password
-- `ASPNETCORE_ENVIRONMENT` - Development/Production
-- `CORS_DOMAIN` - Allowed CORS origins
-
 ## Development
-
-### Project Dependencies
-
-**api** project depends on:
-- db (Entity Framework models and context)
 
 ### Adding New Entities
 
@@ -166,10 +130,6 @@ Key variables:
 1. Create controller in `api/Controllers/`
 2. Inject `ProbateDbContext` in constructor
 3. Implement endpoints following REST conventions
-
-## Deployment
-
-This application is designed to run on OpenShift BC Gov Emerald cluster.
 
 ### OpenShift Configuration
 

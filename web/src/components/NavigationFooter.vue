@@ -14,9 +14,9 @@
             </a>
           </li>
           <li class="nav-item">
-            <a 
-              class="nav-link" 
-              href="https://www2.gov.bc.ca/gov/content/home/privacy" 
+            <a
+              class="nav-link"
+              href="https://www2.gov.bc.ca/gov/content/home/privacy"
               target="_blank"
               rel="noopener noreferrer"
             >
@@ -86,7 +86,7 @@ footer {
   .navbar-nav {
     flex-direction: column;
   }
-  
+
   .nav-item {
     margin-right: 0;
   }

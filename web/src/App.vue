@@ -11,8 +11,8 @@
 </template>
 
 <script setup lang="ts">
-import NavigationTopbar from './components/NavigationTopbar.vue';
-import NavigationFooter from './components/NavigationFooter.vue';
+import NavigationTopbar from "./components/NavigationTopbar.vue";
+import NavigationFooter from "./components/NavigationFooter.vue";
 </script>
 
 <style scoped>

@@ -1,7 +1,7 @@
 <template>
   <div class="cases">
     <h2>Probate Cases</h2>
-    
+
     <div v-if="loading" class="text-center my-5">
       <div class="spinner-border" role="status">
         <span class="visually-hidden">Loading...</span>
@@ -14,7 +14,9 @@
 
     <div v-else>
       <div class="mb-3">
-        <button class="btn btn-success" @click="createCase">Create New Case</button>
+        <button class="btn btn-success" @click="createCase">
+          Create New Case
+        </button>
       </div>
 
       <div v-if="cases.length === 0" class="alert alert-info">
@@ -41,8 +43,8 @@
               </td>
               <td>{{ formatDate(caseItem.filedDate) }}</td>
               <td>
-                <router-link 
-                  :to="`/cases/${caseItem.id}`" 
+                <router-link
+                  :to="`/cases/${caseItem.id}`"
                   class="btn btn-sm btn-outline-primary"
                 >
                   View
@@ -57,9 +59,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
-import { useRouter } from 'vue-router';
-import axios from 'axios';
+import { ref, onMounted } from "vue";
+import { useRouter } from "vue-router";
+import axios from "axios";
 
 interface Case {
   id: number;
@@ -73,26 +75,26 @@ interface Case {
 const router = useRouter();
 const cases = ref<Case[]>([]);
 const loading = ref(true);
-const error = ref('');
+const error = ref("");
 
 const fetchCases = async () => {
   try {
     loading.value = true;
-    const response = await axios.get('/api/cases');
+    const response = await axios.get("/api/cases");
     cases.value = response.data;
   } catch (err: any) {
-    error.value = err.response?.data?.message || 'Failed to load cases';
+    error.value = err.response?.data?.message || "Failed to load cases";
   } finally {
     loading.value = false;
   }
 };
 
 const createCase = () => {
-  router.push('/cases/new');
+  router.push("/cases/new");
 };
 
 const formatDate = (date: string) => {
-  if (!date) return 'N/A';
+  if (!date) return "N/A";
   return new Date(date).toLocaleDateString();
 };
 

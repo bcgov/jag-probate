@@ -9,7 +9,7 @@ Vue 3 + TypeScript frontend for the Probate Management System.
 - **Vue Router** - Official router for Vue.js
 - **Pinia** - State management
 - **Axios** - HTTP client
-- **Bootstrap 4** - CSS framework
+- **bootstrap-v5-theme** - BC Gov CSS framework (https://bcgov.github.io/bootstrap-v5-theme/)
 - **Vite** - Next generation frontend tooling
 
 ## Project Structure
@@ -40,15 +40,15 @@ npm install
 npm run dev
 ```
 
-The application will be available at http://localhost:1339
+The application will be available at http://localhost:8080
 
 ### Docker Development
 
 From the `docker/` directory:
 
 ```bash
-./manage build web-dev
-./manage debug
+./manage build web
+./manage start
 ```
 
 Access at http://localhost:8080
@@ -61,20 +61,13 @@ Access at http://localhost:8080
 - `npm run lint` - Lint and fix files
 - `npm run test` - Run unit tests
 
-## Routes
-
-- `/` - Home page
-- `/cases` - List all probate cases
-- `/cases/:id` - View case details
-- `/about` - About page with system information
-
 ## API Integration
 
 The frontend communicates with the backend API through Axios. API calls are proxied through Vite's dev server:
 
 ```javascript
 // API requests go through proxy
-axios.get('/api/cases')  // → http://api:5000/api/cases
+axios.get('/api/health')  // → http://api:5000/api/health
 ```
 
 ### Proxy Configuration
@@ -92,13 +85,6 @@ proxy: {
 
 ## Components
 
-### Views
-
-- **HomeView.vue** - Landing page with overview
-- **CasesView.vue** - List of all cases with table
-- **CaseDetailView.vue** - Detailed view of a single case
-- **AboutView.vue** - System information and API health
-
 ### App.vue
 
 Root component with navigation bar and router view.
@@ -109,7 +95,7 @@ Uses Pinia for state management. Stores will be added in `src/store/` as needed.
 
 ## Styling
 
-- Bootstrap 4 for component styling
+- BC Gov Bootstrap v5 for component styling
 - Custom CSS in `src/assets/main.css`
 - Scoped styles in individual components
 
@@ -133,7 +119,7 @@ Dist files will be in `dist/` directory.
 
 ## Hot Module Replacement
 
-HMR is enabled by default in development mode. Changes to Vue files will update instantly without full page reload.
+HMR is enabled by default in development mode. Changes to Vue files will update instantly without full page reload, works with docker as well.
 
 ## TypeScript
 
@@ -145,35 +131,7 @@ The project uses TypeScript for type safety. Type definitions are in:
 
 ## Browser Support
 
-- Chrome (latest)
-- Firefox (latest)
-- Safari (latest)
-- Edge (latest)
-
-## Troubleshooting
-
-### Port 8080 already in use
-
-Change the port in `docker-compose.yaml`:
-
-```yaml
-ports:
-  - '8081:1339'  # Use 8081 instead
-```
-
-### Module not found errors
-
-```bash
-cd web
-rm -rf node_modules package-lock.json
-npm install
-```
-
-### HMR not working in Docker
-
-Ensure polling is enabled:
-
-```yaml
-environment:
-  - CHOKIDAR_USEPOLLING=true
-```
+- Chrome
+- Firefox
+- Safari
+- Edge

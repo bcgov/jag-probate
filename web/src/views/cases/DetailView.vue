@@ -13,13 +13,15 @@
     <div v-else-if="caseItem">
       <div class="d-flex justify-content-between align-items-center mb-4">
         <h2>Case Details</h2>
-        <button class="btn btn-secondary" @click="goBack">← Back to Cases</button>
+        <button class="btn btn-secondary" @click="goBack">
+          ← Back to Cases
+        </button>
       </div>
 
       <div class="card">
         <div class="card-body">
           <h3 class="card-title">{{ caseItem.title }}</h3>
-          
+
           <dl class="row mt-4">
             <dt class="col-sm-3">Case Number:</dt>
             <dd class="col-sm-9">{{ caseItem.caseNumber }}</dd>
@@ -33,7 +35,9 @@
             <dd class="col-sm-9">{{ formatDate(caseItem.filedDate) }}</dd>
 
             <dt class="col-sm-3">Description:</dt>
-            <dd class="col-sm-9">{{ caseItem.description || 'No description provided' }}</dd>
+            <dd class="col-sm-9">
+              {{ caseItem.description || "No description provided" }}
+            </dd>
 
             <dt class="col-sm-3">Created:</dt>
             <dd class="col-sm-9">{{ formatDate(caseItem.createdAt) }}</dd>
@@ -53,9 +57,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
-import { useRouter, useRoute } from 'vue-router';
-import axios from 'axios';
+import { ref, onMounted } from "vue";
+import { useRouter, useRoute } from "vue-router";
+import axios from "axios";
 
 interface Case {
   id: number;
@@ -72,7 +76,7 @@ const router = useRouter();
 const route = useRoute();
 const caseItem = ref<Case | null>(null);
 const loading = ref(true);
-const error = ref('');
+const error = ref("");
 
 const fetchCase = async () => {
   try {
@@ -80,31 +84,35 @@ const fetchCase = async () => {
     const response = await axios.get(`/api/cases/${route.params.id}`);
     caseItem.value = response.data;
   } catch (err: any) {
-    error.value = err.response?.data?.message || 'Failed to load case';
+    error.value = err.response?.data?.message || "Failed to load case";
   } finally {
     loading.value = false;
   }
 };
 
 const goBack = () => {
-  router.push('/cases');
+  router.push("/cases");
 };
 
 const deleteCase = async () => {
-  if (!confirm('Are you sure you want to delete this case?')) return;
-  
+  if (!confirm("Are you sure you want to delete this case?")) return;
+
   try {
     await axios.delete(`/api/cases/${route.params.id}`);
-    alert('Case deleted successfully');
+    alert("Case deleted successfully");
     goBack();
   } catch (err: any) {
-    alert(err.response?.data?.message || 'Failed to delete case');
+    alert(err.response?.data?.message || "Failed to delete case");
   }
 };
 
 const formatDate = (date: string) => {
-  if (!date) return 'N/A';
-  return new Date(date).toLocaleDateString() + ' ' + new Date(date).toLocaleTimeString();
+  if (!date) return "N/A";
+  return (
+    new Date(date).toLocaleDateString() +
+    " " +
+    new Date(date).toLocaleTimeString()
+  );
 };
 
 onMounted(() => {

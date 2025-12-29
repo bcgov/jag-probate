@@ -53,7 +53,7 @@
 
       <div class="d-flex gap-2">
         <button type="submit" class="btn btn-success" :disabled="submitting">
-          {{ submitting ? 'Creating...' : 'Create Case' }}
+          {{ submitting ? "Creating..." : "Create Case" }}
         </button>
         <button type="button" class="btn btn-secondary" @click="cancel">
           Cancel
@@ -64,39 +64,39 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
-import { useRouter } from 'vue-router';
-import axios from 'axios';
+import { ref } from "vue";
+import { useRouter } from "vue-router";
+import axios from "axios";
 
 const router = useRouter();
 const submitting = ref(false);
-const error = ref('');
+const error = ref("");
 
 const form = ref({
-  caseNumber: '',
-  title: '',
-  description: '',
-  status: 'Draft',
+  caseNumber: "",
+  title: "",
+  description: "",
+  status: "Draft",
 });
 
 const handleSubmit = async () => {
   try {
     submitting.value = true;
-    error.value = '';
-    
-    const response = await axios.post('/api/cases', form.value);
-    
+    error.value = "";
+
+    const response = await axios.post("/api/cases", form.value);
+
     // Navigate to the newly created case
     router.push(`/cases/${response.data.id}`);
   } catch (err: any) {
-    error.value = err.response?.data?.message || 'Failed to create case';
+    error.value = err.response?.data?.message || "Failed to create case";
   } finally {
     submitting.value = false;
   }
 };
 
 const cancel = () => {
-  router.push('/cases');
+  router.push("/cases");
 };
 </script>
 

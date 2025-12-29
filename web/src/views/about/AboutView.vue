@@ -1,13 +1,14 @@
 <template>
   <div class="about">
     <h2>About Probate Management System</h2>
-    
+
     <div class="card mt-4">
       <div class="card-body">
         <h5 class="card-title">System Information</h5>
         <p class="card-text">
-          The Probate Management System is a comprehensive solution for managing probate cases
-          in British Columbia. Built with modern technologies to ensure efficiency and security.
+          The Probate Management System is a comprehensive solution for managing
+          probate cases in British Columbia. Built with modern technologies to
+          ensure efficiency and security.
         </p>
       </div>
     </div>
@@ -30,7 +31,9 @@
         <div v-if="healthLoading">Checking API...</div>
         <div v-else-if="healthStatus">
           <span class="badge bg-success me-2">{{ healthStatus.status }}</span>
-          <small class="text-muted">Last checked: {{ healthStatus.timestamp }}</small>
+          <small class="text-muted"
+            >Last checked: {{ healthStatus.timestamp }}</small
+          >
         </div>
         <div v-else class="text-danger">API unavailable</div>
       </div>
@@ -39,8 +42,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
-import axios from 'axios';
+import { ref, onMounted } from "vue";
+import axios from "axios";
 
 interface HealthStatus {
   status: string;
@@ -53,10 +56,10 @@ const healthLoading = ref(true);
 
 const checkHealth = async () => {
   try {
-    const response = await axios.get('/api/health');
+    const response = await axios.get("/api/health");
     healthStatus.value = response.data;
   } catch (err) {
-    console.error('Health check failed:', err);
+    console.error("Health check failed:", err);
   } finally {
     healthLoading.value = false;
   }

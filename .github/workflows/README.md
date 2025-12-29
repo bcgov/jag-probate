@@ -11,7 +11,6 @@ Builds and tests the .NET API with quality gates:
   - CSharpier formatting check
   - dotnet format verification
   - Build verification
-  - Spell check with cspell
 
 ### build-and-test-web.yml
 Builds and tests the Vue.js web application with quality gates:
@@ -21,7 +20,6 @@ Builds and tests the Vue.js web application with quality gates:
   - Prettier formatting check
   - Build verification
   - Unit tests with Vitest
-  - Spell check with cspell
 
 ## Quality Gates
 
@@ -33,9 +31,6 @@ Builds and tests the Vue.js web application with quality gates:
 - **API**: CSharpier checks C# code formatting
 - **Web**: Prettier checks Vue/TS/JS formatting
 
-### 3. Spell Check
-- **Both**: cspell validates spelling in source code
-- Configuration: `.github/cspell.json`
 
 ## Local Development
 
