@@ -24,9 +24,18 @@ export default defineConfig({
   },
   server: {
     host: '0.0.0.0',
-    port: 1339,
+    port: 8080,
     proxy: {
       '^/api': {
+        target: 'http://api:5000',
+        changeOrigin: true,
+        headers: {
+          Connection: 'keep-alive',
+          'X-Forwarded-Host': 'localhost',
+          'X-Forwarded-Port': '8080',
+        },
+      },
+      '^/swagger': {
         target: 'http://api:5000',
         changeOrigin: true,
         headers: {

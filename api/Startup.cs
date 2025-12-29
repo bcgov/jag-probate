@@ -35,9 +35,8 @@ namespace Probate.Api
 
             services.AddDbContext<ProbateDbContext>(options =>
                 {
-                    var connectionString = Configuration.GetValue<string>("DatabaseConnectionString") 
-                        ?? "Host=db;Port=5432;Database=probatedb;Username=probate;Password=probate123";
-
+                    var connectionString = Configuration.GetConnectionString("DefaultConnection");
+                    
                     options.UseNpgsql(connectionString, npg =>
                     {
                         npg.MigrationsAssembly("db");
@@ -49,7 +48,6 @@ namespace Probate.Api
                 }
             );
 
-            #region Cors
 
             string corsDomain = Configuration.GetValue<string>("CORS_DOMAIN") ?? "http://localhost:8080";
 
@@ -63,7 +61,6 @@ namespace Probate.Api
                         .AllowCredentials());
             });
 
-            #endregion
 
             services.AddControllers()
                 .AddNewtonsoftJson(options =>
@@ -84,6 +81,8 @@ namespace Probate.Api
                     Version = "v1",
                     Description = "Probate Application System API"
                 });
+                
+                c.EnableAnnotations();
             });
 
             services.AddSwaggerGenNewtonsoftSupport();

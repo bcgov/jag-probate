@@ -1,0 +1,103 @@
+/* === Import BC Gov Bootstrap v5 Theme === */
+@import "@bcgov/bootstrap-v5-theme/css/bootstrap-theme.min.css";
+
+/* === BC Government Visual Identity Styles === */
+
+// BC Gov colors
+$bcgov-blue: #003366;
+$bcgov-gold: #fcba19;
+$bcgov-white: #ffffff;
+
+// Layout
+.app-outer {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.app-main {
+  flex: 1 0 auto;
+  padding: 2rem 0;
+}
+
+// Header
+.app-header {
+  background-color: $bcgov-blue;
+  
+  .navbar {
+    padding: 0.5rem 1rem;
+  }
+  
+  .navbar-brand {
+    display: flex;
+    align-items: center;
+    padding: 0;
+    
+    h1 {
+      font-family: 'BC Sans', 'Noto Sans', Verdana, Arial, sans-serif;
+      font-size: 1.25rem;
+      font-weight: 600;
+      color: $bcgov-white;
+      margin: 0;
+    }
+  }
+}
+
+// Footer
+footer {
+  background-color: $bcgov-blue;
+  margin-top: auto;
+  
+  .navbar {
+    padding: 0.75rem 1rem;
+  }
+  
+  .nav-link {
+    color: $bcgov-white;
+    font-size: 0.9rem;
+    
+    &:hover {
+      color: $bcgov-gold;
+    }
+  }
+}
+
+// Typography
+body {
+  font-family: 'BC Sans', 'Noto Sans', Verdana, Arial, sans-serif;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'BC Sans', 'Noto Sans', Verdana, Arial, sans-serif;
+  font-weight: 600;
+}
+
+// Utilities
+.no-top-rounding {
+  border-top-left-radius: 0px !important;
+  border-top-right-radius: 0px !important;
+}
+
+.mrgn-tp-sm {
+  margin-top: 8px;
+}
+
+.mrgn-tp-md {
+  margin-top: 1.5rem;
+}
+
+.mrgn-tp-lg {
+  margin-top: 3rem;
+}
+
+.mrgn-bttm-sm {
+  margin-bottom: 8px;
+}
+
+.mrgn-bttm-md {
+  margin-bottom: 1.5rem;
+}
+
+.mrgn-bttm-lg {
+  margin-bottom: 3rem;
+}

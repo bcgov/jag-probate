@@ -11,6 +11,7 @@
     "test": "vitest"
   },
   "dependencies": {
+    "@bcgov/bootstrap-v5-theme": "^1.0.1",
     "@fullcalendar/core": "^6.1.15",
     "@fullcalendar/daygrid": "^6.1.15",
     "@fullcalendar/vue3": "^6.1.19",
@@ -18,7 +19,8 @@
     "@types/underscore": "^1.13.0",
     "axios": "^1.13.2",
     "base64url": "^3.0.1",
-    "bootstrap": "^4.3.1",
+    "bootstrap": "^5.3.3",
+    "bootstrap-vue-next": "^0.42.0",
     "luxon": "^3.7.2",
     "pinia": "^3.0.4",
     "underscore": "^1.13.7",
@@ -35,6 +37,7 @@
     "eslint": "^9.17.0",
     "eslint-plugin-vue": "^9.31.0",
     "globals": "^15.14.0",
+    "sass": "^1.83.0",
     "typescript": "^5.7.2",
     "unplugin-vue-components": "^0.27.5",
     "vite": "^6.0.7",

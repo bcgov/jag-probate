@@ -6,10 +6,10 @@ services:
       - API_URL=${API_URL}
       - NODE_ENV=development
       - NPM_CONFIG_LOGLEVEL=notice
-      - VITE_PORT=1339
+      - VITE_PORT=8080
       - CHOKIDAR_USEPOLLING=true
     ports:
-      - '8080:1339'
+      - '8080:8080'
     volumes:
       - '${LOCAL_WORKSPACE_FOLDER-..}/web/src:/opt/app-root/src/src'
       - '${LOCAL_WORKSPACE_FOLDER-..}/web/package.json:/opt/app-root/src/package.json'

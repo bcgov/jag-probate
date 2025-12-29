@@ -95,7 +95,7 @@ build-web() {
   docker build \
     -t "${COMPOSE_PROJECT_NAME}-web" \
     --build-arg NODE_VERSION=22 \
-    --build-arg VITE_PORT=1339 \
+    --build-arg VITE_PORT=8080 \
     --build-arg WEB_SRC='./web' \
     -f './web/Dockerfile.local' '..'
   echo -e "===================================================================================================="

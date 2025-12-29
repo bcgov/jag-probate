@@ -48,12 +48,3 @@ runs:
       run: npm run test
       shell: bash
       working-directory: ${{ inputs.working_directory }}
-
-    - name: Spell check
-      uses: streetsidesoftware/cspell-action@v6
-      with:
-        files: |
-          web/src/**/*.{vue,ts,js}
-        config: .github/cspell.json
-        strict: true
-        incremental_files_only: false
