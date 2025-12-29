@@ -128,7 +128,7 @@ configureEnvironment () {
 
 getStartupParams() {
   CONTAINERS=""
-  ARGS="--force-recreate"
+  ARGS=""
 
   for arg in $@; do
     case "$arg" in

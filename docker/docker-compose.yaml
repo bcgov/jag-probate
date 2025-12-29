@@ -17,7 +17,8 @@ services:
       - '${LOCAL_WORKSPACE_FOLDER-..}/web/tsconfig.json:/opt/app-root/src/tsconfig.json'
       - '${LOCAL_WORKSPACE_FOLDER-..}/web/index.html:/opt/app-root/src/index.html'
     depends_on:
-      - api
+      api:
+        condition: service_healthy
 
   api:
     image: '${COMPOSE_PROJECT_NAME}-api'
@@ -35,6 +36,12 @@ services:
       - api-dev-obj:/opt/app-root/src/api/obj
     depends_on:
       - db
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/api/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
     command: >
       /bin/bash -c "
         echo Waiting for the database service to start up ...;
