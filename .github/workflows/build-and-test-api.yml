@@ -37,8 +37,6 @@ jobs:
             api:
               - 'api/**'
               - 'db/**'
-              - '.github/workflows/build-and-test-api.yml'
-              - '.github/workflows/actions/build-api/**'
 
       - name: Get changed files
         if: steps.filter.outputs.api == 'true'

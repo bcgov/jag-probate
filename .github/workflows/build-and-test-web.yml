@@ -34,8 +34,6 @@ jobs:
           filters: |
             web:
               - 'web/**'
-              - '.github/workflows/build-and-test-web.yml'
-              - '.github/workflows/actions/build-web/**'
 
       - name: Building Web codebase
         if: steps.filter.outputs.web == 'true'
