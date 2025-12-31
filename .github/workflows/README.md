@@ -165,9 +165,4 @@ npm run lint:fix
 3. **Watch for workflow failures**
    - GitHub sends email notifications
    - Fix failures promptly
-   - Don't force-merge
-
-4. **Update workflows when adding new checks**
-   - Add new quality gates to appropriate workflow
-   - Update branch protection rules
-   - Document changes in this README
+   - **Don't force-merge**
