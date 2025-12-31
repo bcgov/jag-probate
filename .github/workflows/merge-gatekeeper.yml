@@ -11,15 +11,18 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  merge-gatekeeper:
+  merge-gate:
+    name: Merge Gate
     runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
     permissions:
       checks: read
       statuses: read
     steps:
-      - name: Run Merge Gatekeeper
+      - name: Wait for all required checks
         uses: upsidr/merge-gatekeeper@v1
-        if: github.event_name == 'pull_request'
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           timeout: 1800
+          interval: 5
+          ignored: 'Merge Gate'
