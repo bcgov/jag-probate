@@ -65,3 +65,4 @@ All workflows run automatically on:
 Failed quality gates will block PR merges.
 
 # test branch rules
+✅ Workflow runs on every PR
