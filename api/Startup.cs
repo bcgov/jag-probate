@@ -35,7 +35,7 @@ namespace Probate.Api
 
             services.AddDbContext<ProbateDbContext>(options =>
             {
-                var connectionString = Configuration.GetConnectionString("DefaultConnection");
+                var connectionString = Configuration.GetValue<string>("DatabaseConnectionString");
 
                 options
                     .UseNpgsql(

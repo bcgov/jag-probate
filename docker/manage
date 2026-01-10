@@ -97,7 +97,7 @@ build-web() {
     --build-arg NODE_VERSION=22 \
     --build-arg VITE_PORT=8080 \
     --build-arg WEB_SRC='./web' \
-    -f './web/Dockerfile.local' '..'
+    -f './web/Dockerfile.dev' '..'
   echo -e "===================================================================================================="
 }
 
