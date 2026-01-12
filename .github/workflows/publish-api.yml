@@ -105,10 +105,7 @@ jobs:
           if git diff --staged --quiet; then
             echo "No changes to commit"
           else
-            git commit -m "🚀 Deploy probate API to dev
-
-SHA: ${{ needs.build.outputs.short_sha }}
-Image: ${{ env.GITHUB_IMAGE_REPO }}/${{ env.IMAGE_NAME }}:${{ needs.build.outputs.short_sha }}"
+            git commit -m "🚀 Deploy probate API to dev - SHA: ${{ needs.build.outputs.short_sha }}"
             
             git push origin develop
             
