@@ -4,7 +4,7 @@ import svgLoader from 'vite-svg-loader';
 import { fileURLToPath, URL } from 'node:url';
 
 export default defineConfig({
-  base: process.env.NODE_ENV === 'production' ? '/' : '/',
+  base: process.env.WEB_BASE_HREF || '/jag-probate/',
   plugins: [vue(), svgLoader()],
   test: {
     environment: 'jsdom',
@@ -26,9 +26,29 @@ export default defineConfig({
     host: '0.0.0.0',
     port: 8080,
     proxy: {
+      '^/jag-probate/api': {
+        target: 'http://api:5000',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/jag-probate/, ''),
+        headers: {
+          Connection: 'keep-alive',
+          'X-Forwarded-Host': 'localhost',
+          'X-Forwarded-Port': '8080',
+        },
+      },
       '^/api': {
         target: 'http://api:5000',
         changeOrigin: true,
+        headers: {
+          Connection: 'keep-alive',
+          'X-Forwarded-Host': 'localhost',
+          'X-Forwarded-Port': '8080',
+        },
+      },
+      '^/jag-probate/swagger': {
+        target: 'http://api:5000',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/jag-probate/, ''),
         headers: {
           Connection: 'keep-alive',
           'X-Forwarded-Host': 'localhost',

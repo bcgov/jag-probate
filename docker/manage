@@ -87,10 +87,10 @@ build-api() {
 
 build-web() {
   #
-  # web
+  # web-dev
   #
   echo -e "\n\n===================================================================================================="
-  echo -e "Building the ${COMPOSE_PROJECT_NAME}-web image using Docker ..."
+  echo -e "Building the ${COMPOSE_PROJECT_NAME}-web (dev) image using Docker ..."
   echo -e "----------------------------------------------------------------------------------------------------"
   docker build \
     -t "${COMPOSE_PROJECT_NAME}-web" \
@@ -98,6 +98,23 @@ build-web() {
     --build-arg VITE_PORT=8080 \
     --build-arg WEB_SRC='./web' \
     -f './web/Dockerfile.dev' '..'
+  echo -e "===================================================================================================="
+}
+
+build-web-prod() {
+  #
+  # web-prod (production image with S2I for testing)
+  #
+  echo -e "\n\n===================================================================================================="
+  echo -e "Building the ${COMPOSE_PROJECT_NAME}-web-prod (production) image using Docker ..."
+  echo -e "----------------------------------------------------------------------------------------------------"
+  docker build \
+    -t "${COMPOSE_PROJECT_NAME}-web-prod" \
+    --build-arg NODE_VERSION=22 \
+    --build-arg WEB_SRC='../web' \
+    --build-arg NGINX_RUNTIME_SRC='./nginx-runtime' \
+    --build-arg VUE_ON_NGINX_SRC='./vue-on-nginx' \
+    -f './web/Dockerfile' '.'
   echo -e "===================================================================================================="
 }
 
@@ -124,6 +141,9 @@ configureEnvironment () {
 
   # Default API startup parameters
   export API_URL=${API_URL-http://api:5000/api/}
+  
+  # Default web startup parameters
+  export WEB_BASE_HREF=${WEB_BASE_HREF}
 }
 
 getStartupParams() {
