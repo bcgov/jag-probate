@@ -101,7 +101,7 @@ jobs:
           TAG="${{ needs.build.outputs.short_sha }}"
           
           # Update kustomization.yaml with new Web image tag
-          sed -i "/name: jag-probate-web/{n;s|newTag:.*|newTag: ${TAG}|}" kustomization.yaml
+          sed -i "/name: jag-probate-web/,/newTag:/ s|newTag:.*|newTag: ${TAG}|" kustomization.yaml
           
           echo "Updated Web image tag to: ${TAG}"
           cat kustomization.yaml

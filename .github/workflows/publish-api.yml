@@ -89,7 +89,7 @@ jobs:
           TAG="${{ needs.build.outputs.short_sha }}"
           
           # Update kustomization.yaml with new API image tag
-          sed -i "/name: jag-probate-api/{n;s|newTag:.*|newTag: ${TAG}|}" kustomization.yaml
+          sed -i "/name: jag-probate-api/,/newTag:/ s|newTag:.*|newTag: ${TAG}|" kustomization.yaml
           
           echo "Updated API image tag to: ${TAG}"
           cat kustomization.yaml
