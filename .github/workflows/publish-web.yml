@@ -73,7 +73,11 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           build-args: |
+            NODE_VERSION=22
             WEB_BASE_HREF=${{ env.WEB_BASE_HREF }}
+            NGINX_RUNTIME_SRC=./docker/nginx-runtime
+            VUE_ON_NGINX_SRC=./docker/vue-on-nginx
+            WEB_SRC=./web
 
   update-gitops-dev:
     name: Update GitOps Dev
