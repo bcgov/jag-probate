@@ -1,0 +1,12 @@
+web/node_modules
+web/dist
+web/.vite
+api/bin
+api/obj
+db/bin
+db/obj
+.git
+.vscode
+.idea
+*.log
+.DS_Store
