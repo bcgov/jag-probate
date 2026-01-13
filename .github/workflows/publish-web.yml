@@ -119,7 +119,25 @@ jobs:
           else
             git commit -m "🚀 Deploy probate Web to dev - SHA: ${{ needs.build.outputs.short_sha }}"
             
-            git push origin develop
+            # Pull with rebase and retry push logic
+            max_retries=3
+            retry_count=0
             
-            echo "GitOps repository updated successfully!"
+            while [ $retry_count -lt $max_retries ]; do
+              git pull --rebase origin develop
+              
+              if git push origin develop; then
+                echo "GitOps repository updated successfully!"
+                break
+              else
+                retry_count=$((retry_count + 1))
+                echo "Push failed, retry $retry_count/$max_retries"
+                sleep 2
+              fi
+              
+              if [ $retry_count -eq $max_retries ]; then
+                echo "Failed to push after $max_retries attempts"
+                exit 1
+              fi
+            done
           fi
