@@ -5,9 +5,12 @@
     "context": "."
   },
   "features": {
-    // .NET feature commented out - project targets .NET 10.0 which is not yet released
-    //  wait for .NET 10.0 release
-    // "ghcr.io/devcontainers/features/dotnet:2": {},
+    "ghcr.io/devcontainers/features/dotnet:2": {
+      "version": "10.0",
+      "alternativeVersions": "9.0",
+      "dotnetRuntimeVersions": "10.0",
+      "aspnetcoreRuntimeVersions": "10.0"
+    },
     "ghcr.io/devcontainers/features/node:1": {
       "version": "22"
     },
@@ -45,7 +48,8 @@
         },
         "[javascript]": {
           "editor.defaultFormatter": "esbenp.prettier-vscode"
-        }
+        },
+        "dotnet.defaultSolution": "/workspaces/jag-probate/jag-probate.sln"
       }
     }
   },
