@@ -1,12 +1,20 @@
-import { createRouter, createWebHistory } from "vue-router";
+import { useLayoutStore } from "@/stores";
 import type { RouteRecordRaw } from "vue-router";
-import HomeView from "../views/home/HomeView.vue";
+import { createRouter, createWebHistory } from "vue-router";
 
 const routes: RouteRecordRaw[] = [
   {
     path: "/",
+    redirect: "/represent-someone-who-died",
     name: "Home",
-    component: HomeView,
+  },
+  {
+    path: "/represent-someone-who-died",
+    name: "RepresentSomeoneWhoDied",
+    component: () => import("../views/landing/RepresentSomeoneWhoDiedView.vue"),
+    meta: {
+      navHeader: "Represent Someone Who Died",
+    },
   },
   {
     path: "/cases",
@@ -34,6 +42,16 @@ const routes: RouteRecordRaw[] = [
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes,
+});
+
+router.beforeEach((to, _from, next) => {
+  const layoutStore = useLayoutStore();
+  if (to.meta.navHeader && typeof to.meta.navHeader === "string") {
+    layoutStore.setNavHeader(to.meta.navHeader);
+  } else {
+    layoutStore.resetNavHeader();
+  }
+  next();
 });
 
 export default router;

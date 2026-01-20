@@ -3,25 +3,15 @@
     <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
       <div class="container-fluid">
         <a class="navbar-brand" href="/">
-          <img
-            class="img-fluid d-none d-lg-block"
-            src="/images/bcid-logo-rev-en.svg"
-            width="177"
-            height="44"
-            alt="B.C. Government Logo"
-          />
-          <img
-            class="img-fluid d-lg-none"
-            src="/images/bcid-symbol-rev.svg"
-            width="63"
-            height="44"
-            alt="B.C. Government Logo"
-          />
+          <img class="img-fluid d-none d-lg-block" src="/images/bcid-logo-rev-en.svg" width="177" height="44"
+            alt="B.C. Government Logo" />
+          <img class="img-fluid d-lg-none" src="/images/bcid-symbol-rev.svg" width="63" height="44"
+            alt="B.C. Government Logo" />
         </a>
 
         <div class="navbar-brand ms-3">
           <h1 class="m-0 text-white">
-            Probate
+            {{ layoutStore.navHeader }}
             <span class="badge ms-2 p-1 ml-2" :class="envBadgeClass">{{
               environment
             }}</span>
@@ -30,31 +20,20 @@
 
         <div class="navbar-nav ms-auto">
           <div class="nav-item dropdown">
-            <a
-              class="nav-link dropdown-toggle text-white"
-              href="#"
-              role="button"
-              data-bs-toggle="dropdown"
-              aria-expanded="false"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="24"
-                height="24"
-                fill="currentColor"
-                class="bi bi-person-circle"
-                viewBox="0 0 16 16"
-              >
+            <a class="nav-link dropdown-toggle text-white" href="#" role="button" data-bs-toggle="dropdown"
+              aria-expanded="false">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor"
+                class="bi bi-person-circle" viewBox="0 0 16 16">
                 <path d="M11 6a3 3 0 1 1-6 0 3 3 0 0 1 6 0z" />
-                <path
-                  fill-rule="evenodd"
-                  d="M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8zm8-7a7 7 0 0 0-5.468 11.37C3.242 11.226 4.805 10 8 10s4.757 1.225 5.468 2.37A7 7 0 0 0 8 1z"
-                />
+                <path fill-rule="evenodd"
+                  d="M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8zm8-7a7 7 0 0 0-5.468 11.37C3.242 11.226 4.805 10 8 10s4.757 1.225 5.468 2.37A7 7 0 0 0 8 1z" />
               </svg>
             </a>
             <ul class="dropdown-menu dropdown-menu-end">
               <li><a class="dropdown-item" href="/dashboard">Dashboard</a></li>
-              <li><hr class="dropdown-divider" /></li>
+              <li>
+                <hr class="dropdown-divider" />
+              </li>
               <li><a class="dropdown-item" href="/logout">Sign out</a></li>
             </ul>
           </div>
@@ -65,7 +44,10 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, onMounted } from "vue";
+import { useLayoutStore } from "@/stores";
+import { computed, onMounted, ref } from "vue";
+
+const layoutStore = useLayoutStore();
 
 // Environment from runtime config
 const runtimeEnv = ref<string>("dev");

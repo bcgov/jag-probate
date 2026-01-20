@@ -1,14 +1,16 @@
 import { createApp } from "vue";
-import { createPinia } from "pinia";
 import App from "./App.vue";
-import router from "./router";
-import "./styles/index.scss";
 import "./assets/main.css";
+import router from "./router";
+import { registerPinia } from "./stores";
+import "./styles/index.scss";
 
 const app = createApp(App);
-const pinia = createPinia();
 
-app.use(pinia);
+// Add Pinia store with extensible registration function
+registerPinia(app);
+
+// Add Vue Router
 app.use(router);
 
 app.mount("#app");
