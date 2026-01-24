@@ -5,13 +5,13 @@ import { createRouter, createWebHistory } from "vue-router";
 const routes: RouteRecordRaw[] = [
   {
     path: "/",
-    redirect: "/represent-someone-who-died",
-    name: "Home",
+    name: "LandingPage",
+    component: () => import("../views/landing/LandingPage.vue"),
   },
   {
     path: "/represent-someone-who-died",
     name: "RepresentSomeoneWhoDied",
-    component: () => import("../views/landing/RepresentSomeoneWhoDiedView.vue"),
+    component: () => import("../views/landing/LandingPage.vue"),
     meta: {
       navHeader: "Represent Someone Who Died",
     },

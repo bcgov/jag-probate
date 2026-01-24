@@ -2,7 +2,7 @@
   <div id="app" class="app-outer">
     <NavigationTopbar />
 
-    <main class="app-main container">
+    <main class="app-main container" :class="layoutStore.backdropClass">
       <router-view />
     </main>
 
@@ -11,8 +11,11 @@
 </template>
 
 <script setup lang="ts">
-import NavigationTopbar from "./components/NavigationTopbar.vue";
 import NavigationFooter from "./components/NavigationFooter.vue";
+import NavigationTopbar from "./components/NavigationTopbar.vue";
+import { useLayoutStore } from "./stores/LayoutStore";
+
+const layoutStore = useLayoutStore();
 </script>
 
 <style scoped>
