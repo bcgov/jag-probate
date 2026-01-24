@@ -17,22 +17,6 @@ const routes: RouteRecordRaw[] = [
     },
   },
   {
-    path: "/cases",
-    name: "Cases",
-    component: () => import("../views/cases/ListView.vue"),
-  },
-  {
-    path: "/cases/new",
-    name: "CreateCase",
-    component: () => import("../views/cases/CreateView.vue"),
-  },
-  {
-    path: "/cases/:id",
-    name: "CaseDetail",
-    component: () => import("../views/cases/DetailView.vue"),
-    props: true,
-  },
-  {
     path: "/about",
     name: "About",
     component: () => import("../views/about/AboutView.vue"),
