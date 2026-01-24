@@ -19,16 +19,17 @@
                             <h2 class="h4 fw-bold mb-3">Presently, this service can only be used if:</h2>
                             <ul class="list-unstyled mb-0 checklist">
                                 <li>
-                                    <font-awesome-icon icon="fas-solid fa-circle-check" class="text-success me-2" />The
+                                    <font-awesome-icon icon="fas-solid fa-circle-check" class="text-success me-2"
+                                        aria-hidden="true" />The
                                     <strong>deceased did not leave a will</strong>.
                                 </li>
-                                <li><font-awesome-icon icon="fas-solid fa-circle-check"
-                                        class="text-success me-2" /><strong>Only one person</strong> is applying for the
+                                <li><font-awesome-icon icon="fas-solid fa-circle-check" class="text-success me-2"
+                                        aria-hidden="true" /><strong>Only one person</strong> is applying for the
                                     Representation Grant.
                                 </li>
                                 <li class="d-block">
-                                    <p><font-awesome-icon icon="fas-solid fa-circle-check"
-                                            class="text-success me-2" />You
+                                    <p><font-awesome-icon icon="fas-solid fa-circle-check" class="text-success me-2"
+                                            aria-hidden="true" />You
                                         are <strong>one of the following</strong>:
                                     </p>
                                     <ul class="disc-list ms-4">
@@ -50,11 +51,13 @@
                         <div class="col-12 col-lg-6 fs-5">
                             <h2 class="h4 fw-bold mb-3">This service CANNOT be used if:</h2>
                             <ul class="list-unstyled mb-0 checklist">
-                                <li><font-awesome-icon icon="fas-solid fa-circle-xmark" class="text-danger me-2" />One
+                                <li><font-awesome-icon icon="fas-solid fa-circle-xmark" class="text-danger me-2"
+                                        aria-hidden="true" />One
                                     of the
                                     deceased's <strong>children passed
                                         away before them</strong> and that child has children of their own.</li>
-                                <li><font-awesome-icon icon="fas-solid fa-circle-xmark" class="text-danger me-2" />There
+                                <li><font-awesome-icon icon="fas-solid fa-circle-xmark" class="text-danger me-2"
+                                        aria-hidden="true" />There
                                     is
                                     <strong>no surviving spouse, descendant,
                                         or creditor</strong> (other than yourself) who can be identified at this time.
