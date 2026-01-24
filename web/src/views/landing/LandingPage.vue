@@ -1,7 +1,7 @@
 <template>
     <div class="position-relative text-dark">
         <section class="container">
-            <h2 class="text-center fw-bold">Represent Someone Who Died (also known as Probate)</h2>
+            <h2 class="text-center fw-bold">Probate Application</h2>
 
             <div class="card shadow-sm border-0 info-card mb-4">
                 <div class="card-body">
@@ -36,6 +36,12 @@
                                         <li>A <strong>child</strong> of the deceased</li>
                                         <li>A <strong>legal guardian, nominee, or personal representative</strong>
                                             acting for someone listed above</li>
+                                        <li>An <strong>
+                                                <ToolTip term="intestate successor" /> or someone nominated by
+                                                an intestate successor
+                                            </strong>
+                                        </li>
+                                        <li>A <strong>person appointed by the court</strong> </li>
                                     </ul>
                                 </li>
                             </ul>
