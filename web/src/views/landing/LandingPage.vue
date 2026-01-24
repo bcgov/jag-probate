@@ -1,6 +1,6 @@
 <template>
     <div class="position-relative text-dark">
-        <section class="container-fluid">
+        <section class="container">
             <h2 class="text-center fw-bold">Represent Someone Who Died (also known as Probate)</h2>
 
             <div class="card shadow-sm border-0 info-card mb-4">

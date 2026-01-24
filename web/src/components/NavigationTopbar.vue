@@ -10,13 +10,15 @@
         </a>
 
         <div class="navbar-brand">
-          <h1 class="m-0 text-white">
+          <h1 class="m-0 text-white d-none d-sm-inline">
             {{ layoutStore.navHeader }}
-            <small class="small fs-6" v-if="layoutStore.navSubtitle">{{ layoutStore.navSubtitle }}</small>
+            <small class="small d-none d-lg-inline fs-6" v-if="layoutStore.navSubtitle">{{ layoutStore.navSubtitle
+              }}</small>
           </h1>
+          <h1 class="m-0 text-white d-sm-none">Probate</h1>
           <span class="badge ms-2 p-1 ml-2" :class="envBadgeClass">{{
             environment
-          }}</span>
+            }}</span>
         </div>
 
         <div class="navbar-nav ms-auto">

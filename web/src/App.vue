@@ -2,7 +2,7 @@
   <div id="app" class="app-outer">
     <NavigationTopbar />
 
-    <main class="app-main container" :class="layoutStore.backdropClass">
+    <main class="app-main container-fluid position-relative" :class="layoutStore.backdropClass">
       <router-view />
     </main>
 
