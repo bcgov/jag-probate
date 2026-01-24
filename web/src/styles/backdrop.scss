@@ -1,6 +1,7 @@
 .bd-legislature-dome {
   &::before {
     content: " ";
+    margin-top: 62px;
     display: block;
     position: absolute;
     z-index: -100;

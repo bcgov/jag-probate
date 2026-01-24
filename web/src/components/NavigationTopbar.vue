@@ -9,13 +9,14 @@
             alt="B.C. Government Logo" />
         </a>
 
-        <div class="navbar-brand ms-3">
+        <div class="navbar-brand">
           <h1 class="m-0 text-white">
             {{ layoutStore.navHeader }}
-            <span class="badge ms-2 p-1 ml-2" :class="envBadgeClass">{{
-              environment
-            }}</span>
+            <small class="small fs-6" v-if="layoutStore.navSubtitle">{{ layoutStore.navSubtitle }}</small>
           </h1>
+          <span class="badge ms-2 p-1 ml-2" :class="envBadgeClass">{{
+            environment
+          }}</span>
         </div>
 
         <div class="navbar-nav ms-auto">
@@ -84,16 +85,17 @@ const envBadgeClass = computed(() => {
 
 <style scoped>
 .navbar-brand h1 {
-  font-size: 1.25rem;
+  font-size: 1.1rem;
   font-weight: 600;
   display: flex;
-  align-items: center;
+  align-items: baseline;
 }
 
-.navbar-brand h1 .badge {
+.navbar-brand .badge {
   font-size: 0.6rem;
   padding: 0.25em 0.5em;
   font-weight: 700;
+  align-items: center;
   vertical-align: middle;
 }
 

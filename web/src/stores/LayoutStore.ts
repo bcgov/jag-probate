@@ -9,18 +9,30 @@ import { ref } from "vue";
 export type backdropClasses = "" | "bd-legislature-dome";
 
 export const useLayoutStore = defineStore("LayoutStore", () => {
+  // Navigation header state
   const navHeader = ref<string>("Probate");
-  const backdropClass = ref<backdropClasses>("");
-
   const setNavHeader = (newHeader: string) => (navHeader.value = newHeader);
   const resetNavHeader = () => (navHeader.value = "Probate");
+
+  // Backdrop class state
+  const backdropClass = ref<backdropClasses>("");
   const setBackdropClass = (newClass: backdropClasses) =>
     (backdropClass.value = newClass);
   const resetBackdropClass = () => (backdropClass.value = "");
+
+  // Navigation subtitle state
+  const navSubtitle = ref<string | undefined>();
+  const setNavSubtitle = (newSubtitle: string | undefined) =>
+    (navSubtitle.value = newSubtitle);
+  const resetNavSubtitle = () => (navSubtitle.value = undefined);
+
   return {
     navHeader,
     setNavHeader,
     resetNavHeader,
+    navSubtitle,
+    setNavSubtitle,
+    resetNavSubtitle,
     backdropClass,
     setBackdropClass,
     resetBackdropClass,
