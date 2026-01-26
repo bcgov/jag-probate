@@ -1,5 +1,5 @@
-import { createPinia } from "pinia";
-import { App } from "vue";
+import { createPinia } from 'pinia';
+import { App } from 'vue';
 
 const pinia = createPinia();
 
@@ -9,4 +9,4 @@ export function registerPinia(app: App) {
 
 export default pinia;
 
-export { useLayoutStore } from "./LayoutStore";
+export { useLayoutStore } from './LayoutStore';

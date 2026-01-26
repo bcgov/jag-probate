@@ -42,36 +42,36 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from "vue";
-import axios from "axios";
+  import { ref, onMounted } from 'vue';
+  import axios from 'axios';
 
-interface HealthStatus {
-  status: string;
-  timestamp: string;
-  application: string;
-}
-
-const healthStatus = ref<HealthStatus | null>(null);
-const healthLoading = ref(true);
-
-const checkHealth = async () => {
-  try {
-    const response = await axios.get("/api/health");
-    healthStatus.value = response.data;
-  } catch (err) {
-    console.error("Health check failed:", err);
-  } finally {
-    healthLoading.value = false;
+  interface HealthStatus {
+    status: string;
+    timestamp: string;
+    application: string;
   }
-};
 
-onMounted(() => {
-  checkHealth();
-});
+  const healthStatus = ref<HealthStatus | null>(null);
+  const healthLoading = ref(true);
+
+  const checkHealth = async () => {
+    try {
+      const response = await axios.get('/api/health');
+      healthStatus.value = response.data;
+    } catch (err) {
+      console.error('Health check failed:', err);
+    } finally {
+      healthLoading.value = false;
+    }
+  };
+
+  onMounted(() => {
+    checkHealth();
+  });
 </script>
 
 <style scoped>
-.about {
-  padding: 1rem 0;
-}
+  .about {
+    padding: 1rem 0;
+  }
 </style>

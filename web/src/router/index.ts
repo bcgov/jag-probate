@@ -1,25 +1,25 @@
-import { useLayoutStore } from "@/stores";
-import type { RouteRecordRaw } from "vue-router";
-import { createRouter, createWebHistory } from "vue-router";
+import { useLayoutStore } from '@/stores';
+import type { RouteRecordRaw } from 'vue-router';
+import { createRouter, createWebHistory } from 'vue-router';
 
 const routes: RouteRecordRaw[] = [
   {
-    path: "/",
-    name: "LandingPage",
-    component: () => import("../views/landing/LandingPage.vue"),
+    path: '/',
+    name: 'LandingPage',
+    component: () => import('../views/landing/LandingPage.vue'),
   },
   {
-    path: "/represent-someone-who-died",
-    name: "RepresentSomeoneWhoDied",
-    component: () => import("../views/landing/LandingPage.vue"),
+    path: '/represent-someone-who-died',
+    name: 'RepresentSomeoneWhoDied',
+    component: () => import('../views/landing/LandingPage.vue'),
     meta: {
-      navHeader: "Represent Someone Who Died",
+      navHeader: 'Represent Someone Who Died',
     },
   },
   {
-    path: "/about",
-    name: "About",
-    component: () => import("../views/about/AboutView.vue"),
+    path: '/about',
+    name: 'About',
+    component: () => import('../views/about/AboutView.vue'),
   },
 ];
 
@@ -30,7 +30,7 @@ const router = createRouter({
 
 router.beforeEach((to, _from, next) => {
   const layoutStore = useLayoutStore();
-  if (to.meta.navHeader && typeof to.meta.navHeader === "string") {
+  if (to.meta.navHeader && typeof to.meta.navHeader === 'string') {
     layoutStore.setNavHeader(to.meta.navHeader);
   } else {
     layoutStore.resetNavHeader();
