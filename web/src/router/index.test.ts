@@ -1,34 +1,37 @@
-import { describe, it, expect } from "vitest";
-import router from "./index";
+import { describe, expect, it } from 'vitest';
+import router from './index';
 
-describe("Router", () => {
-  it("should be defined", () => {
+describe('Router', () => {
+  it('should be defined', () => {
     expect(router).toBeDefined();
   });
 
-  it("should have routes configured", () => {
+  it('should have routes configured', () => {
     expect(router.getRoutes().length).toBeGreaterThan(0);
   });
 
-  it("should have home route", () => {
-    const homeRoute = router.getRoutes().find((route) => route.name === "Home");
-    expect(homeRoute).toBeDefined();
-    expect(homeRoute?.path).toBe("/");
+  it('should have LandingPage route', () => {
+    const landingRoute = router
+      .getRoutes()
+      .find((route) => route.name === 'LandingPage');
+    expect(landingRoute).toBeDefined();
+    expect(landingRoute?.path).toBe('/');
   });
 
-  it("should have cases route", () => {
-    const casesRoute = router
+  it('should have About route', () => {
+    const aboutRoute = router
       .getRoutes()
-      .find((route) => route.name === "Cases");
-    expect(casesRoute).toBeDefined();
-    expect(casesRoute?.path).toBe("/cases");
+      .find((route) => route.name === 'About');
+    expect(aboutRoute).toBeDefined();
+    expect(aboutRoute?.path).toBe('/about');
   });
 
-  it("should have create case route", () => {
-    const createRoute = router
+  it('should have RepresentSomeoneWhoDied route with correct meta', () => {
+    const representRoute = router
       .getRoutes()
-      .find((route) => route.name === "CreateCase");
-    expect(createRoute).toBeDefined();
-    expect(createRoute?.path).toBe("/cases/new");
+      .find((route) => route.name === 'RepresentSomeoneWhoDied');
+    expect(representRoute).toBeDefined();
+    expect(representRoute?.path).toBe('/represent-someone-who-died');
+    expect(representRoute?.meta.navHeader).toBe('Represent Someone Who Died');
   });
 });

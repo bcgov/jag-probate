@@ -59,52 +59,52 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from "vue";
-import { useRouter } from "vue-router";
-import axios from "axios";
+  import { ref, onMounted } from 'vue';
+  import { useRouter } from 'vue-router';
+  import axios from 'axios';
 
-interface Case {
-  id: number;
-  caseNumber: string;
-  title: string;
-  status: string;
-  filedDate: string;
-  description: string;
-}
-
-const router = useRouter();
-const cases = ref<Case[]>([]);
-const loading = ref(true);
-const error = ref("");
-
-const fetchCases = async () => {
-  try {
-    loading.value = true;
-    const response = await axios.get("/api/cases");
-    cases.value = response.data;
-  } catch (err: any) {
-    error.value = err.response?.data?.message || "Failed to load cases";
-  } finally {
-    loading.value = false;
+  interface Case {
+    id: number;
+    caseNumber: string;
+    title: string;
+    status: string;
+    filedDate: string;
+    description: string;
   }
-};
 
-const createCase = () => {
-  router.push("/cases/new");
-};
+  const router = useRouter();
+  const cases = ref<Case[]>([]);
+  const loading = ref(true);
+  const error = ref('');
 
-const formatDate = (date: string) => {
-  if (!date) return "N/A";
-  return new Date(date).toLocaleDateString();
-};
+  const fetchCases = async () => {
+    try {
+      loading.value = true;
+      const response = await axios.get('/api/cases');
+      cases.value = response.data;
+    } catch (err: any) {
+      error.value = err.response?.data?.message || 'Failed to load cases';
+    } finally {
+      loading.value = false;
+    }
+  };
 
-onMounted(() => {
-  fetchCases();
-});
+  const createCase = () => {
+    router.push('/cases/new');
+  };
+
+  const formatDate = (date: string) => {
+    if (!date) return 'N/A';
+    return new Date(date).toLocaleDateString();
+  };
+
+  onMounted(() => {
+    fetchCases();
+  });
 </script>
 
 <style scoped>
-.cases {
-  padding: 1rem 0;
-}
+  .cases {
+    padding: 1rem 0;
+  }
 </style>

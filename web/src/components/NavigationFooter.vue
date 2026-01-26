@@ -60,35 +60,35 @@
 </template>
 
 <script setup lang="ts">
-// Navigation Footer Component
-// Uses BC Government Visual Identity
+  // Navigation Footer Component
+  // Uses BC Government Visual Identity
 </script>
 
 <style scoped>
-footer {
-  margin-top: auto;
-}
+  footer {
+    margin-top: auto;
+  }
 
-.navbar {
-  padding: 0.5rem 0;
-}
+  .navbar {
+    padding: 0.5rem 0;
+  }
 
-.navbar-nav {
-  flex-direction: row;
-  flex-wrap: wrap;
-}
-
-.nav-item {
-  margin-right: 1rem;
-}
-
-@media (max-width: 768px) {
   .navbar-nav {
-    flex-direction: column;
+    flex-direction: row;
+    flex-wrap: wrap;
   }
 
   .nav-item {
-    margin-right: 0;
+    margin-right: 1rem;
   }
-}
+
+  @media (max-width: 768px) {
+    .navbar-nav {
+      flex-direction: column;
+    }
+
+    .nav-item {
+      margin-right: 0;
+    }
+  }
 </style>

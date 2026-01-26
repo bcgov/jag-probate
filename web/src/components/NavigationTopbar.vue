@@ -19,13 +19,19 @@
           />
         </a>
 
-        <div class="navbar-brand ms-3">
-          <h1 class="m-0 text-white">
-            Probate
-            <span class="badge ms-2 p-1 ml-2" :class="envBadgeClass">{{
-              environment
-            }}</span>
+        <div class="navbar-brand">
+          <h1 class="m-0 text-white d-none d-sm-inline">
+            {{ layoutStore.navHeader }}
+            <small
+              class="small d-none d-lg-inline fs-6"
+              v-if="layoutStore.navSubtitle"
+              >{{ layoutStore.navSubtitle }}</small
+            >
           </h1>
+          <h1 class="m-0 text-white d-sm-none">Probate</h1>
+          <span class="badge ms-2 p-1 ml-2" :class="envBadgeClass">{{
+            environment
+          }}</span>
         </div>
 
         <div class="navbar-nav ms-auto">
@@ -54,7 +60,9 @@
             </a>
             <ul class="dropdown-menu dropdown-menu-end">
               <li><a class="dropdown-item" href="/dashboard">Dashboard</a></li>
-              <li><hr class="dropdown-divider" /></li>
+              <li>
+                <hr class="dropdown-divider" />
+              </li>
               <li><a class="dropdown-item" href="/logout">Sign out</a></li>
             </ul>
           </div>
@@ -65,72 +73,76 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, onMounted } from "vue";
+  import { useLayoutStore } from '@/stores';
+  import { computed, onMounted, ref } from 'vue';
 
-// Environment from runtime config
-const runtimeEnv = ref<string>("dev");
+  const layoutStore = useLayoutStore();
 
-// Fetch runtime config on mount
-onMounted(async () => {
-  try {
-    const response = await fetch("/config.json");
-    const config = await response.json();
-    runtimeEnv.value = config.environment || "dev";
-  } catch {
-    console.warn("Could not load runtime config, defaulting to dev");
-    runtimeEnv.value = "dev";
-  }
-});
+  // Environment from runtime config
+  const runtimeEnv = ref<string>('dev');
 
-// Display environment
-const environment = computed(() => {
-  const env = runtimeEnv.value.toLowerCase();
-  if (env === "dev" || env === "development") return "DEV";
-  if (env === "test") return "TEST";
-  if (env === "prod" || env === "production") return "PROD";
-  return env.toUpperCase();
-});
+  // Fetch runtime config on mount
+  onMounted(async () => {
+    try {
+      const response = await fetch('/config.json');
+      const config = await response.json();
+      runtimeEnv.value = config.environment || 'dev';
+    } catch {
+      console.warn('Could not load runtime config, defaulting to dev');
+      runtimeEnv.value = 'dev';
+    }
+  });
 
-// Badge color based on environment
-const envBadgeClass = computed(() => {
-  const env = environment.value;
-  if (env === "PROD") return "badge-prod";
-  if (env === "TEST") return "badge-test";
-  return "badge-dev";
-});
+  // Display environment
+  const environment = computed(() => {
+    const env = runtimeEnv.value.toLowerCase();
+    if (env === 'dev' || env === 'development') return 'DEV';
+    if (env === 'test') return 'TEST';
+    if (env === 'prod' || env === 'production') return 'PROD';
+    return env.toUpperCase();
+  });
+
+  // Badge color based on environment
+  const envBadgeClass = computed(() => {
+    const env = environment.value;
+    if (env === 'PROD') return 'badge-prod';
+    if (env === 'TEST') return 'badge-test';
+    return 'badge-dev';
+  });
 </script>
 
 <style scoped>
-.navbar-brand h1 {
-  font-size: 1.25rem;
-  font-weight: 600;
-  display: flex;
-  align-items: center;
-}
+  .navbar-brand h1 {
+    font-size: 1.1rem;
+    font-weight: 600;
+    display: flex;
+    align-items: baseline;
+  }
 
-.navbar-brand h1 .badge {
-  font-size: 0.6rem;
-  padding: 0.25em 0.5em;
-  font-weight: 700;
-  vertical-align: middle;
-}
+  .navbar-brand .badge {
+    font-size: 0.6rem;
+    padding: 0.25em 0.5em;
+    font-weight: 700;
+    align-items: center;
+    vertical-align: middle;
+  }
 
-.badge-dev {
-  background-color: #fcba19;
-  color: #003366;
-}
+  .badge-dev {
+    background-color: #fcba19;
+    color: #003366;
+  }
 
-.badge-test {
-  background-color: #f9ca54;
-  color: #003366;
-}
+  .badge-test {
+    background-color: #f9ca54;
+    color: #003366;
+  }
 
-.badge-prod {
-  background-color: #dc3545;
-  color: white;
-}
+  .badge-prod {
+    background-color: #dc3545;
+    color: white;
+  }
 
-.navbar .dropdown-menu {
-  width: 250px !important;
-}
+  .navbar .dropdown-menu {
+    width: 250px !important;
+  }
 </style>

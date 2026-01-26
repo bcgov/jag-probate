@@ -29,13 +29,7 @@ runs:
       working-directory: ${{ inputs.working_directory }}
       continue-on-error: false
 
-    - name: Prettier format check
-      run: |
-        if [ -f "package.json" ] && grep -q "prettier:check" package.json; then
-          npm run prettier:check
-        else
-          npx prettier --check "src/**/*.{vue,ts,js}"
-        fi
+    - run: npm run prettier:check
       shell: bash
       working-directory: ${{ inputs.working_directory }}
 
