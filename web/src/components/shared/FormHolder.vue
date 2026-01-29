@@ -45,7 +45,7 @@
     height: 100%;
     min-height: 100vh;
     background-color: #f8f9fa;
-    
+
     p {
       color: #6c757d;
       font-size: 1.1rem;

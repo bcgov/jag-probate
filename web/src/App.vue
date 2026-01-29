@@ -1,12 +1,16 @@
 <template>
-  <div id="app" class="app-outer" :class="{ 'fullscreen-mode': layoutStore.isFullscreen }">
+  <div
+    id="app"
+    class="app-outer"
+    :class="{ 'fullscreen-mode': layoutStore.isFullscreen }"
+  >
     <NavigationTopbar v-if="!layoutStore.isFullscreen" />
 
     <main
       class="app-main"
       :class="[
         layoutStore.backdropClass,
-        layoutStore.isFullscreen ? '' : 'container-fluid position-relative'
+        layoutStore.isFullscreen ? '' : 'container-fluid position-relative',
       ]"
     >
       <router-view />
