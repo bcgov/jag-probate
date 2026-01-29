@@ -26,6 +26,11 @@ export const useLayoutStore = defineStore('LayoutStore', () => {
     (navSubtitle.value = newSubtitle);
   const resetNavSubtitle = () => (navSubtitle.value = undefined);
 
+  // Fullscreen mode state
+  const isFullscreen = ref<boolean>(false);
+  const setFullscreen = (value: boolean) => (isFullscreen.value = value);
+  const resetFullscreen = () => (isFullscreen.value = false);
+
   return {
     navHeader,
     setNavHeader,
@@ -36,5 +41,8 @@ export const useLayoutStore = defineStore('LayoutStore', () => {
     backdropClass,
     setBackdropClass,
     resetBackdropClass,
+    isFullscreen,
+    setFullscreen,
+    resetFullscreen,
   };
 });

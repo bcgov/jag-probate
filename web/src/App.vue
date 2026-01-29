@@ -1,15 +1,18 @@
 <template>
-  <div id="app" class="app-outer">
-    <NavigationTopbar />
+  <div id="app" class="app-outer" :class="{ 'fullscreen-mode': layoutStore.isFullscreen }">
+    <NavigationTopbar v-if="!layoutStore.isFullscreen" />
 
     <main
-      class="app-main container-fluid position-relative"
-      :class="layoutStore.backdropClass"
+      class="app-main"
+      :class="[
+        layoutStore.backdropClass,
+        layoutStore.isFullscreen ? '' : 'container-fluid position-relative'
+      ]"
     >
       <router-view />
     </main>
 
-    <NavigationFooter />
+    <NavigationFooter v-if="!layoutStore.isFullscreen" />
   </div>
 </template>
 
@@ -30,5 +33,16 @@
 
   main {
     flex: 1;
+  }
+
+  .fullscreen-mode {
+    height: 100vh;
+    overflow: hidden;
+  }
+
+  .fullscreen-mode main {
+    height: 100vh;
+    padding: 0;
+    margin: 0;
   }
 </style>

@@ -190,7 +190,7 @@
   };
 
   const handleReturning = () => {
-    router.push({ name: 'Cases' });
+    router.push({ name: 'ProbateForm' });
   };
 </script>
 
