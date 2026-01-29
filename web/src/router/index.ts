@@ -21,6 +21,14 @@ const routes: RouteRecordRaw[] = [
     name: 'About',
     component: () => import('../views/about/AboutView.vue'),
   },
+  {
+    path: '/probate-form',
+    name: 'ProbateForm',
+    component: () => import('../views/forms/ProbateFormPage.vue'),
+    meta: {
+      navHeader: 'Probate Application',
+    },
+  },
 ];
 
 const router = createRouter({
