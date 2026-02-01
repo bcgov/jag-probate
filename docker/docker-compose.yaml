@@ -28,6 +28,11 @@ services:
       - ASPNETCORE_ENVIRONMENT=${ASPNETCORE_ENVIRONMENT:-Development}
       - DatabaseConnectionString=${DatabaseConnectionString}
       - CORS_DOMAIN=${CORS_DOMAIN}
+      - Keycloak__Authority=${OIDC_RP_PROVIDER_ENDPOINT}
+      - Keycloak__Client=${OIDC_RP_CLIENT_ID}
+      - Keycloak__Secret=${OIDC_RP_CLIENT_SECRET}
+      - Keycloak__BceidIdpHint=${OIDC_RP_KC_IDP_HINT}
+      - TokenRefreshThreshold=${TOKEN_REFRESH_THRESHOLD}
     ports:
       - 5000:5000
     volumes:
