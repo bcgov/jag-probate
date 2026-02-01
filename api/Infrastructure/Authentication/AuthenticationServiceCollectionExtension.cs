@@ -140,10 +140,22 @@ namespace Probate.Api.Infrastructure.Authentication
                         },
                         OnRedirectToIdentityProvider = context =>
                         {
-                            // Set BCeID as the identity provider
-                            var bceidIdpHint =
-                                configuration["Keycloak:BceidIdpHint"] ?? "bceidbasic";
-                            context.ProtocolMessage.SetParameter("kc_idp_hint", bceidIdpHint);
+                            // Check if kc_idp_hint was set in authentication properties (from login endpoint)
+                            if (
+                                context.Properties.Items.TryGetValue(
+                                    "kc_idp_hint",
+                                    out var idpHint
+                                )
+                            )
+                            {
+                                context.ProtocolMessage.SetParameter("kc_idp_hint", idpHint);
+                            }
+                            else
+                            {
+                                // Fallback to configuration default
+                                var kcIdpHint = configuration["Keycloak:KcIdpHint"];
+                                context.ProtocolMessage.SetParameter("kc_idp_hint", kcIdpHint);
+                            }
                             return Task.CompletedTask;
                         },
                     };
