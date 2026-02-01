@@ -142,10 +142,7 @@ namespace Probate.Api.Infrastructure.Authentication
                         {
                             // Check if kc_idp_hint was set in authentication properties (from login endpoint)
                             if (
-                                context.Properties.Items.TryGetValue(
-                                    "kc_idp_hint",
-                                    out var idpHint
-                                )
+                                context.Properties.Items.TryGetValue("kc_idp_hint", out var idpHint)
                             )
                             {
                                 context.ProtocolMessage.SetParameter("kc_idp_hint", idpHint);
