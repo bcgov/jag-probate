@@ -143,25 +143,35 @@ namespace Probate.Api.Infrastructure.Authentication
                         {
                             // Set the redirect URI explicitly using forwarded headers if available
                             var request = context.HttpContext.Request;
-                            
+
                             // Check for forwarded headers from proxy
-                            var forwardedHost = request.Headers["X-Forwarded-Host"].FirstOrDefault();
-                            var forwardedPort = request.Headers["X-Forwarded-Port"].FirstOrDefault();
-                            var forwardedProto = request.Headers["X-Forwarded-Proto"].FirstOrDefault() ?? request.Scheme;
-                            
+                            var forwardedHost = request
+                                .Headers["X-Forwarded-Host"]
+                                .FirstOrDefault();
+                            var forwardedPort = request
+                                .Headers["X-Forwarded-Port"]
+                                .FirstOrDefault();
+                            var forwardedProto =
+                                request.Headers["X-Forwarded-Proto"].FirstOrDefault()
+                                ?? request.Scheme;
+
                             string redirectUri;
                             if (!string.IsNullOrEmpty(forwardedHost))
                             {
                                 // Use forwarded headers (from proxy like Vite dev server or OpenShift)
-                                var port = !string.IsNullOrEmpty(forwardedPort) ? $":{forwardedPort}" : "";
-                                redirectUri = $"{forwardedProto}://{forwardedHost}{port}{context.Options.CallbackPath}";
+                                var port = !string.IsNullOrEmpty(forwardedPort)
+                                    ? $":{forwardedPort}"
+                                    : "";
+                                redirectUri =
+                                    $"{forwardedProto}://{forwardedHost}{port}{context.Options.CallbackPath}";
                             }
                             else
                             {
                                 // Fallback to request host
-                                redirectUri = $"{request.Scheme}://{request.Host}{context.Options.CallbackPath}";
+                                redirectUri =
+                                    $"{request.Scheme}://{request.Host}{context.Options.CallbackPath}";
                             }
-                            
+
                             context.ProtocolMessage.RedirectUri = redirectUri;
 
                             // Check if kc_idp_hint was set in authentication properties (from login endpoint)
