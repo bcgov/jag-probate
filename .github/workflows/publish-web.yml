@@ -18,7 +18,7 @@ env:
   WEB_RUNTIME_IMAGE_NAME: web-runtime
   WEB_ARTIFACTS_IMAGE_NAME: web-artifacts
   GITHUB_IMAGE_REPO: ghcr.io/bcgov/jag-probate
-  WEB_BASE_HREF: /jag-probate/
+  WEB_BASE_HREF: /probate/
 
 permissions:
   id-token: write
