@@ -9,7 +9,7 @@ on:
     branches:
       - main
     paths:
-      - "web/**"
+      - 'web/**'
 
   workflow_dispatch:
 
@@ -25,10 +25,10 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
-      
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
       - name: Check for file changes
-        uses: dorny/paths-filter@v3
+        uses: dorny/paths-filter@de90cc6fb38fc0963ad72b210f1f284cd68cea36 # v3.0.2
         id: filter
         with:
           filters: |
@@ -41,7 +41,7 @@ jobs:
         with:
           working_directory: ${{ env.WORKING_DIRECTORY }}
           node_version: 22
-      
+
       - name: Summary
         run: |
           if [[ "${{ steps.filter.outputs.web }}" == "false" ]]; then
