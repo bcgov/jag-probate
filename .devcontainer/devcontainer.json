@@ -1,5 +1,6 @@
 {
   "name": "JAG Probate",
+  "runArgs": ["--name", "jag-probate-devcontainer"],
   "build": {
     "dockerfile": "Dockerfile",
     "context": "."
