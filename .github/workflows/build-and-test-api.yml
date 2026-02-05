@@ -22,6 +22,8 @@ jobs:
   filter-changes:
     name: Filter Changes
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     outputs:
       csproj-files: ${{ steps.filter.outputs.csharp-projects_files }}
 
