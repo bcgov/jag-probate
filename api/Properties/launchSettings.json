@@ -2,11 +2,11 @@
   "profiles": {
     "api": {
       "commandName": "Project",
-      "launchBrowser": true,
+      "launchBrowser": false,
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development"
       },
-      "applicationUrl": "https://localhost:56476;http://localhost:56477"
+      "applicationUrl": "http://localhost:5000"
     }
   }
 }
