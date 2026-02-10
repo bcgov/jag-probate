@@ -65,7 +65,7 @@ namespace Probate.Api.Controllers
                 out StringValues baseHrefValue
             )
                 ? baseHrefValue.ToString()
-                : "/api";
+                : "/";
 
             var forwardedProto =
                 HttpContext.Request.Headers["X-Forwarded-Proto"].FirstOrDefault() ?? Request.Scheme;
@@ -118,23 +118,16 @@ namespace Probate.Api.Controllers
 
         /// <summary>
         /// Validates and sanitizes a return URL to prevent open redirect attacks.
-        /// Only allows relative URLs that start with "/".
         /// </summary>
-        private static string SanitizeReturnUrl(string returnUrl)
+        private string SanitizeReturnUrl(string returnUrl)
         {
             if (string.IsNullOrWhiteSpace(returnUrl))
                 return "/";
 
-            if (Uri.TryCreate(returnUrl, UriKind.Absolute, out _))
-                return "/";
+            if (Url.IsLocalUrl(returnUrl))
+                return returnUrl;
 
-            if (returnUrl.StartsWith("//"))
-                return "/";
-
-            if (!returnUrl.StartsWith("/"))
-                return "/";
-
-            return returnUrl;
+            return "/";
         }
     }
 }
