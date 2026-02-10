@@ -51,13 +51,19 @@ namespace Probate.Api.Controllers
             var logoutUrl =
                 $"{_configuration.GetNonEmptyValue("Keycloak:Authority")}/protocol/openid-connect/logout";
 
-            var forwardedHost = HttpContext.Request.Headers.TryGetValue("X-Forwarded-Host", out StringValues forwardedHostValue)
+            var forwardedHost = HttpContext.Request.Headers.TryGetValue(
+                "X-Forwarded-Host",
+                out StringValues forwardedHostValue
+            )
                 ? forwardedHostValue.ToString()
                 : Request.Host.ToString();
             var forwardedPort = HttpContext.Request.Headers["X-Forwarded-Port"];
 
             //We are always sending X-Forwarded-Port, only time we aren't is when we are hitting the API directly.
-            var baseUri = HttpContext.Request.Headers.TryGetValue("X-Base-Href", out StringValues baseHrefValue)
+            var baseUri = HttpContext.Request.Headers.TryGetValue(
+                "X-Base-Href",
+                out StringValues baseHrefValue
+            )
                 ? baseHrefValue.ToString()
                 : "/api";
 
