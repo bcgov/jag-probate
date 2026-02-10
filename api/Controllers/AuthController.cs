@@ -1,3 +1,4 @@
+using System;
 using System.Linq;
 using System.Security.Claims;
 using System.Threading.Tasks;
@@ -7,6 +8,7 @@ using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
+using Probate.Api.Helpers;
 
 namespace Probate.Api.Controllers
 {
@@ -25,50 +27,52 @@ namespace Probate.Api.Controllers
         /// Initiates the BCeID login flow
         /// </summary>
         /// <param name="returnUrl">Optional URL to redirect to after login</param>
+        [Authorize(AuthenticationSchemes = OpenIdConnectDefaults.AuthenticationScheme)]
         [HttpGet("login")]
-        [AllowAnonymous]
-        public IActionResult Login(string returnUrl = "/")
+        public IActionResult Login(string returnUrl = "/api")
         {
-            if (User.Identity?.IsAuthenticated == true)
-            {
-                return Redirect(returnUrl);
-            }
-
-            var kcIdpHint = _configuration["Keycloak:KcIdpHint"];
-
-            var properties = new AuthenticationProperties
-            {
-                RedirectUri = returnUrl,
-                IsPersistent = true,
-            };
-
-            // Set the kc_idp_hint parameter for BCeID identity provider
-            properties.Items["kc_idp_hint"] = kcIdpHint;
-
-            return Challenge(properties, OpenIdConnectDefaults.AuthenticationScheme);
+            var safeReturnUrl = SanitizeReturnUrl(returnUrl);
+            return Redirect(safeReturnUrl);
         }
 
         /// <summary>
         /// Logs out the current user and clears the session
         /// </summary>
         [HttpGet("logout")]
-        [AllowAnonymous]
         public async Task<IActionResult> Logout()
         {
-            if (User.Identity?.IsAuthenticated == true)
+            // Retrieve id_token BEFORE signing out (sign-out clears the cookie)
+            var idToken = await HttpContext.GetTokenAsync("id_token");
+
+            await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+            await HttpContext.SignOutAsync(OpenIdConnectDefaults.AuthenticationScheme);
+
+            var logoutUrl =
+                $"{_configuration.GetNonEmptyValue("Keycloak:Authority")}/protocol/openid-connect/logout";
+
+            var forwardedHost = HttpContext.Request.Headers.ContainsKey("X-Forwarded-Host")
+                ? HttpContext.Request.Headers["X-Forwarded-Host"].ToString()
+                : Request.Host.ToString();
+            var forwardedPort = HttpContext.Request.Headers["X-Forwarded-Port"];
+
+            //We are always sending X-Forwarded-Port, only time we aren't is when we are hitting the API directly.
+            var baseUri = HttpContext.Request.Headers.ContainsKey("X-Forwarded-Host")
+                ? $"{HttpContext.Request.Headers["X-Base-Href"]}"
+                : "/api";
+
+            var forwardedProto =
+                HttpContext.Request.Headers["X-Forwarded-Proto"].FirstOrDefault() ?? Request.Scheme;
+
+            var applicationUrl =
+                $"{XForwardedForHelper.BuildUrlString(forwardedHost, forwardedPort, baseUri, scheme: forwardedProto)}";
+            var keycloakLogoutUrl = $"{logoutUrl}?post_logout_redirect_uri={applicationUrl}";
+
+            if (!string.IsNullOrEmpty(idToken))
             {
-                var logoutUrl =
-                    _configuration["Keycloak:Authority"] + "/protocol/openid-connect/logout";
-                var applicationUrl = GetApplicationBaseUrl();
-
-                await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
-                await HttpContext.SignOutAsync(OpenIdConnectDefaults.AuthenticationScheme);
-
-                var keycloakLogoutUrl = $"{logoutUrl}?post_logout_redirect_uri={applicationUrl}";
-                return Redirect(keycloakLogoutUrl);
+                keycloakLogoutUrl += $"&id_token_hint={idToken}";
             }
 
-            return Redirect("/");
+            return Redirect(keycloakLogoutUrl);
         }
 
         /// <summary>
@@ -105,11 +109,25 @@ namespace Probate.Api.Controllers
             );
         }
 
-        private string GetApplicationBaseUrl()
+        /// <summary>
+        /// Validates and sanitizes a return URL to prevent open redirect attacks.
+        /// Only allows relative URLs that start with "/".
+        /// </summary>
+        private static string SanitizeReturnUrl(string returnUrl)
         {
-            var request = HttpContext.Request;
-            var baseUrl = $"{request.Scheme}://{request.Host}{request.PathBase}";
-            return baseUrl;
+            if (string.IsNullOrWhiteSpace(returnUrl))
+                return "/";
+
+            if (Uri.TryCreate(returnUrl, UriKind.Absolute, out _))
+                return "/";
+
+            if (returnUrl.StartsWith("//"))
+                return "/";
+
+            if (!returnUrl.StartsWith("/"))
+                return "/";
+
+            return returnUrl;
         }
     }
 }

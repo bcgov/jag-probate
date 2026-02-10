@@ -74,8 +74,9 @@ namespace Probate.Api.Infrastructure.Authentication
                                 cookieCtx.HttpContext.RequestServices.GetRequiredService<IHttpClientFactory>();
                             var httpClient = httpClientFactory.CreateClient();
 
-                            var response = await httpClient.RequestRefreshTokenAsync(
-                                new RefreshTokenRequest
+                            // Wrap in using to dispose the underlying HttpRequestMessage and prevent resource leaks
+                            using (
+                                var refreshRequest = new RefreshTokenRequest
                                 {
                                     Address =
                                         configuration["Keycloak:Authority"]
@@ -84,30 +85,35 @@ namespace Probate.Api.Infrastructure.Authentication
                                     ClientSecret = configuration["Keycloak:Secret"],
                                     RefreshToken = refreshToken,
                                 }
-                            );
+                            )
+                            {
+                                var response = await httpClient.RequestRefreshTokenAsync(
+                                    refreshRequest
+                                );
 
-                            if (response.IsError)
-                            {
-                                cookieCtx.RejectPrincipal();
-                                await cookieCtx.HttpContext.SignOutAsync(
-                                    CookieAuthenticationDefaults.AuthenticationScheme
-                                );
-                            }
-                            else
-                            {
-                                var expiresInSeconds = response.ExpiresIn;
-                                var updatedExpiresAt = DateTimeOffset.UtcNow.AddSeconds(
-                                    expiresInSeconds
-                                );
-                                cookieCtx.Properties.UpdateTokenValue(
-                                    "expires_at",
-                                    updatedExpiresAt.ToString()
-                                );
-                                cookieCtx.Properties.UpdateTokenValue(
-                                    "refresh_token",
-                                    response.RefreshToken
-                                );
-                                cookieCtx.ShouldRenew = true;
+                                if (response.IsError)
+                                {
+                                    cookieCtx.RejectPrincipal();
+                                    await cookieCtx.HttpContext.SignOutAsync(
+                                        CookieAuthenticationDefaults.AuthenticationScheme
+                                    );
+                                }
+                                else
+                                {
+                                    var expiresInSeconds = response.ExpiresIn;
+                                    var updatedExpiresAt = DateTimeOffset.UtcNow.AddSeconds(
+                                        expiresInSeconds
+                                    );
+                                    cookieCtx.Properties.UpdateTokenValue(
+                                        "expires_at",
+                                        updatedExpiresAt.ToString()
+                                    );
+                                    cookieCtx.Properties.UpdateTokenValue(
+                                        "refresh_token",
+                                        response.RefreshToken
+                                    );
+                                    cookieCtx.ShouldRenew = true;
+                                }
                             }
                         },
                     };
@@ -124,6 +130,11 @@ namespace Probate.Api.Infrastructure.Authentication
                     options.UsePkce = true;
                     options.SaveTokens = true;
                     options.CallbackPath = "/api/auth/signin-oidc";
+
+                    // Disable Pushed Authorization Requests (PAR) so that kc_idp_hint
+                    // is sent as a query parameter on the authorization URL rather than
+                    options.PushedAuthorizationBehavior = PushedAuthorizationBehavior.Disable;
+
                     options.Scope.Add("openid");
                     options.Scope.Add("profile");
                     options.Scope.Add("email");
@@ -132,11 +143,10 @@ namespace Probate.Api.Infrastructure.Authentication
                     {
                         OnTicketReceived = context =>
                         {
-                            // Remove id_token and access_token from cookie for security
-                            context.Properties.Items.Remove(".Token.id_token");
+                            //id_token_hint for Keycloak logout.
                             context.Properties.Items.Remove(".Token.access_token");
                             context.Properties.Items[".TokenNames"] =
-                                "refresh_token;token_type;expires_at";
+                                "id_token;refresh_token;token_type;expires_at";
                             return Task.CompletedTask;
                         },
                         OnRedirectToIdentityProvider = context =>

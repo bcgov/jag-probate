@@ -34,6 +34,8 @@ namespace Probate.Api
 
             services.AddScoped<MigrationService>();
 
+            services.AddHttpClient();
+
             services.AddDbContext<ProbateDbContext>(options =>
             {
                 var connectionString = Configuration.GetValue<string>("DatabaseConnectionString");
@@ -123,8 +125,6 @@ namespace Probate.Api
 
             app.UseRouting();
             app.UseCors("ProbateCorsPolicy");
-
-            // Add Authentication & Authorization middleware
             app.UseAuthentication();
             app.UseAuthorization();
 
