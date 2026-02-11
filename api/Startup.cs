@@ -9,6 +9,7 @@ using Microsoft.OpenApi.Models;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using Newtonsoft.Json.Serialization;
+using Probate.Api.Infrastructure.Authentication;
 using Probate.Api.Services;
 using Probate.Db.Models;
 
@@ -32,6 +33,8 @@ namespace Probate.Api
             services.AddProblemDetails();
 
             services.AddScoped<MigrationService>();
+
+            services.AddHttpClient();
 
             services.AddDbContext<ProbateDbContext>(options =>
             {
@@ -67,6 +70,10 @@ namespace Probate.Api
                             .AllowCredentials()
                 );
             });
+
+            // Add Authentication & Authorization
+            services.AddProbateAuthentication(CurrentEnvironment, Configuration);
+            services.AddAuthorization();
 
             services
                 .AddControllers()
@@ -118,6 +125,7 @@ namespace Probate.Api
 
             app.UseRouting();
             app.UseCors("ProbateCorsPolicy");
+            app.UseAuthentication();
             app.UseAuthorization();
 
             app.UseEndpoints(endpoints =>
