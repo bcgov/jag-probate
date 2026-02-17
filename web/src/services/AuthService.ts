@@ -24,7 +24,10 @@ class AuthService {
    * Checks authentication status without triggering a redirect.
    * Used for non-protected pages (e.g., landing page) to show/hide UI elements.
    */
-  async getAuthStatus(): Promise<{ isAuthenticated: boolean; name: string | null }> {
+  async getAuthStatus(): Promise<{
+    isAuthenticated: boolean;
+    name: string | null;
+  }> {
     return await this.httpService.get('api/auth/status');
   }
 }

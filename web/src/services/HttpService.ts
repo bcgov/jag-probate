@@ -12,7 +12,7 @@ class HttpService {
 
     this.axiosInstance.interceptors.response.use(
       (response) => response,
-      (error) => this.handleError(error),
+      (error) => this.handleError(error)
     );
   }
 
@@ -38,8 +38,7 @@ class HttpService {
   }
 
   async delete<T>(url: string): Promise<T> {
-    const response: AxiosResponse<T> =
-      await this.axiosInstance.delete(url);
+    const response: AxiosResponse<T> = await this.axiosInstance.delete(url);
     return response.data;
   }
 }

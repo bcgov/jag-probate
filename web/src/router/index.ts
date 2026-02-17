@@ -52,7 +52,9 @@ async function authGuard(to: any, _from: any, next: any) {
  */
 function redirectToLogin(destinationPath: string) {
   const base = import.meta.env.BASE_URL.replace(/\/$/, '');
-  window.location.replace(`/api/auth/login?returnUrl=${base}${destinationPath}`);
+  window.location.replace(
+    `/api/auth/login?returnUrl=${base}${destinationPath}`
+  );
 }
 
 const routes: RouteRecordRaw[] = [

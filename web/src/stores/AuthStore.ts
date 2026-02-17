@@ -11,7 +11,7 @@ export const useAuthStore = defineStore('AuthStore', () => {
   const isLoading = ref(false);
 
   const isAuthenticated = computed(
-    () => userInfo.value?.isAuthenticated ?? false,
+    () => userInfo.value?.isAuthenticated ?? false
   );
 
   const userName = computed(() => userInfo.value?.name ?? null);

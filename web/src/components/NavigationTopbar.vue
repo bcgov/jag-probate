@@ -35,11 +35,7 @@
         </div>
 
         <div v-if="authStore.isAuthenticated" class="navbar-nav ms-auto">
-          <a
-            class="nav-link text-white"
-            href="#"
-            @click.prevent="handleLogout"
-          >
+          <a class="nav-link text-white" href="#" @click.prevent="handleLogout">
             Log out
           </a>
         </div>

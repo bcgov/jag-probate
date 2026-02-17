@@ -1,92 +1,96 @@
 <template>
-  <div id="status" class="card bg-white border-white" style="min-height: 784px;">
+  <div id="status" class="card bg-white border-white" style="min-height: 784px">
     <div class="card home-content border-white">
       <!-- Header Section -->
       <div name="info-content-header" class="header-section">
         <h1 class="page-title">Previous Activity</h1>
         <div class="card bg-white border-white">
           <p class="instruction-text">
-            To resume a previous session, click the Resume button next to the activity. 
-            To start a new session, click the Begin New Session button at the bottom of the page.
+            To resume a previous session, click the Resume button next to the
+            activity. To start a new session, click the Begin New Session button
+            at the bottom of the page.
           </p>
         </div>
         <div class="header-divider"></div>
       </div>
 
       <!-- Table Section -->
-      <div style="height: 525px;">
-        <div class="card bg-white border-white" style="height: 525px;">
-          <div class="mx-0 b-table-sticky-header table-responsive-sm" style="max-height: 600px; overflow-y: auto;">
-            <table 
-              role="table" 
-              aria-busy="false" 
-              aria-colcount="6" 
+      <div style="height: 525px">
+        <div class="card bg-white border-white" style="height: 525px">
+          <div
+            class="mx-0 b-table-sticky-header table-responsive-sm"
+            style="max-height: 600px; overflow-y: auto"
+          >
+            <table
+              role="table"
+              aria-busy="false"
+              aria-colcount="6"
               class="table b-table table-striped table-borderless table-sm"
             >
               <thead role="rowgroup" class="thead-dark">
                 <tr role="row">
-                  <th 
-                    role="columnheader" 
-                    scope="col" 
-                    tabindex="0" 
-                    aria-colindex="1" 
-                    class="b-table-sort-icon-left" 
-                    style="font-size: 11pt; width: 20%;"
+                  <th
+                    role="columnheader"
+                    scope="col"
+                    tabindex="0"
+                    aria-colindex="1"
+                    class="b-table-sort-icon-left"
+                    style="font-size: 11pt; width: 20%"
                   >
                     <div>Application</div>
                     <span class="sr-only"> (Click to sort Ascending)</span>
                   </th>
-                  <th 
-                    role="columnheader" 
-                    scope="col" 
-                    tabindex="0" 
-                    aria-colindex="2" 
+                  <th
+                    role="columnheader"
+                    scope="col"
+                    tabindex="0"
+                    aria-colindex="2"
                     aria-sort="descending"
-                    class="b-table-sort-icon-left" 
-                    style="font-size: 11pt; width: 20%;"
+                    class="b-table-sort-icon-left"
+                    style="font-size: 11pt; width: 20%"
                   >
                     <div>Last Updated</div>
                     <span class="sr-only"> (Click to sort Ascending)</span>
                   </th>
-                  <th 
-                    role="columnheader" 
-                    scope="col" 
-                    tabindex="0" 
-                    aria-colindex="3" 
-                    class="b-table-sort-icon-left" 
-                    style="font-size: 11pt; width: 20%;"
+                  <th
+                    role="columnheader"
+                    scope="col"
+                    tabindex="0"
+                    aria-colindex="3"
+                    class="b-table-sort-icon-left"
+                    style="font-size: 11pt; width: 20%"
                   >
                     <div>Last Filed</div>
                     <span class="sr-only"> (Click to sort Ascending)</span>
                   </th>
-                  <th 
-                    role="columnheader" 
-                    scope="col" 
-                    tabindex="0" 
-                    aria-colindex="4" 
-                    class="b-table-sort-icon-left" 
-                    style="font-size: 10pt; width: 15%;"
+                  <th
+                    role="columnheader"
+                    scope="col"
+                    tabindex="0"
+                    aria-colindex="4"
+                    class="b-table-sort-icon-left"
+                    style="font-size: 10pt; width: 15%"
                   >
                     <div>Status</div>
                     <span class="sr-only"> (Click to sort Ascending)</span>
                   </th>
-                  <th 
-                    role="columnheader" 
-                    scope="col" 
-                    tabindex="0" 
-                    aria-colindex="5" 
-                    style="font-size: 10pt; width: 15%;"
+                  <th
+                    role="columnheader"
+                    scope="col"
+                    tabindex="0"
+                    aria-colindex="5"
+                    style="font-size: 10pt; width: 15%"
                   >
                     <div>Package#</div>
                     <span class="sr-only"> (Click to clear sorting)</span>
                   </th>
-                  <th 
-                    role="columnheader" 
-                    scope="col" 
-                    tabindex="0" 
-                    aria-colindex="6" 
+                  <th
+                    role="columnheader"
+                    scope="col"
+                    tabindex="0"
+                    aria-colindex="6"
                     aria-label="Edit"
-                    style="font-size: 10pt; width: 10%;"
+                    style="font-size: 10pt; width: 10%"
                   >
                     <div></div>
                     <span class="sr-only"> (Click to clear sorting)</span>
@@ -111,56 +115,56 @@
                     {{ caseItem.caseNumber }}
                   </td>
                   <td aria-colindex="6" role="cell" class="border-top">
-                    <button 
-                      title="Remove Application" 
-                      type="button" 
+                    <button
+                      title="Remove Application"
+                      type="button"
                       class="btn my-0 py-0 border-0 btn-transparent btn-sm"
                       @click="removeCase(caseItem.id)"
                     >
-                      <svg 
-                        viewBox="0 0 16 16" 
-                        width="1em" 
-                        height="1em" 
-                        focusable="false" 
-                        role="img" 
-                        aria-label="trash fill" 
-                        xmlns="http://www.w3.org/2000/svg" 
-                        fill="currentColor" 
-                        class="bi-trash-fill b-icon bi text-danger" 
-                        style="font-size: 125%;"
+                      <svg
+                        viewBox="0 0 16 16"
+                        width="1em"
+                        height="1em"
+                        focusable="false"
+                        role="img"
+                        aria-label="trash fill"
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="currentColor"
+                        class="bi-trash-fill b-icon bi text-danger"
+                        style="font-size: 125%"
                       >
                         <g>
-                          <path 
-                            fill-rule="evenodd" 
+                          <path
+                            fill-rule="evenodd"
                             d="M2.5 1a1 1 0 0 0-1 1v1a1 1 0 0 0 1 1H3v9a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2V4h.5a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1H10a1 1 0 0 0-1-1H7a1 1 0 0 0-1 1H2.5zm3 4a.5.5 0 0 1 .5.5v7a.5.5 0 0 1-1 0v-7a.5.5 0 0 1 .5-.5zM8 5a.5.5 0 0 1 .5.5v7a.5.5 0 0 1-1 0v-7A.5.5 0 0 1 8 5zm3 .5a.5.5 0 0 0-1 0v7a.5.5 0 0 0 1 0v-7z"
                           ></path>
                         </g>
                       </svg>
                     </button>
-                    <button 
-                      title="Resume Application" 
-                      type="button" 
+                    <button
+                      title="Resume Application"
+                      type="button"
                       class="btn my-0 py-0 border-0 btn-transparent btn-sm"
                       @click="resumeCase(caseItem.id)"
                     >
-                      <svg 
-                        viewBox="0 0 16 16" 
-                        width="1em" 
-                        height="1em" 
-                        focusable="false" 
-                        role="img" 
-                        aria-label="pencil square" 
-                        xmlns="http://www.w3.org/2000/svg" 
-                        fill="currentColor" 
-                        class="bi-pencil-square b-icon bi text-primary" 
-                        style="font-size: 125%;"
+                      <svg
+                        viewBox="0 0 16 16"
+                        width="1em"
+                        height="1em"
+                        focusable="false"
+                        role="img"
+                        aria-label="pencil square"
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="currentColor"
+                        class="bi-pencil-square b-icon bi text-primary"
+                        style="font-size: 125%"
                       >
                         <g>
-                          <path 
+                          <path
                             d="M15.502 1.94a.5.5 0 0 1 0 .706L14.459 3.69l-2-2L13.502.646a.5.5 0 0 1 .707 0l1.293 1.293zm-1.75 2.456l-2-2L4.939 9.21a.5.5 0 0 0-.121.196l-.805 2.414a.25.25 0 0 0 .316.316l2.414-.805a.5.5 0 0 0 .196-.12l6.813-6.814z"
                           ></path>
-                          <path 
-                            fill-rule="evenodd" 
+                          <path
+                            fill-rule="evenodd"
                             d="M1 13.5A1.5 1.5 0 0 0 2.5 15h11a1.5 1.5 0 0 0 1.5-1.5v-6a.5.5 0 0 0-1 0v6a.5.5 0 0 1-.5.5h-11a.5.5 0 0 1-.5-.5v-11a.5.5 0 0 1 .5-.5H9a.5.5 0 0 0 0-1H2.5A1.5 1.5 0 0 0 1 2.5v11z"
                           ></path>
                         </g>
@@ -178,16 +182,14 @@
       <div name="button-menu" class="card button-content bg-white border-white">
         <div class="card-body p-3">
           <div class="button-row">
-            <button 
-              type="button" 
+            <button
+              type="button"
               class="btn btn-success begin-session-btn"
               @click="createCase"
             >
               Begin NEW Session
             </button>
-            <a class="terms-link" @click="showTerms">
-              Terms and Conditions
-            </a>
+            <a class="terms-link" @click="showTerms"> Terms and Conditions </a>
           </div>
         </div>
       </div>
@@ -253,14 +255,14 @@
   const formatDateTime = (date: string) => {
     if (!date) return '';
     const d = new Date(date);
-    const options: Intl.DateTimeFormatOptions = { 
-      weekday: 'short', 
-      year: 'numeric', 
-      month: 'short', 
+    const options: Intl.DateTimeFormatOptions = {
+      weekday: 'short',
+      year: 'numeric',
+      month: 'short',
       day: '2-digit',
       hour: '2-digit',
       minute: '2-digit',
-      hour12: false
+      hour12: false,
     };
     return d.toLocaleString('en-US', options).replace(',', '');
   };
