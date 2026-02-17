@@ -29,5 +29,5 @@ Check the health status of the API.
 
 
 Interactive API documentation is available at:
-- Swagger UI: `http://localhost:5000/swagger`
-- OpenAPI JSON: `http://localhost:5000/swagger/v1/swagger.json`
+- Swagger UI: `http://localhost:5000/api/swagger`
+- OpenAPI JSON: `http://localhost:5000/api/swagger/v1/swagger.json`
