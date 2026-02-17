@@ -34,38 +34,14 @@
           }}</span>
         </div>
 
-        <div class="navbar-nav ms-auto">
-          <div class="nav-item dropdown">
-            <a
-              class="nav-link dropdown-toggle text-white"
-              href="#"
-              role="button"
-              data-bs-toggle="dropdown"
-              aria-expanded="false"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="24"
-                height="24"
-                fill="currentColor"
-                class="bi bi-person-circle"
-                viewBox="0 0 16 16"
-              >
-                <path d="M11 6a3 3 0 1 1-6 0 3 3 0 0 1 6 0z" />
-                <path
-                  fill-rule="evenodd"
-                  d="M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8zm8-7a7 7 0 0 0-5.468 11.37C3.242 11.226 4.805 10 8 10s4.757 1.225 5.468 2.37A7 7 0 0 0 8 1z"
-                />
-              </svg>
-            </a>
-            <ul class="dropdown-menu dropdown-menu-end">
-              <li><a class="dropdown-item" href="/dashboard">Dashboard</a></li>
-              <li>
-                <hr class="dropdown-divider" />
-              </li>
-              <li><a class="dropdown-item" href="/logout">Sign out</a></li>
-            </ul>
-          </div>
+        <div v-if="authStore.isAuthenticated" class="navbar-nav ms-auto">
+          <a
+            class="nav-link text-white"
+            href="#"
+            @click.prevent="handleLogout"
+          >
+            Log out
+          </a>
         </div>
       </div>
     </nav>
@@ -73,10 +49,20 @@
 </template>
 
 <script setup lang="ts">
-  import { useLayoutStore } from '@/stores';
+  import { useAuthStore, useLayoutStore } from '@/stores';
   import { computed, onMounted, ref } from 'vue';
 
   const layoutStore = useLayoutStore();
+  const authStore = useAuthStore();
+
+  /**
+   * Logs the user out by clearing the auth store and redirecting
+   * to the backend logout endpoint, which signs out of Keycloak.
+   */
+  const handleLogout = () => {
+    authStore.clearUserInfo();
+    window.location.href = '/api/auth/logout';
+  };
 
   // Environment from runtime config
   const runtimeEnv = ref<string>('dev');
@@ -84,7 +70,7 @@
   // Fetch runtime config on mount
   onMounted(async () => {
     try {
-      const response = await fetch('/config.json');
+      const response = await fetch(`${import.meta.env.BASE_URL}config.json`);
       const config = await response.json();
       runtimeEnv.value = config.environment || 'dev';
     } catch {

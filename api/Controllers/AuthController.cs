@@ -72,7 +72,10 @@ namespace Probate.Api.Controllers
 
             var applicationUrl =
                 $"{XForwardedForHelper.BuildUrlString(forwardedHost, forwardedPort, baseUri, scheme: forwardedProto)}";
-            var keycloakLogoutUrl = $"{logoutUrl}?post_logout_redirect_uri={applicationUrl}";
+            var clientId = _configuration.GetNonEmptyValue("Keycloak:Client");
+            var encodedRedirectUri = Uri.EscapeDataString(applicationUrl);
+            var keycloakLogoutUrl =
+                $"{logoutUrl}?client_id={clientId}&post_logout_redirect_uri={encodedRedirectUri}";
 
             if (!string.IsNullOrEmpty(idToken))
             {
