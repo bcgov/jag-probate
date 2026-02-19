@@ -11,7 +11,9 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Protocols.OpenIdConnect;
+using Probate.Api.Infrastructure.Options;
 
 namespace Probate.Api.Infrastructure.Authentication
 {
@@ -24,6 +26,11 @@ namespace Probate.Api.Infrastructure.Authentication
         )
         {
             services.AddHttpClient();
+
+            var keycloakOptions = services
+                .BuildServiceProvider()
+                .GetRequiredService<IOptions<KeycloakOptions>>()
+                .Value;
 
             services
                 .AddAuthentication(options =>
@@ -59,11 +66,8 @@ namespace Probate.Api.Infrastructure.Authentication
                             var timeRemaining = accessTokenExpiration.Subtract(
                                 DateTimeOffset.UtcNow
                             );
-                            var refreshThreshold = TimeSpan.Parse(
-                                configuration["TokenRefreshThreshold"] ?? "00:05:00"
-                            );
 
-                            if (timeRemaining > refreshThreshold)
+                            if (timeRemaining > TimeSpan.FromMinutes(5))
                                 return;
 
                             var refreshToken = cookieCtx.Properties.GetTokenValue("refresh_token");
@@ -79,10 +83,10 @@ namespace Probate.Api.Infrastructure.Authentication
                                 var refreshRequest = new RefreshTokenRequest
                                 {
                                     Address =
-                                        configuration["Keycloak:Authority"]
+                                        keycloakOptions.Authority
                                         + "/protocol/openid-connect/token",
-                                    ClientId = configuration["Keycloak:Client"],
-                                    ClientSecret = configuration["Keycloak:Secret"],
+                                    ClientId = keycloakOptions.Client,
+                                    ClientSecret = keycloakOptions.Secret,
                                     RefreshToken = refreshToken,
                                 }
                             )
@@ -121,9 +125,9 @@ namespace Probate.Api.Infrastructure.Authentication
                 .AddOpenIdConnect(options =>
                 {
                     options.SignInScheme = CookieAuthenticationDefaults.AuthenticationScheme;
-                    options.Authority = configuration["Keycloak:Authority"];
-                    options.ClientId = configuration["Keycloak:Client"];
-                    options.ClientSecret = configuration["Keycloak:Secret"];
+                    options.Authority = keycloakOptions.Authority;
+                    options.ClientId = keycloakOptions.Client;
+                    options.ClientSecret = keycloakOptions.Secret;
                     options.RequireHttpsMetadata = !env.IsDevelopment();
                     options.GetClaimsFromUserInfoEndpoint = true;
                     options.ResponseType = OpenIdConnectResponseType.Code;
@@ -194,8 +198,10 @@ namespace Probate.Api.Infrastructure.Authentication
                             else
                             {
                                 // Fallback to configuration default
-                                var kcIdpHint = configuration["Keycloak:KcIdpHint"];
-                                context.ProtocolMessage.SetParameter("kc_idp_hint", kcIdpHint);
+                                context.ProtocolMessage.SetParameter(
+                                    "kc_idp_hint",
+                                    keycloakOptions.KcIdpHint
+                                );
                             }
                             return Task.CompletedTask;
                         },
