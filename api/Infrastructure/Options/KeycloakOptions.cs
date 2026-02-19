@@ -1,3 +1,4 @@
+using System;
 using System.ComponentModel.DataAnnotations;
 
 namespace Probate.Api.Infrastructure.Options
@@ -9,6 +10,8 @@ namespace Probate.Api.Infrastructure.Options
     public sealed class KeycloakOptions
     {
         public const string SectionName = "Keycloak";
+
+        public static readonly TimeSpan DefaultRefreshThreshold = TimeSpan.FromMinutes(5);
 
         /// <summary>
         /// Keycloak authority URL (e.g., https://keycloak.example.com/auth/realms/your-realm).
@@ -33,5 +36,10 @@ namespace Probate.Api.Infrastructure.Options
         /// Keycloak identity provider hint for automatic provider selection.
         /// </summary>
         public string KcIdpHint { get; set; } = "bceid";
+
+        /// <summary>
+        /// (Optional) Refresh threshold (TimeSpan format) for refreshing access tokens.
+        /// </summary>
+        public string? RefreshThreshold { get; set; }
     }
 }

@@ -32,6 +32,12 @@ namespace Probate.Api.Infrastructure.Authentication
                 .GetRequiredService<IOptions<KeycloakOptions>>()
                 .Value;
 
+            var refreshThreshold = KeycloakOptions.DefaultRefreshThreshold;
+            if (!string.IsNullOrWhiteSpace(keycloakOptions.RefreshThreshold))
+            {
+                TimeSpan.TryParse(keycloakOptions.RefreshThreshold, out refreshThreshold);
+            }
+
             services
                 .AddAuthentication(options =>
                 {
@@ -67,7 +73,7 @@ namespace Probate.Api.Infrastructure.Authentication
                                 DateTimeOffset.UtcNow
                             );
 
-                            if (timeRemaining > TimeSpan.FromMinutes(5))
+                            if (timeRemaining > refreshThreshold)
                                 return;
 
                             var refreshToken = cookieCtx.Properties.GetTokenValue("refresh_token");
