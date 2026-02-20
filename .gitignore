@@ -17,6 +17,7 @@ project.lock.json
 *.db
 *.sqlite
 *.log
+.claude/
 
 # Exception: Include docker nginx runtime scripts
 !docker/nginx-runtime/s2i/bin/
