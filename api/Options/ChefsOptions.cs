@@ -2,7 +2,7 @@ namespace Probate.Api.Options;
 
 /// <summary>
 /// Configuration for the CHEFS (Common Hosted Form Service) API.
-/// API key is per form; bind from environment (e.g. Chefs__FormId, Chefs__ApiKey, Chefs__BaseUrl).
+/// API key is per form; bind from environment (e.g. Chefs__ApiKey, Chefs__BaseUrl).
 /// </summary>
 public class ChefsOptions
 {

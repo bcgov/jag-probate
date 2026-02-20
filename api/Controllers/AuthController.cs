@@ -13,8 +13,8 @@ using Probate.Api.Helpers;
 
 namespace Probate.Api.Controllers
 {
-    //[Route("api/[controller]")]
-    //[ApiController]
+    [Route("api/[controller]")]
+    [ApiController]
     public class AuthController : ControllerBase
     {
         private readonly IConfiguration _configuration;

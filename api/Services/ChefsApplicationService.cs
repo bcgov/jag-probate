@@ -41,20 +41,6 @@ public class ChefsApplicationService : IChefsApplicationService
         CancellationToken cancellationToken = default
     )
     {
-        if (string.IsNullOrWhiteSpace(_options.FormId))
-        {
-            _logger.LogWarning("Chefs:FormId is not configured");
-            throw new InvalidOperationException(
-                "Chefs:FormId must be configured (e.g. Chefs__FormId in .env)."
-            );
-        }
-
-        if (!string.Equals(formId, _options.FormId, StringComparison.OrdinalIgnoreCase))
-        {
-            _logger.LogWarning("FormId {FormId} is not allowed; configured form is {ConfiguredFormId}", formId, _options.FormId);
-            throw new InvalidOperationException("FormId is not allowed.");
-        }
-
         _logger.LogInformation("Fetching CHEFS applications for form {FormId}", formId);
 
         ChefsSubmissionsResponse response;
