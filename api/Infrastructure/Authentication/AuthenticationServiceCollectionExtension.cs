@@ -161,10 +161,8 @@ namespace Probate.Api.Infrastructure.Authentication
                         },
                         OnRedirectToIdentityProvider = context =>
                         {
-                            // Set the redirect URI explicitly using forwarded headers if available
+                            // Set the redirect URI explicitly using forwarded headers if available.
                             var request = context.HttpContext.Request;
-
-                            // Check for forwarded headers from proxy
                             var forwardedHost = request
                                 .Headers["X-Forwarded-Host"]
                                 .FirstOrDefault();
@@ -178,12 +176,17 @@ namespace Probate.Api.Infrastructure.Authentication
                             string redirectUri;
                             if (!string.IsNullOrEmpty(forwardedHost))
                             {
-                                // Use forwarded headers (from proxy like Vite dev server or OpenShift)
-                                var port = !string.IsNullOrEmpty(forwardedPort)
-                                    ? $":{forwardedPort}"
-                                    : "";
+                                // Include port when it's non-standard (not 80/443).
+                                // The Vite dev proxy sends X-Forwarded-Port separately
+                                // from X-Forwarded-Host, so we must combine them.
+                                var portSuffix =
+                                    !string.IsNullOrEmpty(forwardedPort)
+                                    && forwardedPort != "80"
+                                    && forwardedPort != "443"
+                                        ? $":{forwardedPort}"
+                                        : "";
                                 redirectUri =
-                                    $"{forwardedProto}://{forwardedHost}{port}{context.Options.CallbackPath}";
+                                    $"{forwardedProto}://{forwardedHost}{portSuffix}{context.Options.CallbackPath}";
                             }
                             else
                             {
