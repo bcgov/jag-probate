@@ -58,7 +58,7 @@ Or for development with hot reload:
 ```bash
 ./manage debug
 ```
-Refer to [Runing Application on Docker](./docker/README.md) for more command.
+Refer to [Running Application on Docker](./docker/README.md) for more commands.
 
 ### 4. Access the application
 
@@ -74,9 +74,13 @@ Refer to [Runing Application on Docker](./docker/README.md) for more command.
 The project uses PostgreSQL as the database. Entity Framework Core handles migrations automatically on startup.
 
 ## API
+
 ### Health Check
 - `GET /api/health` - Check API health status
 
+### CHEFS (Common Hosted Form Service)
+
+See [docs/chefs.md](./docs/chefs.md) for integration details, endpoint usage, and configuration.
 
 ## Environment Variables
 
