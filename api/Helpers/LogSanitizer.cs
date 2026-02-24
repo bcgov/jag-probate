@@ -17,8 +17,6 @@ public static class LogSanitizer
         if (string.IsNullOrEmpty(value))
             return string.Empty;
 
-        return value
-            .Replace("\r", "\\r")
-            .Replace("\n", "\\n");
+        return value.Replace("\r", "\\r").Replace("\n", "\\n");
     }
 }

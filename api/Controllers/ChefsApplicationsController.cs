@@ -65,12 +65,19 @@ public class ApplicationsController : ControllerBase
 
         try
         {
-            var applications = await _chefsApplicationService.GetApplicationsAsync(formKey, cancellationToken);
+            var applications = await _chefsApplicationService.GetApplicationsAsync(
+                formKey,
+                cancellationToken
+            );
             return Ok(applications);
         }
         catch (InvalidOperationException ex)
         {
-            _logger.LogInformation(ex, "Invalid request for CHEFS applications: {Message}", ex.Message);
+            _logger.LogInformation(
+                ex,
+                "Invalid request for CHEFS applications: {Message}",
+                ex.Message
+            );
             return BadRequest(new { message = ex.Message });
         }
         catch (ChefsApiException ex)

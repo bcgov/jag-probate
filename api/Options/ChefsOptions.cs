@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 
 namespace Probate.Api.Options;
@@ -15,7 +16,7 @@ public class ChefsOptions
     /// The GUID is never exposed to the frontend; callers use the logical key only.
     /// Example env var: Chefs__Forms__probate=&lt;guid&gt;
     /// </summary>
-    public Dictionary<string, string> Forms { get; set; } = new(System.StringComparer.OrdinalIgnoreCase);
+    public Dictionary<string, string> Forms { get; set; } = new(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>
     /// API access key for the form. Required for CHEFS API calls (per-form).
