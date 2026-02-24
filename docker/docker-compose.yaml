@@ -32,8 +32,9 @@ services:
       - Keycloak__Secret=${OIDC_RP_CLIENT_SECRET}
       - Keycloak__KcIdpHint=${OIDC_RP_KC_IDP_HINT}
       - Keycloak__RefreshThreshold=${OIDC_RP_REFRESH_THRESHOLD:-00:05:00}
-      - Chefs__FormId=${CHEFS_FORM_ID}
       - TokenRefreshThreshold=${TOKEN_REFRESH_THRESHOLD}
+      - Chefs__Forms__legal=${CHEFS_FORM_ID_LEGAL}
+      - Chefs__Forms__nonlegal=${CHEFS_FORM_ID_NONLEGAL}
       - Chefs__ApiKey=${CHEFS_API_KEY}
       - Chefs__BaseUrl=${CHEFS_BASE_URL}
     ports:
