@@ -23,25 +23,35 @@ namespace Probate.Api.Helpers
                 );
             }
 
+            // forwardedHost may contain a port (e.g. "localhost:8080").
+            // UriBuilder.Host expects a bare hostname, so split if needed.
+            var hostOnly = forwardedHost;
+            if (
+                string.IsNullOrEmpty(forwardedPort)
+                && forwardedHost != null
+                && forwardedHost.Contains(":")
+            )
+            {
+                var parts = forwardedHost.Split(':', 2);
+                hostOnly = parts[0];
+                forwardedPort = parts[1];
+            }
+
             var uriBuilder = new UriBuilder
             {
                 Scheme = scheme,
-                Host = forwardedHost,
+                Host = hostOnly,
                 Path = sanitizedPath,
                 Query = query,
             };
 
-            var portComponent =
-                string.IsNullOrEmpty(forwardedPort)
-                || forwardedPort == "80"
-                || forwardedPort == "443"
-                    ? ""
-                    : $":{forwardedPort}";
-
-            if (!string.IsNullOrEmpty(portComponent))
+            if (
+                !string.IsNullOrEmpty(forwardedPort)
+                && forwardedPort != "80"
+                && forwardedPort != "443"
+                && int.TryParse(forwardedPort, out var port)
+            )
             {
-                int port;
-                int.TryParse(forwardedPort, out port);
                 uriBuilder.Port = port;
             }
 
