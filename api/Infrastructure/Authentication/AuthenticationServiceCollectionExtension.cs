@@ -142,6 +142,14 @@ namespace Probate.Api.Infrastructure.Authentication
                     options.SaveTokens = true;
                     options.CallbackPath = "/api/auth/signin-oidc";
 
+                    // Set explicit cookie paths so nginx's proxy_cookie_path directive
+                    // (which rewrites /api/auth → /probate/api/auth) does not alter
+                    // the OIDC correlation/nonce cookies. The callback POST from
+                    // Keycloak targets /api/auth/signin-oidc (no /probate/ prefix),
+                    // so cookies must be on a path that matches that URL.
+                    options.CorrelationCookie.Path = "/";
+                    options.NonceCookie.Path = "/";
+
                     // Disable Pushed Authorization Requests (PAR) so that kc_idp_hint
                     // is sent as a query parameter on the authorization URL rather than
                     options.PushedAuthorizationBehavior = PushedAuthorizationBehavior.Disable;
