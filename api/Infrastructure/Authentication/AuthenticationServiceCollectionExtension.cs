@@ -142,6 +142,10 @@ namespace Probate.Api.Infrastructure.Authentication
                     options.SaveTokens = true;
                     options.CallbackPath = "/api/auth/signin-oidc";
 
+                    // Set explicit cookie paths so nginx's proxy_cookie_path directive
+                    options.CorrelationCookie.Path = "/";
+                    options.NonceCookie.Path = "/";
+
                     // Disable Pushed Authorization Requests (PAR) so that kc_idp_hint
                     // is sent as a query parameter on the authorization URL rather than
                     options.PushedAuthorizationBehavior = PushedAuthorizationBehavior.Disable;
@@ -176,17 +180,21 @@ namespace Probate.Api.Infrastructure.Authentication
                                 request.Headers["X-Forwarded-Proto"].FirstOrDefault()
                                 ?? request.Scheme;
 
+                            var baseHref = XForwardedForHelper.ResolveBaseHref(request);
+                            var callbackPathWithBase =
+                                $"{baseHref.TrimEnd('/')}{context.Options.CallbackPath}";
+
                             string redirectUri;
                             if (!string.IsNullOrEmpty(forwardedHost))
                             {
                                 redirectUri =
-                                    $"{forwardedProto}://{forwardedHost}{context.Options.CallbackPath}";
+                                    $"{forwardedProto}://{forwardedHost}{callbackPathWithBase}";
                             }
                             else
                             {
                                 // Fallback to request host (preserves port for local dev)
                                 redirectUri =
-                                    $"{request.Scheme}://{request.Host}{context.Options.CallbackPath}";
+                                    $"{request.Scheme}://{request.Host}{callbackPathWithBase}";
                             }
 
                             context.ProtocolMessage.RedirectUri = redirectUri;

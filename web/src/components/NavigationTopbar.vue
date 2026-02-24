@@ -57,7 +57,7 @@
    */
   const handleLogout = () => {
     authStore.clearUserInfo();
-    window.location.href = '/api/auth/logout';
+    window.location.href = `${import.meta.env.BASE_URL}api/auth/logout`;
   };
 
   // Environment from runtime config

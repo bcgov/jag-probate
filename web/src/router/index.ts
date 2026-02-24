@@ -52,8 +52,17 @@ async function authGuard(to: any, _from: any, next: any) {
  */
 function redirectToLogin(destinationPath: string) {
   const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+  const apiBase = `${base}/api`;
+  console.log(
+    'base',
+    base,
+    'apiBase',
+    apiBase,
+    'destinationPath',
+    destinationPath
+  );
   window.location.replace(
-    `/api/auth/login?returnUrl=${base}${destinationPath}`
+    `${apiBase}/auth/login?returnUrl=${base}${destinationPath}`
   );
 }
 

@@ -51,27 +51,24 @@ namespace Probate.Api.Controllers
             var logoutUrl =
                 $"{_configuration.GetNonEmptyValue("Keycloak:Authority")}/protocol/openid-connect/logout";
 
+            // Use the host from forwarded headers (or fall back to Request.Host
+            // which already reflects forwarded headers thanks to UseForwardedHeaders).
+            // X-Forwarded-Port is intentionally NOT read because on OpenShift the
+            // nginx proxy leaks the internal container port (8080).
             var forwardedHost = HttpContext.Request.Headers.TryGetValue(
                 "X-Forwarded-Host",
                 out StringValues forwardedHostValue
             )
                 ? forwardedHostValue.ToString()
                 : Request.Host.ToString();
-            var forwardedPort = HttpContext.Request.Headers["X-Forwarded-Port"];
 
-            //We are always sending X-Forwarded-Port, only time we aren't is when we are hitting the API directly.
-            var baseUri = HttpContext.Request.Headers.TryGetValue(
-                "X-Base-Href",
-                out StringValues baseHrefValue
-            )
-                ? baseHrefValue.ToString()
-                : "/";
+            var baseUri = XForwardedForHelper.ResolveBaseHref(HttpContext.Request);
 
             var forwardedProto =
                 HttpContext.Request.Headers["X-Forwarded-Proto"].FirstOrDefault() ?? Request.Scheme;
 
             var applicationUrl =
-                $"{XForwardedForHelper.BuildUrlString(forwardedHost, forwardedPort, baseUri, scheme: forwardedProto)}";
+                $"{XForwardedForHelper.BuildUrlString(forwardedHost, "", baseUri, scheme: forwardedProto)}";
             var clientId = _configuration.GetNonEmptyValue("Keycloak:Client");
             var encodedRedirectUri = Uri.EscapeDataString(applicationUrl);
             var keycloakLogoutUrl =

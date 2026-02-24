@@ -1,6 +1,7 @@
 using System;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -9,6 +10,7 @@ using Microsoft.OpenApi.Models;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using Newtonsoft.Json.Serialization;
+using Probate.Api.Helpers;
 using Probate.Api.Infrastructure.Authentication;
 using Probate.Api.Infrastructure.Options;
 using Probate.Api.Services;
@@ -32,6 +34,20 @@ namespace Probate.Api
         {
             services.AddExceptionHandler<GlobalExceptionHandler>();
             services.AddProblemDetails();
+
+            // Configure forwarded headers so the app sees the external scheme/host
+            // from the nginx reverse proxy. Required for OIDC token exchange to
+            // construct the correct redirect_uri.
+            services.Configure<ForwardedHeadersOptions>(options =>
+            {
+                options.ForwardedHeaders =
+                    ForwardedHeaders.XForwardedFor
+                    | ForwardedHeaders.XForwardedProto
+                    | ForwardedHeaders.XForwardedHost;
+                // Trust all proxies (nginx runs in the same pod / overlay network)
+                options.KnownNetworks.Clear();
+                options.KnownProxies.Clear();
+            });
 
             services.RegisterOptions(Configuration);
 
@@ -113,6 +129,18 @@ namespace Probate.Api
 
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
         {
+            // Must be first so Request.Scheme, Request.Host, etc. reflect the
+            // external URL for all downstream middleware (OIDC, cookies, etc.).
+            app.UseForwardedHeaders();
+
+            app.Use(
+                (context, next) =>
+                {
+                    XForwardedForHelper.ApplyPathBase(context.Request);
+                    return next();
+                }
+            );
+
             if (env.IsDevelopment())
             {
                 app.UseDeveloperExceptionPage();
