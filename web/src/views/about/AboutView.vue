@@ -56,7 +56,7 @@
 
   const checkHealth = async () => {
     try {
-      const response = await axios.get('/api/health');
+      const response = await axios.get(`${import.meta.env.BASE_URL}api/health`);
       healthStatus.value = response.data;
     } catch (err) {
       console.error('Health check failed:', err);

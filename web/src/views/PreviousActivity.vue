@@ -219,7 +219,7 @@
   const fetchCases = async () => {
     try {
       loading.value = true;
-      const response = await axios.get('/api/cases');
+      const response = await axios.get(`${import.meta.env.BASE_URL}api/cases`);
       cases.value = response.data;
     } catch (err: any) {
       error.value = err.response?.data?.message || 'Failed to load cases';
@@ -239,7 +239,7 @@
   const removeCase = async (id: number) => {
     if (confirm('Are you sure you want to remove this application?')) {
       try {
-        await axios.delete(`/api/cases/${id}`);
+        await axios.delete(`${import.meta.env.BASE_URL}api/cases/${id}`);
         await fetchCases();
       } catch (err: any) {
         alert(err.response?.data?.message || 'Failed to remove case');
