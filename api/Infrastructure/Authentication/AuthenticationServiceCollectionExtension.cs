@@ -167,7 +167,14 @@ namespace Probate.Api.Infrastructure.Authentication
                             var forwardedHost = request
                                 .Headers["X-Forwarded-Host"]
                                 .FirstOrDefault();
+                            var forwardedPort = request
+                                .Headers["X-Forwarded-Port"]
+                                .FirstOrDefault();
+                            var forwardedProto =
+                                request.Headers["X-Forwarded-Proto"].FirstOrDefault()
+                                ?? request.Scheme;
 
+                            string redirectUri;
                             if (!string.IsNullOrEmpty(forwardedHost))
                             {
                                 // Include port when it's non-standard (not 80/443).
@@ -184,10 +191,12 @@ namespace Probate.Api.Infrastructure.Authentication
                             }
                             else
                             {
-                                // Fallback to request host
+                                // Fallback to request host (preserves port for local dev)
                                 redirectUri =
                                     $"{request.Scheme}://{request.Host}{context.Options.CallbackPath}";
                             }
+
+                            context.ProtocolMessage.RedirectUri = redirectUri;
 
                             // Check if kc_idp_hint was set in authentication properties (from login endpoint)
                             if (
