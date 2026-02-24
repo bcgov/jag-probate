@@ -133,11 +133,13 @@ namespace Probate.Api
             // external URL for all downstream middleware (OIDC, cookies, etc.).
             app.UseForwardedHeaders();
 
-            app.Use((context, next) =>
-            {
-                XForwardedForHelper.ApplyPathBase(context.Request);
-                return next();
-            });
+            app.Use(
+                (context, next) =>
+                {
+                    XForwardedForHelper.ApplyPathBase(context.Request);
+                    return next();
+                }
+            );
 
             if (env.IsDevelopment())
             {
@@ -163,6 +165,5 @@ namespace Probate.Api
                 endpoints.MapControllers();
             });
         }
-
     }
 }

@@ -129,6 +129,5 @@ namespace Probate.Api.Controllers
 
             return "/";
         }
-
     }
 }

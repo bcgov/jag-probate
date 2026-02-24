@@ -181,7 +181,8 @@ namespace Probate.Api.Infrastructure.Authentication
                                 ?? request.Scheme;
 
                             var baseHref = XForwardedForHelper.ResolveBaseHref(request);
-                            var callbackPathWithBase = $"{baseHref.TrimEnd('/')}{context.Options.CallbackPath}";
+                            var callbackPathWithBase =
+                                $"{baseHref.TrimEnd('/')}{context.Options.CallbackPath}";
 
                             string redirectUri;
                             if (!string.IsNullOrEmpty(forwardedHost))
