@@ -7,16 +7,16 @@ namespace Probate.Api.Services;
 
 /// <summary>
 /// Provides current and previous CHEFS applications (submissions) for a form.
-/// Form ID is passed in by the caller (e.g. from the frontend) and must match configured Chefs:FormId.
+/// Callers pass a logical form key; the implementation resolves it to the actual CHEFS form GUID via config.
 /// </summary>
 public interface IChefsApplicationService
 {
     /// <summary>
-    /// Gets all applications (submissions) for the given form ID.
-    /// Throws <see cref="InvalidOperationException"/> if formId is not allowed or Chefs:FormId is not configured.
+    /// Gets all applications (submissions) for the form identified by <paramref name="formKey"/>.
+    /// Throws <see cref="InvalidOperationException"/> if <paramref name="formKey"/> is not present in Chefs:Forms config.
     /// </summary>
     Task<IReadOnlyList<ApplicationDto>> GetApplicationsAsync(
-        string formId,
+        string formKey,
         CancellationToken cancellationToken = default
     );
 }

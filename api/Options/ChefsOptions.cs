@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+
 namespace Probate.Api.Options;
 
 /// <summary>
@@ -9,9 +11,11 @@ public class ChefsOptions
     public const string SectionName = "Chefs";
 
     /// <summary>
-    /// CHEFS form UUID. Only this form's submissions are allowed (validated when frontend passes formId).
+    /// Maps logical form keys (sent by the frontend) to actual CHEFS form GUIDs.
+    /// The GUID is never exposed to the frontend; callers use the logical key only.
+    /// Example env var: Chefs__Forms__probate=&lt;guid&gt;
     /// </summary>
-    public string FormId { get; set; } = string.Empty;
+    public Dictionary<string, string> Forms { get; set; } = new(System.StringComparer.OrdinalIgnoreCase);
 
     /// <summary>
     /// API access key for the form. Required for CHEFS API calls (per-form).

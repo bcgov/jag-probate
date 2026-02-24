@@ -16,7 +16,8 @@ using Refit;
 namespace Probate.Api.Services;
 
 /// <summary>
-/// Retrieves CHEFS applications (submissions) for the configured form. Validates formId against Chefs:FormId.
+/// Retrieves CHEFS applications (submissions) for a form identified by a logical key.
+/// Resolves the logical key to the actual CHEFS form GUID via Chefs:Forms config; the GUID is never exposed to callers.
 /// </summary>
 public class ChefsApplicationService : IChefsApplicationService
 {
@@ -37,20 +38,23 @@ public class ChefsApplicationService : IChefsApplicationService
 
     /// <inheritdoc />
     public async Task<IReadOnlyList<ApplicationDto>> GetApplicationsAsync(
-        string formId,
+        string formKey,
         CancellationToken cancellationToken = default
     )
     {
-        _logger.LogInformation("Fetching CHEFS applications for form {FormId}", formId);
+        if (!_options.Forms.TryGetValue(formKey, out var formGuid) || string.IsNullOrWhiteSpace(formGuid))
+            throw new InvalidOperationException($"Form key '{formKey}' is not configured.");
+
+        _logger.LogInformation("Fetching CHEFS applications for form key {FormKey}", formKey);
 
         ChefsSubmissionsResponse response;
         try
         {
-            response = await _chefsApi.GetSubmissionsAsync(formId, cancellationToken);
+            response = await _chefsApi.GetSubmissionsAsync(formGuid, cancellationToken);
         }
         catch (ApiException ex)
         {
-            _logger.LogWarning(ex, "CHEFS API error for form {FormId}: {StatusCode} {Content}", formId, ex.StatusCode, ex.Content);
+            _logger.LogWarning(ex, "CHEFS API error for form key {FormKey}: {StatusCode} {Content}", formKey, ex.StatusCode, ex.Content);
             var statusCode = (HttpStatusCode)ex.StatusCode;
             var message = !string.IsNullOrWhiteSpace(ex.Content)
                 ? $"CHEFS API error: {ex.Content}"
@@ -59,7 +63,7 @@ public class ChefsApplicationService : IChefsApplicationService
         }
         catch (HttpRequestException ex)
         {
-            _logger.LogWarning(ex, "CHEFS API request failed for form {FormId}", formId);
+            _logger.LogWarning(ex, "CHEFS API request failed for form key {FormKey}", formKey);
             throw new ChefsApiException("Unable to reach CHEFS API. Please try again later.", HttpStatusCode.BadGateway, ex);
         }
         catch (TaskCanceledException ex) when (cancellationToken.IsCancellationRequested)
@@ -78,7 +82,7 @@ public class ChefsApplicationService : IChefsApplicationService
             })
             .ToList();
 
-        _logger.LogInformation("Retrieved {Count} applications for form {FormId}", applications.Count, formId);
+        _logger.LogInformation("Retrieved {Count} applications for form key {FormKey}", applications.Count, formKey);
         return applications;
     }
 }

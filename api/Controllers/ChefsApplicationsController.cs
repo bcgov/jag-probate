@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
@@ -14,13 +15,19 @@ namespace Probate.Api.Controllers;
 
 /// <summary>
 /// Exposes CHEFS applications (current and previous submissions) for the dashboard.
-/// Form ID is passed by the frontend and must match the configured Chefs:FormId.
+/// The frontend passes a logical form key; the backend resolves it to the actual CHEFS form GUID (never exposed to callers).
 /// </summary>
 [Route("api/chefs/[controller]")]
 [ApiController]
 [Authorize]
 public class ApplicationsController : ControllerBase
 {
+    /// <summary>
+    /// Allowlist for form key values: alphanumeric, hyphens, underscores only.
+    /// Prevents log injection from unsanitised user input reaching log sinks or error messages.
+    /// </summary>
+    private static readonly Regex FormKeyPattern = new(@"^[a-zA-Z0-9_-]+$", RegexOptions.Compiled);
+
     private readonly IChefsApplicationService _chefsApplicationService;
     private readonly ILogger<ApplicationsController> _logger;
 
@@ -36,28 +43,29 @@ public class ApplicationsController : ControllerBase
     /// <summary>
     /// Gets all applications (submissions) for the given CHEFS form.
     /// </summary>
-    /// <param name="formId">CHEFS form UUID (must match Chefs:FormId in config).</param>
+    /// <param name="formKey">Logical form key (e.g. "probate"). Resolved to the actual CHEFS form GUID server-side via Chefs:Forms config.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <response code="200">List of applications.</response>
-    /// <response code="400">FormId missing, not allowed, or Chefs:FormId not configured.</response>
+    /// <response code="400">formKey missing, invalid characters, or not a recognised form key.</response>
     /// <response code="502">CHEFS API unreachable or returned an error.</response>
     [HttpGet]
     [ProducesResponseType(typeof(IReadOnlyList<ApplicationDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status502BadGateway)]
     public async Task<ActionResult<IReadOnlyList<ApplicationDto>>> GetApplications(
-        [FromQuery] string formId,
+        [FromQuery] string formKey,
         CancellationToken cancellationToken = default
     )
     {
-        if (string.IsNullOrWhiteSpace(formId))
-        {
-            return BadRequest(new { message = "formId is required." });
-        }
+        if (string.IsNullOrWhiteSpace(formKey))
+            return BadRequest(new { message = "formKey is required." });
+
+        if (!FormKeyPattern.IsMatch(formKey))
+            return BadRequest(new { message = "formKey contains invalid characters." });
 
         try
         {
-            var applications = await _chefsApplicationService.GetApplicationsAsync(formId, cancellationToken);
+            var applications = await _chefsApplicationService.GetApplicationsAsync(formKey, cancellationToken);
             return Ok(applications);
         }
         catch (InvalidOperationException ex)
