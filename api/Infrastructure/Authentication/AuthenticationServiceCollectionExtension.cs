@@ -13,6 +13,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Protocols.OpenIdConnect;
+using Probate.Api.Helpers;
 using Probate.Api.Infrastructure.Options;
 
 namespace Probate.Api.Infrastructure.Authentication
@@ -161,38 +162,30 @@ namespace Probate.Api.Infrastructure.Authentication
                         },
                         OnRedirectToIdentityProvider = context =>
                         {
-                            // Set the redirect URI explicitly using forwarded headers if available
                             var request = context.HttpContext.Request;
 
-                            // Check for forwarded headers from proxy
                             var forwardedHost = request
                                 .Headers["X-Forwarded-Host"]
                                 .FirstOrDefault();
-                            var forwardedPort = request
-                                .Headers["X-Forwarded-Port"]
-                                .FirstOrDefault();
-                            var forwardedProto =
-                                request.Headers["X-Forwarded-Proto"].FirstOrDefault()
-                                ?? request.Scheme;
 
-                            string redirectUri;
                             if (!string.IsNullOrEmpty(forwardedHost))
                             {
-                                // Use forwarded headers (from proxy like Vite dev server or OpenShift)
-                                var port = !string.IsNullOrEmpty(forwardedPort)
-                                    ? $":{forwardedPort}"
-                                    : "";
-                                redirectUri =
-                                    $"{forwardedProto}://{forwardedHost}{port}{context.Options.CallbackPath}";
-                            }
-                            else
-                            {
-                                // Fallback to request host
-                                redirectUri =
-                                    $"{request.Scheme}://{request.Host}{context.Options.CallbackPath}";
-                            }
+                                var forwardedPort = request
+                                    .Headers["X-Forwarded-Port"]
+                                    .FirstOrDefault();
+                                var forwardedProto =
+                                    request.Headers["X-Forwarded-Proto"].FirstOrDefault()
+                                    ?? request.Scheme;
 
-                            context.ProtocolMessage.RedirectUri = redirectUri;
+                                // Use XForwardedForHelper which correctly strips standard ports (80, 443)
+                                context.ProtocolMessage.RedirectUri =
+                                    XForwardedForHelper.BuildUrlString(
+                                        forwardedHost,
+                                        forwardedPort,
+                                        context.Options.CallbackPath,
+                                        scheme: forwardedProto
+                                    );
+                            }
 
                             // Check if kc_idp_hint was set in authentication properties (from login endpoint)
                             if (
