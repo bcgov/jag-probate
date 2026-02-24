@@ -10,6 +10,7 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using Newtonsoft.Json.Serialization;
 using Probate.Api.Infrastructure.Authentication;
+using Probate.Api.Infrastructure.Options;
 using Probate.Api.Services;
 using Probate.Db.Models;
 
@@ -32,17 +33,21 @@ namespace Probate.Api
             services.AddExceptionHandler<GlobalExceptionHandler>();
             services.AddProblemDetails();
 
+            services.RegisterOptions(Configuration);
+
             services.AddScoped<MigrationService>();
 
             services.AddHttpClient();
 
             services.AddDbContext<ProbateDbContext>(options =>
             {
-                var connectionString = Configuration.GetValue<string>("DatabaseConnectionString");
+                var databaseOptions = Configuration
+                    .GetSection(DatabaseOptions.SectionName)
+                    .Get<DatabaseOptions>();
 
                 options
                     .UseNpgsql(
-                        connectionString,
+                        databaseOptions.ConnectionString,
                         npg =>
                         {
                             npg.MigrationsAssembly("db");
@@ -55,8 +60,7 @@ namespace Probate.Api
                     options.EnableSensitiveDataLogging();
             });
 
-            string corsDomain =
-                Configuration.GetValue<string>("CORS_DOMAIN") ?? "http://localhost:8080";
+            var corsOptions = Configuration.GetSection(CorsOptions.SectionName).Get<CorsOptions>();
 
             services.AddCors(options =>
             {
@@ -64,7 +68,7 @@ namespace Probate.Api
                     "ProbateCorsPolicy",
                     builder =>
                         builder
-                            .WithOrigins(corsDomain.Split(','))
+                            .WithOrigins(corsOptions.AllowedOrigins.Split(','))
                             .AllowAnyMethod()
                             .AllowAnyHeader()
                             .AllowCredentials()

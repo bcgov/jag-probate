@@ -34,6 +34,8 @@ export default defineConfig({
           Connection: 'keep-alive',
           'X-Forwarded-Host': 'localhost',
           'X-Forwarded-Port': '8080',
+          'X-Forwarded-Proto': 'http',
+          'X-Base-Href': process.env.WEB_BASE_HREF || '/probate/',
         },
       },
       '^/api': {
@@ -43,16 +45,8 @@ export default defineConfig({
           Connection: 'keep-alive',
           'X-Forwarded-Host': 'localhost',
           'X-Forwarded-Port': '8080',
-        },
-      },
-      '^/probate/swagger': {
-        target: 'http://api:5000',
-        changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/probate/, ''),
-        headers: {
-          Connection: 'keep-alive',
-          'X-Forwarded-Host': 'localhost',
-          'X-Forwarded-Port': '8080',
+          'X-Forwarded-Proto': 'http',
+          'X-Base-Href': process.env.WEB_BASE_HREF || '/probate/',
         },
       },
       '^/swagger': {
@@ -62,6 +56,7 @@ export default defineConfig({
           Connection: 'keep-alive',
           'X-Forwarded-Host': 'localhost',
           'X-Forwarded-Port': '8080',
+          'X-Forwarded-Proto': 'http',
         },
       },
     },

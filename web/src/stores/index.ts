@@ -9,4 +9,5 @@ export function registerPinia(app: App) {
 
 export default pinia;
 
+export { useAuthStore } from './AuthStore';
 export { useLayoutStore } from './LayoutStore';
