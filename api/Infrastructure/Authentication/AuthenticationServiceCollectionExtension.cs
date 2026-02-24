@@ -163,12 +163,14 @@ namespace Probate.Api.Infrastructure.Authentication
                         OnRedirectToIdentityProvider = context =>
                         {
                             // Set the redirect URI explicitly using forwarded headers if available.
+                            // X-Forwarded-Host should contain host:port when a non-standard
+                            // port is needed (e.g. localhost:8080 for local dev).
+                            // X-Forwarded-Port is NOT used here because on OpenShift the
+                            // nginx proxy leaks the internal container port (8080) which
+                            // is wrong for the external URL (standard 443).
                             var request = context.HttpContext.Request;
                             var forwardedHost = request
                                 .Headers["X-Forwarded-Host"]
-                                .FirstOrDefault();
-                            var forwardedPort = request
-                                .Headers["X-Forwarded-Port"]
                                 .FirstOrDefault();
                             var forwardedProto =
                                 request.Headers["X-Forwarded-Proto"].FirstOrDefault()
@@ -177,17 +179,8 @@ namespace Probate.Api.Infrastructure.Authentication
                             string redirectUri;
                             if (!string.IsNullOrEmpty(forwardedHost))
                             {
-                                // Include port when it's non-standard (not 80/443).
-                                // The Vite dev proxy sends X-Forwarded-Port separately
-                                // from X-Forwarded-Host, so we must combine them.
-                                var portSuffix =
-                                    !string.IsNullOrEmpty(forwardedPort)
-                                    && forwardedPort != "80"
-                                    && forwardedPort != "443"
-                                        ? $":{forwardedPort}"
-                                        : "";
                                 redirectUri =
-                                    $"{forwardedProto}://{forwardedHost}{portSuffix}{context.Options.CallbackPath}";
+                                    $"{forwardedProto}://{forwardedHost}{context.Options.CallbackPath}";
                             }
                             else
                             {

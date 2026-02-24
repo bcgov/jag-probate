@@ -32,8 +32,7 @@ export default defineConfig({
         rewrite: (path) => path.replace(/^\/probate/, ''),
         headers: {
           Connection: 'keep-alive',
-          'X-Forwarded-Host': 'localhost',
-          'X-Forwarded-Port': '8080',
+          'X-Forwarded-Host': 'localhost:8080',
           'X-Forwarded-Proto': 'http',
           'X-Base-Href': process.env.WEB_BASE_HREF || '/probate/',
         },
@@ -43,8 +42,7 @@ export default defineConfig({
         changeOrigin: true,
         headers: {
           Connection: 'keep-alive',
-          'X-Forwarded-Host': 'localhost',
-          'X-Forwarded-Port': '8080',
+          'X-Forwarded-Host': 'localhost:8080',
           'X-Forwarded-Proto': 'http',
           'X-Base-Href': process.env.WEB_BASE_HREF || '/probate/',
         },
@@ -54,8 +52,7 @@ export default defineConfig({
         changeOrigin: true,
         headers: {
           Connection: 'keep-alive',
-          'X-Forwarded-Host': 'localhost',
-          'X-Forwarded-Port': '8080',
+          'X-Forwarded-Host': 'localhost:8080',
           'X-Forwarded-Proto': 'http',
         },
       },
