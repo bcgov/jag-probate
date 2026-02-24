@@ -162,30 +162,41 @@ namespace Probate.Api.Infrastructure.Authentication
                         },
                         OnRedirectToIdentityProvider = context =>
                         {
+                            // Set the redirect URI explicitly using forwarded headers if available.
                             var request = context.HttpContext.Request;
-
                             var forwardedHost = request
                                 .Headers["X-Forwarded-Host"]
                                 .FirstOrDefault();
+                            var forwardedPort = request
+                                .Headers["X-Forwarded-Port"]
+                                .FirstOrDefault();
+                            var forwardedProto =
+                                request.Headers["X-Forwarded-Proto"].FirstOrDefault()
+                                ?? request.Scheme;
 
+                            string redirectUri;
                             if (!string.IsNullOrEmpty(forwardedHost))
                             {
-                                var forwardedPort = request
-                                    .Headers["X-Forwarded-Port"]
-                                    .FirstOrDefault();
-                                var forwardedProto =
-                                    request.Headers["X-Forwarded-Proto"].FirstOrDefault()
-                                    ?? request.Scheme;
-
-                                // Use XForwardedForHelper which correctly strips standard ports (80, 443)
-                                context.ProtocolMessage.RedirectUri =
-                                    XForwardedForHelper.BuildUrlString(
-                                        forwardedHost,
-                                        forwardedPort,
-                                        context.Options.CallbackPath,
-                                        scheme: forwardedProto
-                                    );
+                                // Include port when it's non-standard (not 80/443).
+                                // The Vite dev proxy sends X-Forwarded-Port separately
+                                // from X-Forwarded-Host, so we must combine them.
+                                var portSuffix =
+                                    !string.IsNullOrEmpty(forwardedPort)
+                                    && forwardedPort != "80"
+                                    && forwardedPort != "443"
+                                        ? $":{forwardedPort}"
+                                        : "";
+                                redirectUri =
+                                    $"{forwardedProto}://{forwardedHost}{portSuffix}{context.Options.CallbackPath}";
                             }
+                            else
+                            {
+                                // Fallback to request host (preserves port for local dev)
+                                redirectUri =
+                                    $"{request.Scheme}://{request.Host}{context.Options.CallbackPath}";
+                            }
+
+                            context.ProtocolMessage.RedirectUri = redirectUri;
 
                             // Check if kc_idp_hint was set in authentication properties (from login endpoint)
                             if (
