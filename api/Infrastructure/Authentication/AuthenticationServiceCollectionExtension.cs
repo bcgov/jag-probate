@@ -13,6 +13,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Protocols.OpenIdConnect;
+using Probate.Api.Helpers;
 using Probate.Api.Infrastructure.Options;
 
 namespace Probate.Api.Infrastructure.Authentication
@@ -166,14 +167,7 @@ namespace Probate.Api.Infrastructure.Authentication
                             var forwardedHost = request
                                 .Headers["X-Forwarded-Host"]
                                 .FirstOrDefault();
-                            var forwardedPort = request
-                                .Headers["X-Forwarded-Port"]
-                                .FirstOrDefault();
-                            var forwardedProto =
-                                request.Headers["X-Forwarded-Proto"].FirstOrDefault()
-                                ?? request.Scheme;
 
-                            string redirectUri;
                             if (!string.IsNullOrEmpty(forwardedHost))
                             {
                                 // Include port when it's non-standard (not 80/443).
@@ -194,8 +188,6 @@ namespace Probate.Api.Infrastructure.Authentication
                                 redirectUri =
                                     $"{request.Scheme}://{request.Host}{context.Options.CallbackPath}";
                             }
-
-                            context.ProtocolMessage.RedirectUri = redirectUri;
 
                             // Check if kc_idp_hint was set in authentication properties (from login endpoint)
                             if (
