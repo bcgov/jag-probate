@@ -10,6 +10,7 @@ using Microsoft.OpenApi.Models;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using Newtonsoft.Json.Serialization;
+using Probate.Api.Helpers;
 using Probate.Api.Infrastructure.Authentication;
 using Probate.Api.Infrastructure.Options;
 using Probate.Api.Services;
@@ -132,6 +133,12 @@ namespace Probate.Api
             // external URL for all downstream middleware (OIDC, cookies, etc.).
             app.UseForwardedHeaders();
 
+            app.Use((context, next) =>
+            {
+                XForwardedForHelper.ApplyPathBase(context.Request);
+                return next();
+            });
+
             if (env.IsDevelopment())
             {
                 app.UseDeveloperExceptionPage();
@@ -156,5 +163,6 @@ namespace Probate.Api
                 endpoints.MapControllers();
             });
         }
+
     }
 }

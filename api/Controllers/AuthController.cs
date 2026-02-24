@@ -62,12 +62,7 @@ namespace Probate.Api.Controllers
                 ? forwardedHostValue.ToString()
                 : Request.Host.ToString();
 
-            var baseUri = HttpContext.Request.Headers.TryGetValue(
-                "X-Base-Href",
-                out StringValues baseHrefValue
-            )
-                ? baseHrefValue.ToString()
-                : "/";
+            var baseUri = XForwardedForHelper.ResolveBaseHref(HttpContext.Request);
 
             var forwardedProto =
                 HttpContext.Request.Headers["X-Forwarded-Proto"].FirstOrDefault() ?? Request.Scheme;
@@ -134,5 +129,6 @@ namespace Probate.Api.Controllers
 
             return "/";
         }
+
     }
 }
