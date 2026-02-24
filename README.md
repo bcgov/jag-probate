@@ -80,26 +80,11 @@ The project uses PostgreSQL as the database. Entity Framework Core handles migra
 
 ### CHEFS (Common Hosted Form Service)
 
-The API integrates with [CHEFS](https://developer.gov.bc.ca/docs/default/component/chefs-techdocs/) to retrieve form submissions (applications) for the dashboard. Authentication uses **api-key** only (no auth-token).
-
-**Form URL (dev):**  
-https://chefs-dev.apps.silver.devops.gov.bc.ca/app/form/submit?f=449a6ceb-9cf8-45cc-a697-e5bd46cfb522  
-
-**Endpoint:**
-- `GET /api/chefs/Applications?formId={formId}` – Returns current and previous applications (submissions) for the given CHEFS form. Requires authentication. `formId` must match the configured `Chefs:FormId`.
-
-**Required configuration** (see Environment Variables): `Chefs:BaseUrl`, `Chefs:ApiKey`, and `Chefs:FormId` (for validation). The frontend passes `formId` in the query; the backend validates it against the configured form.
-
-**Error handling:** CHEFS API errors (e.g. 4xx/5xx or unreachable) are returned as Problem Details (e.g. 502 Bad Gateway with a descriptive message).
+See [docs/chefs.md](./docs/chefs.md) for integration details, endpoint usage, and configuration.
 
 ## Environment Variables
 
 Copy `docker/.env.template` to `docker/.env` and customize as needed.
-
-**CHEFS** (required for the applications endpoint):
-- `CHEFS_BASE_URL` – CHEFS API base URL (e.g. `https://chefs-dev.apps.silver.devops.gov.bc.ca/app/api/v1`)
-- `CHEFS_API_KEY` – API key for the form (per-form; obtain from CHEFS form settings)
-- `CHEFS_FORM_ID` – Form UUID allowed for submissions (e.g. `449a6ceb-9cf8-45cc-a697-e5bd46cfb522`). The frontend must pass this same `formId` in the query.
 
 
 ## Troubleshooting

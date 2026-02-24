@@ -7,6 +7,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Probate.Api.Helpers;
 using Probate.Api.Helpers.Exceptions;
 using Probate.Api.Infrastructure.Chefs;
 using Probate.Api.Models;
@@ -45,7 +46,7 @@ public class ChefsApplicationService : IChefsApplicationService
         if (!_options.Forms.TryGetValue(formKey, out var formGuid) || string.IsNullOrWhiteSpace(formGuid))
             throw new InvalidOperationException($"Form key '{formKey}' is not configured.");
 
-        _logger.LogInformation("Fetching CHEFS applications for form key {FormKey}", formKey);
+        _logger.LogInformation("Fetching CHEFS applications for form key {FormKey}", LogSanitizer.Sanitize(formKey));
 
         ChefsSubmissionsResponse response;
         try
@@ -54,7 +55,7 @@ public class ChefsApplicationService : IChefsApplicationService
         }
         catch (ApiException ex)
         {
-            _logger.LogWarning(ex, "CHEFS API error for form key {FormKey}: {StatusCode} {Content}", formKey, ex.StatusCode, ex.Content);
+            _logger.LogWarning(ex, "CHEFS API error for form key {FormKey}: {StatusCode} {Content}", LogSanitizer.Sanitize(formKey), ex.StatusCode, ex.Content);
             var statusCode = (HttpStatusCode)ex.StatusCode;
             var message = !string.IsNullOrWhiteSpace(ex.Content)
                 ? $"CHEFS API error: {ex.Content}"
@@ -63,7 +64,7 @@ public class ChefsApplicationService : IChefsApplicationService
         }
         catch (HttpRequestException ex)
         {
-            _logger.LogWarning(ex, "CHEFS API request failed for form key {FormKey}", formKey);
+            _logger.LogWarning(ex, "CHEFS API request failed for form key {FormKey}", LogSanitizer.Sanitize(formKey));
             throw new ChefsApiException("Unable to reach CHEFS API. Please try again later.", HttpStatusCode.BadGateway, ex);
         }
         catch (TaskCanceledException ex) when (cancellationToken.IsCancellationRequested)
@@ -82,7 +83,7 @@ public class ChefsApplicationService : IChefsApplicationService
             })
             .ToList();
 
-        _logger.LogInformation("Retrieved {Count} applications for form key {FormKey}", applications.Count, formKey);
+        _logger.LogInformation("Retrieved {Count} applications for form key {FormKey}", applications.Count, LogSanitizer.Sanitize(formKey));
         return applications;
     }
 }
