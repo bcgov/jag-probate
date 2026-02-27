@@ -108,7 +108,10 @@ public class ChefsApplicationService : IChefsApplicationService
     }
 
     /// <inheritdoc />
-    public async Task<string> GetAuthTokenAsync(string formKey, CancellationToken cancellationToken = default)
+    public async Task<string> GetAuthTokenAsync(
+        string formKey,
+        CancellationToken cancellationToken = default
+    )
     {
         if (
             !_options.Forms.TryGetValue(formKey, out var formGuid)

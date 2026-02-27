@@ -44,7 +44,9 @@ public class ChefsApiKeyHandler : DelegatingHandler
                 request.Headers.Authorization = new AuthenticationHeaderValue("Basic", authValue);
 
                 // Log for debugging
-                System.Diagnostics.Debug.WriteLine($"CHEFS Auth Token Request: {request.RequestUri}");
+                System.Diagnostics.Debug.WriteLine(
+                    $"CHEFS Auth Token Request: {request.RequestUri}"
+                );
                 System.Diagnostics.Debug.WriteLine($"Using Basic Auth with formId: {formId}");
             }
         }

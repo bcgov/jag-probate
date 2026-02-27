@@ -58,7 +58,11 @@ public class ChefsControllerTests
         var badRequestResult = Assert.IsType<ActionResult<string>>(result);
         var badRequest = Assert.IsType<BadRequestObjectResult>(badRequestResult.Result);
         Assert.NotNull(badRequest.Value);
-        var message = badRequest.Value.GetType().GetProperty("message")?.GetValue(badRequest.Value)?.ToString();
+        var message = badRequest
+            .Value.GetType()
+            .GetProperty("message")
+            ?.GetValue(badRequest.Value)
+            ?.ToString();
         Assert.Equal("formKey is required.", message);
     }
 
@@ -103,7 +107,9 @@ public class ChefsControllerTests
         var formKey = "nonexistent";
         _mockService
             .Setup(x => x.GetAuthTokenAsync(formKey, It.IsAny<CancellationToken>()))
-            .ThrowsAsync(new InvalidOperationException("Form key 'nonexistent' is not configured."));
+            .ThrowsAsync(
+                new InvalidOperationException("Form key 'nonexistent' is not configured.")
+            );
 
         // Act
         var result = await _controller.GetAuthToken(formKey);
@@ -111,7 +117,11 @@ public class ChefsControllerTests
         // Assert
         var badRequestResult = Assert.IsType<ActionResult<string>>(result);
         var badRequest = Assert.IsType<BadRequestObjectResult>(badRequestResult.Result);
-        var message = badRequest.Value.GetType().GetProperty("message")?.GetValue(badRequest.Value)?.ToString();
+        var message = badRequest
+            .Value.GetType()
+            .GetProperty("message")
+            ?.GetValue(badRequest.Value)
+            ?.ToString();
         Assert.Contains("not configured", message);
     }
 

@@ -68,8 +68,10 @@ public class ChefsAuthTokenIntegrationTests : IDisposable
         var formKey = "legal";
 
         // Skip test if form key is not configured
-        if (!_chefsOptions.Forms.ContainsKey(formKey) ||
-            string.IsNullOrWhiteSpace(_chefsOptions.Forms[formKey]))
+        if (
+            !_chefsOptions.Forms.ContainsKey(formKey)
+            || string.IsNullOrWhiteSpace(_chefsOptions.Forms[formKey])
+        )
         {
             _output.WriteLine($"Skipping test: Form key '{formKey}' is not configured.");
             return;
@@ -91,7 +93,9 @@ public class ChefsAuthTokenIntegrationTests : IDisposable
         // Assert
         Assert.NotNull(token);
         Assert.NotEmpty(token);
-        _output.WriteLine($"Token received (first 50 chars): {token.Substring(0, Math.Min(50, token.Length))}...");
+        _output.WriteLine(
+            $"Token received (first 50 chars): {token.Substring(0, Math.Min(50, token.Length))}..."
+        );
 
         // Validate token format (JWT tokens have 3 parts separated by dots)
         var parts = token.Split('.');
@@ -108,8 +112,8 @@ public class ChefsAuthTokenIntegrationTests : IDisposable
         var formKey = "nonexistent";
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
-            () => _chefsApplicationService.GetAuthTokenAsync(formKey)
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            _chefsApplicationService.GetAuthTokenAsync(formKey)
         );
 
         Assert.Contains("not configured", exception.Message);
@@ -124,9 +128,11 @@ public class ChefsAuthTokenIntegrationTests : IDisposable
         var formKey = "legal";
 
         // Skip test if form key is not configured
-        if (!_chefsOptions.Forms.ContainsKey(formKey) ||
-            string.IsNullOrWhiteSpace(_chefsOptions.Forms[formKey]) ||
-            string.IsNullOrWhiteSpace(_chefsOptions.ApiKey))
+        if (
+            !_chefsOptions.Forms.ContainsKey(formKey)
+            || string.IsNullOrWhiteSpace(_chefsOptions.Forms[formKey])
+            || string.IsNullOrWhiteSpace(_chefsOptions.ApiKey)
+        )
         {
             _output.WriteLine("Skipping test: Configuration not available.");
             return;
@@ -143,8 +149,12 @@ public class ChefsAuthTokenIntegrationTests : IDisposable
         Assert.NotEmpty(token1);
         Assert.NotEmpty(token2);
 
-        _output.WriteLine($"Token 1 (first 30 chars): {token1.Substring(0, Math.Min(30, token1.Length))}...");
-        _output.WriteLine($"Token 2 (first 30 chars): {token2.Substring(0, Math.Min(30, token2.Length))}...");
+        _output.WriteLine(
+            $"Token 1 (first 30 chars): {token1.Substring(0, Math.Min(30, token1.Length))}..."
+        );
+        _output.WriteLine(
+            $"Token 2 (first 30 chars): {token2.Substring(0, Math.Min(30, token2.Length))}..."
+        );
 
         // Tokens might be the same or different depending on CHEFS implementation
         _output.WriteLine($"Tokens are {(token1 == token2 ? "identical" : "different")}");
@@ -159,9 +169,11 @@ public class ChefsAuthTokenIntegrationTests : IDisposable
         var formKey = "legal";
 
         // Skip test if form key is not configured
-        if (!_chefsOptions.Forms.ContainsKey(formKey) ||
-            string.IsNullOrWhiteSpace(_chefsOptions.Forms[formKey]) ||
-            string.IsNullOrWhiteSpace(_chefsOptions.ApiKey))
+        if (
+            !_chefsOptions.Forms.ContainsKey(formKey)
+            || string.IsNullOrWhiteSpace(_chefsOptions.Forms[formKey])
+            || string.IsNullOrWhiteSpace(_chefsOptions.ApiKey)
+        )
         {
             _output.WriteLine("Skipping test: Configuration not available.");
             return;
@@ -200,9 +212,11 @@ public class ChefsAuthTokenIntegrationTests : IDisposable
         var formKey = "legal";
 
         // Skip test if form key is not configured
-        if (!_chefsOptions.Forms.ContainsKey(formKey) ||
-            string.IsNullOrWhiteSpace(_chefsOptions.Forms[formKey]) ||
-            string.IsNullOrWhiteSpace(_chefsOptions.ApiKey))
+        if (
+            !_chefsOptions.Forms.ContainsKey(formKey)
+            || string.IsNullOrWhiteSpace(_chefsOptions.Forms[formKey])
+            || string.IsNullOrWhiteSpace(_chefsOptions.ApiKey)
+        )
         {
             _output.WriteLine("Skipping test: Configuration not available.");
             return;
@@ -212,8 +226,8 @@ public class ChefsAuthTokenIntegrationTests : IDisposable
         cts.Cancel(); // Cancel immediately
 
         // Act & Assert
-        await Assert.ThrowsAnyAsync<OperationCanceledException>(
-            () => _chefsApplicationService.GetAuthTokenAsync(formKey, cts.Token)
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
+            _chefsApplicationService.GetAuthTokenAsync(formKey, cts.Token)
         );
 
         _output.WriteLine("? Correctly handled cancellation");

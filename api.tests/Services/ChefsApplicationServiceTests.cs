@@ -32,8 +32,8 @@ public class ChefsApplicationServiceTests
             Forms = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
             {
                 { "legal", "12345678-1234-1234-1234-123456789012" },
-                { "probate", "87654321-4321-4321-4321-210987654321" }
-            }
+                { "probate", "87654321-4321-4321-4321-210987654321" },
+            },
         };
 
         var options = Microsoft.Extensions.Options.Options.Create(_chefsOptions);
@@ -49,11 +49,13 @@ public class ChefsApplicationServiceTests
         var response = new ChefsAuthTokenResponse { Token = expectedToken };
 
         _mockChefsApi
-            .Setup(x => x.GetAuthTokenAsync(
-                It.IsAny<string>(),
-                It.IsAny<ChefsAuthTokenRequest>(),
-                It.IsAny<CancellationToken>()
-            ))
+            .Setup(x =>
+                x.GetAuthTokenAsync(
+                    It.IsAny<string>(),
+                    It.IsAny<ChefsAuthTokenRequest>(),
+                    It.IsAny<CancellationToken>()
+                )
+            )
             .ReturnsAsync(response);
 
         // Act
@@ -62,11 +64,12 @@ public class ChefsApplicationServiceTests
         // Assert
         Assert.Equal(expectedToken, result);
         _mockChefsApi.Verify(
-            x => x.GetAuthTokenAsync(
-                "12345678-1234-1234-1234-123456789012",
-                It.IsAny<ChefsAuthTokenRequest>(),
-                It.IsAny<CancellationToken>()
-            ),
+            x =>
+                x.GetAuthTokenAsync(
+                    "12345678-1234-1234-1234-123456789012",
+                    It.IsAny<ChefsAuthTokenRequest>(),
+                    It.IsAny<CancellationToken>()
+                ),
             Times.Once
         );
     }
@@ -78,8 +81,8 @@ public class ChefsApplicationServiceTests
         var formKey = "nonexistent";
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
-            () => _service.GetAuthTokenAsync(formKey)
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            _service.GetAuthTokenAsync(formKey)
         );
         Assert.Contains("not configured", exception.Message);
     }
@@ -91,8 +94,8 @@ public class ChefsApplicationServiceTests
         var formKey = "";
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
-            () => _service.GetAuthTokenAsync(formKey)
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            _service.GetAuthTokenAsync(formKey)
         );
         Assert.Contains("not configured", exception.Message);
     }
@@ -107,22 +110,24 @@ public class ChefsApplicationServiceTests
             HttpMethod.Post,
             new HttpResponseMessage(HttpStatusCode.NotFound)
             {
-                Content = new StringContent("Form not found")
+                Content = new StringContent("Form not found"),
             },
             new RefitSettings()
         );
 
         _mockChefsApi
-            .Setup(x => x.GetAuthTokenAsync(
-                It.IsAny<string>(),
-                It.IsAny<ChefsAuthTokenRequest>(),
-                It.IsAny<CancellationToken>()
-            ))
+            .Setup(x =>
+                x.GetAuthTokenAsync(
+                    It.IsAny<string>(),
+                    It.IsAny<ChefsAuthTokenRequest>(),
+                    It.IsAny<CancellationToken>()
+                )
+            )
             .ThrowsAsync(apiException);
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<ChefsApiException>(
-            () => _service.GetAuthTokenAsync(formKey)
+        var exception = await Assert.ThrowsAsync<ChefsApiException>(() =>
+            _service.GetAuthTokenAsync(formKey)
         );
         Assert.Equal(HttpStatusCode.NotFound, exception.StatusCode);
         Assert.Contains("Form not found", exception.Message);
@@ -138,22 +143,24 @@ public class ChefsApplicationServiceTests
             HttpMethod.Post,
             new HttpResponseMessage(HttpStatusCode.Unauthorized)
             {
-                Content = new StringContent("Unauthorized")
+                Content = new StringContent("Unauthorized"),
             },
             new RefitSettings()
         );
 
         _mockChefsApi
-            .Setup(x => x.GetAuthTokenAsync(
-                It.IsAny<string>(),
-                It.IsAny<ChefsAuthTokenRequest>(),
-                It.IsAny<CancellationToken>()
-            ))
+            .Setup(x =>
+                x.GetAuthTokenAsync(
+                    It.IsAny<string>(),
+                    It.IsAny<ChefsAuthTokenRequest>(),
+                    It.IsAny<CancellationToken>()
+                )
+            )
             .ThrowsAsync(apiException);
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<ChefsApiException>(
-            () => _service.GetAuthTokenAsync(formKey)
+        var exception = await Assert.ThrowsAsync<ChefsApiException>(() =>
+            _service.GetAuthTokenAsync(formKey)
         );
         Assert.Equal(HttpStatusCode.Unauthorized, exception.StatusCode);
     }
@@ -164,16 +171,18 @@ public class ChefsApplicationServiceTests
         // Arrange
         var formKey = "legal";
         _mockChefsApi
-            .Setup(x => x.GetAuthTokenAsync(
-                It.IsAny<string>(),
-                It.IsAny<ChefsAuthTokenRequest>(),
-                It.IsAny<CancellationToken>()
-            ))
+            .Setup(x =>
+                x.GetAuthTokenAsync(
+                    It.IsAny<string>(),
+                    It.IsAny<ChefsAuthTokenRequest>(),
+                    It.IsAny<CancellationToken>()
+                )
+            )
             .ThrowsAsync(new HttpRequestException("Connection failed"));
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<ChefsApiException>(
-            () => _service.GetAuthTokenAsync(formKey)
+        var exception = await Assert.ThrowsAsync<ChefsApiException>(() =>
+            _service.GetAuthTokenAsync(formKey)
         );
         Assert.Equal(HttpStatusCode.BadGateway, exception.StatusCode);
         Assert.Contains("Unable to reach CHEFS API", exception.Message);
@@ -188,16 +197,18 @@ public class ChefsApplicationServiceTests
         cts.Cancel();
 
         _mockChefsApi
-            .Setup(x => x.GetAuthTokenAsync(
-                It.IsAny<string>(),
-                It.IsAny<ChefsAuthTokenRequest>(),
-                It.IsAny<CancellationToken>()
-            ))
+            .Setup(x =>
+                x.GetAuthTokenAsync(
+                    It.IsAny<string>(),
+                    It.IsAny<ChefsAuthTokenRequest>(),
+                    It.IsAny<CancellationToken>()
+                )
+            )
             .ThrowsAsync(new TaskCanceledException());
 
         // Act & Assert
-        await Assert.ThrowsAsync<OperationCanceledException>(
-            () => _service.GetAuthTokenAsync(formKey, cts.Token)
+        await Assert.ThrowsAsync<OperationCanceledException>(() =>
+            _service.GetAuthTokenAsync(formKey, cts.Token)
         );
     }
 
@@ -210,11 +221,13 @@ public class ChefsApplicationServiceTests
         var response = new ChefsAuthTokenResponse { Token = expectedToken };
 
         _mockChefsApi
-            .Setup(x => x.GetAuthTokenAsync(
-                It.IsAny<string>(),
-                It.IsAny<ChefsAuthTokenRequest>(),
-                It.IsAny<CancellationToken>()
-            ))
+            .Setup(x =>
+                x.GetAuthTokenAsync(
+                    It.IsAny<string>(),
+                    It.IsAny<ChefsAuthTokenRequest>(),
+                    It.IsAny<CancellationToken>()
+                )
+            )
             .ReturnsAsync(response);
 
         // Act

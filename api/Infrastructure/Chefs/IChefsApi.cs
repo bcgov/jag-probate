@@ -22,7 +22,7 @@ public interface IChefsApi
     );
 
     /// <summary>
-    /// Get a short-lived auth token (JWT) for the CHEFS web component. 
+    /// Get a short-lived auth token (JWT) for the CHEFS web component.
     /// Uses Basic Authentication (formId:apiKey) added by ChefsApiKeyHandler.
     /// </summary>
     [Post("/gateway/v1/auth/token/forms/{formId}")]
