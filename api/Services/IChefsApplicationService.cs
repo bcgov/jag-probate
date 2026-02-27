@@ -5,10 +5,6 @@ using Probate.Api.Models;
 
 namespace Probate.Api.Services;
 
-/// <summary>
-/// Provides current and previous CHEFS applications (submissions) for a form.
-/// Callers pass a logical form key; the implementation resolves it to the actual CHEFS form GUID via config.
-/// </summary>
 public interface IChefsApplicationService
 {
     /// <summary>
@@ -19,4 +15,9 @@ public interface IChefsApplicationService
         string formKey,
         CancellationToken cancellationToken = default
     );
+
+    /// <summary>
+    /// Gets a short-lived auth token for the CHEFS web component.
+    /// </summary>
+    Task<string> GetAuthTokenAsync(string formKey, CancellationToken cancellationToken = default);
 }
