@@ -38,7 +38,7 @@ public static class ChefsServiceCollectionExtensions
             .AddRefitClient<IChefsApi>()
             .ConfigureHttpClient(c =>
             {
-                c.BaseAddress = new Uri(baseUrl!.TrimEnd('/') + "/");
+                c.BaseAddress = new Uri(baseUrl!.TrimEnd('/'));
             })
             .AddHttpMessageHandler<ChefsApiKeyHandler>();
 
