@@ -94,6 +94,12 @@ const routes: RouteRecordRaw[] = [
     component: () => import('../views/PreviousActivity.vue'),
     meta: { requiresAuth: true },
   },
+  {
+    path: '/get-started',
+    name: 'NewApplication',
+    component: () => import('../views/NewApplication.vue'),
+    meta: { requiresAuth: true },
+  },
 ];
 
 const router = createRouter({
