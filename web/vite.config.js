@@ -27,7 +27,7 @@ export default defineConfig({
     port: 8080,
     proxy: {
       '^/probate/api': {
-        target: 'http://api:5000',
+        target: process.env.API_URL || 'http://localhost:5000',
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/probate/, ''),
         headers: {
@@ -38,7 +38,7 @@ export default defineConfig({
         },
       },
       '^/api': {
-        target: 'http://api:5000',
+        target: process.env.API_URL || 'http://localhost:5000',
         changeOrigin: true,
         headers: {
           Connection: 'keep-alive',
@@ -48,7 +48,7 @@ export default defineConfig({
         },
       },
       '^/swagger': {
-        target: 'http://api:5000',
+        target: process.env.API_URL || 'http://localhost:5000',
         changeOrigin: true,
         headers: {
           Connection: 'keep-alive',

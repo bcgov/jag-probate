@@ -9,6 +9,7 @@ services:
       - NPM_CONFIG_LOGLEVEL=notice
       - VITE_PORT=8080
       - CHOKIDAR_USEPOLLING=true
+      - VITE_CHEFS_BASE_URL=${CHEFS_BASE_URL}
     ports:
       - '8080:8080'
     volumes:

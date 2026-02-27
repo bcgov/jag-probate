@@ -229,7 +229,7 @@
   };
 
   const createCase = () => {
-    router.push('/cases/new');
+    router.push('/get-started');
   };
 
   const resumeCase = (id: number) => {
