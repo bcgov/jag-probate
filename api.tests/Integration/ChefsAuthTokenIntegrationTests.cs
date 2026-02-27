@@ -88,17 +88,23 @@ public class ChefsAuthTokenIntegrationTests : IDisposable
         _output.WriteLine($"Base URL: {_chefsOptions.BaseUrl}");
 
         // Act
-        var token = await _chefsApplicationService.GetAuthTokenAsync(formKey);
+        var result = await _chefsApplicationService.GetAuthTokenAsync(formKey);
 
         // Assert
-        Assert.NotNull(token);
-        Assert.NotEmpty(token);
+        Assert.NotNull(result);
+        Assert.NotNull(result.Token);
+        Assert.NotEmpty(result.Token);
+        Assert.NotNull(result.FormId);
+        Assert.NotEmpty(result.FormId);
+        Assert.Equal(_chefsOptions.Forms[formKey], result.FormId);
+
         _output.WriteLine(
-            $"Token received (first 50 chars): {token.Substring(0, Math.Min(50, token.Length))}..."
+            $"Token received (first 50 chars): {result.Token.Substring(0, Math.Min(50, result.Token.Length))}..."
         );
+        _output.WriteLine($"Form ID: {result.FormId}");
 
         // Validate token format (JWT tokens have 3 parts separated by dots)
-        var parts = token.Split('.');
+        var parts = result.Token.Split('.');
         Assert.True(parts.Length == 3, "Token should be in JWT format (3 parts separated by dots)");
 
         _output.WriteLine("? Successfully retrieved auth token from CHEFS API");
@@ -139,25 +145,30 @@ public class ChefsAuthTokenIntegrationTests : IDisposable
         }
 
         // Act
-        var token1 = await _chefsApplicationService.GetAuthTokenAsync(formKey);
+        var result1 = await _chefsApplicationService.GetAuthTokenAsync(formKey);
         await Task.Delay(100); // Small delay to ensure different tokens
-        var token2 = await _chefsApplicationService.GetAuthTokenAsync(formKey);
+        var result2 = await _chefsApplicationService.GetAuthTokenAsync(formKey);
 
         // Assert
-        Assert.NotNull(token1);
-        Assert.NotNull(token2);
-        Assert.NotEmpty(token1);
-        Assert.NotEmpty(token2);
+        Assert.NotNull(result1);
+        Assert.NotNull(result2);
+        Assert.NotEmpty(result1.Token);
+        Assert.NotEmpty(result2.Token);
+        Assert.Equal(result1.FormId, result2.FormId); // Same form ID
+        Assert.Equal(_chefsOptions.Forms[formKey], result1.FormId);
 
         _output.WriteLine(
-            $"Token 1 (first 30 chars): {token1.Substring(0, Math.Min(30, token1.Length))}..."
+            $"Token 1 (first 30 chars): {result1.Token.Substring(0, Math.Min(30, result1.Token.Length))}..."
         );
         _output.WriteLine(
-            $"Token 2 (first 30 chars): {token2.Substring(0, Math.Min(30, token2.Length))}..."
+            $"Token 2 (first 30 chars): {result2.Token.Substring(0, Math.Min(30, result2.Token.Length))}..."
         );
+        _output.WriteLine($"Form ID: {result1.FormId}");
 
         // Tokens might be the same or different depending on CHEFS implementation
-        _output.WriteLine($"Tokens are {(token1 == token2 ? "identical" : "different")}");
+        _output.WriteLine(
+            $"Tokens are {(result1.Token == result2.Token ? "identical" : "different")}"
+        );
         _output.WriteLine("? Successfully retrieved multiple auth tokens");
     }
 
@@ -180,14 +191,17 @@ public class ChefsAuthTokenIntegrationTests : IDisposable
         }
 
         // Act
-        var token = await _chefsApplicationService.GetAuthTokenAsync(formKey);
+        var result = await _chefsApplicationService.GetAuthTokenAsync(formKey);
 
         // Assert
-        Assert.NotNull(token);
-        Assert.NotEmpty(token);
+        Assert.NotNull(result);
+        Assert.NotNull(result.Token);
+        Assert.NotEmpty(result.Token);
+        Assert.NotNull(result.FormId);
+        Assert.NotEmpty(result.FormId);
 
         // Verify JWT structure (header.payload.signature)
-        var parts = token.Split('.');
+        var parts = result.Token.Split('.');
         Assert.Equal(3, parts.Length);
 
         // Verify each part is base64 encoded (basic check)
@@ -201,6 +215,7 @@ public class ChefsAuthTokenIntegrationTests : IDisposable
         _output.WriteLine($"  Header length: {parts[0].Length}");
         _output.WriteLine($"  Payload length: {parts[1].Length}");
         _output.WriteLine($"  Signature length: {parts[2].Length}");
+        _output.WriteLine($"Form ID: {result.FormId}");
         _output.WriteLine("? Token has valid JWT structure");
     }
 

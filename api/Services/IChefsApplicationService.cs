@@ -17,7 +17,11 @@ public interface IChefsApplicationService
     );
 
     /// <summary>
-    /// Gets a short-lived auth token for the CHEFS web component.
+    /// Gets a short-lived authentication token (JWT) for embedding CHEFS forms via the web component.
+    /// Tokens are typically valid for 15 minutes and should be used immediately for form embedding.
     /// </summary>
-    Task<string> GetAuthTokenAsync(string formKey, CancellationToken cancellationToken = default);
+    Task<ChefsAuthTokenDto> GetAuthTokenAsync(
+        string formKey,
+        CancellationToken cancellationToken = default
+    );
 }

@@ -110,14 +110,14 @@ public class ChefsController : ControllerBase
     /// </summary>
     /// <param name="formKey">Logical form key (e.g. "legal"). Resolved to the actual CHEFS form GUID server-side via Chefs:Forms config.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    /// <response code="200">Auth token.</response>
+    /// <response code="200">Auth token and form ID.</response>
     /// <response code="400">formKey missing, invalid characters, or not a recognised form key.</response>
     /// <response code="502">CHEFS API unreachable or returned an error.</response>
     [HttpGet("Auth")]
-    [ProducesResponseType(typeof(string), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ChefsAuthTokenDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status502BadGateway)]
-    public async Task<ActionResult<string>> GetAuthToken(
+    public async Task<ActionResult<ChefsAuthTokenDto>> GetAuthToken(
         [FromQuery] string formKey,
         CancellationToken cancellationToken = default
     )

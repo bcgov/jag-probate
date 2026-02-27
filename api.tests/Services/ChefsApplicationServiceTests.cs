@@ -46,6 +46,7 @@ public class ChefsApplicationServiceTests
         // Arrange
         var formKey = "legal";
         var expectedToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.test.token";
+        var expectedFormId = "12345678-1234-1234-1234-123456789012";
         var response = new ChefsAuthTokenResponse { Token = expectedToken };
 
         _mockChefsApi
@@ -62,11 +63,13 @@ public class ChefsApplicationServiceTests
         var result = await _service.GetAuthTokenAsync(formKey);
 
         // Assert
-        Assert.Equal(expectedToken, result);
+        Assert.NotNull(result);
+        Assert.Equal(expectedToken, result.Token);
+        Assert.Equal(expectedFormId, result.FormId);
         _mockChefsApi.Verify(
             x =>
                 x.GetAuthTokenAsync(
-                    "12345678-1234-1234-1234-123456789012",
+                    expectedFormId,
                     It.IsAny<ChefsAuthTokenRequest>(),
                     It.IsAny<CancellationToken>()
                 ),
@@ -218,6 +221,7 @@ public class ChefsApplicationServiceTests
         // Arrange
         var formKey = "LEGAL"; // uppercase
         var expectedToken = "test-token";
+        var expectedFormId = "12345678-1234-1234-1234-123456789012";
         var response = new ChefsAuthTokenResponse { Token = expectedToken };
 
         _mockChefsApi
@@ -234,6 +238,8 @@ public class ChefsApplicationServiceTests
         var result = await _service.GetAuthTokenAsync(formKey);
 
         // Assert
-        Assert.Equal(expectedToken, result);
+        Assert.NotNull(result);
+        Assert.Equal(expectedToken, result.Token);
+        Assert.Equal(expectedFormId, result.FormId);
     }
 }

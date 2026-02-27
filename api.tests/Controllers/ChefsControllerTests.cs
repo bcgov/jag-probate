@@ -8,6 +8,7 @@ using Microsoft.Extensions.Logging;
 using Moq;
 using Probate.Api.Controllers;
 using Probate.Api.Helpers.Exceptions;
+using Probate.Api.Models;
 using Probate.Api.Services;
 using Xunit;
 
@@ -32,17 +33,22 @@ public class ChefsControllerTests
         // Arrange
         var formKey = "legal";
         var expectedToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.test.token";
+        var expectedFormId = "form-guid-123";
+        var authTokenDto = new ChefsAuthTokenDto { Token = expectedToken, FormId = expectedFormId };
+
         _mockService
             .Setup(x => x.GetAuthTokenAsync(formKey, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(expectedToken);
+            .ReturnsAsync(authTokenDto);
 
         // Act
         var result = await _controller.GetAuthToken(formKey);
 
         // Assert
-        var okResult = Assert.IsType<ActionResult<string>>(result);
+        var okResult = Assert.IsType<ActionResult<ChefsAuthTokenDto>>(result);
         var okObjectResult = Assert.IsType<OkObjectResult>(okResult.Result);
-        Assert.Equal(expectedToken, okObjectResult.Value);
+        var returnedDto = Assert.IsType<ChefsAuthTokenDto>(okObjectResult.Value);
+        Assert.Equal(expectedToken, returnedDto.Token);
+        Assert.Equal(expectedFormId, returnedDto.FormId);
     }
 
     [Fact]
@@ -55,7 +61,7 @@ public class ChefsControllerTests
         var result = await _controller.GetAuthToken(formKey);
 
         // Assert
-        var badRequestResult = Assert.IsType<ActionResult<string>>(result);
+        var badRequestResult = Assert.IsType<ActionResult<ChefsAuthTokenDto>>(result);
         var badRequest = Assert.IsType<BadRequestObjectResult>(badRequestResult.Result);
         Assert.NotNull(badRequest.Value);
         var message = badRequest
@@ -76,7 +82,7 @@ public class ChefsControllerTests
         var result = await _controller.GetAuthToken(formKey);
 
         // Assert
-        var badRequestResult = Assert.IsType<ActionResult<string>>(result);
+        var badRequestResult = Assert.IsType<ActionResult<ChefsAuthTokenDto>>(result);
         var badRequest = Assert.IsType<BadRequestObjectResult>(badRequestResult.Result);
         Assert.NotNull(badRequest.Value);
     }
@@ -86,18 +92,21 @@ public class ChefsControllerTests
     {
         // Arrange
         var formKey = "legal-form_123"; // hyphens and underscores are allowed
-        var expectedToken = "test-token";
+        var authTokenDto = new ChefsAuthTokenDto { Token = "test-token", FormId = "form-guid-123" };
+
         _mockService
             .Setup(x => x.GetAuthTokenAsync(formKey, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(expectedToken);
+            .ReturnsAsync(authTokenDto);
 
         // Act
         var result = await _controller.GetAuthToken(formKey);
 
         // Assert
-        var okResult = Assert.IsType<ActionResult<string>>(result);
+        var okResult = Assert.IsType<ActionResult<ChefsAuthTokenDto>>(result);
         var okObjectResult = Assert.IsType<OkObjectResult>(okResult.Result);
-        Assert.Equal(expectedToken, okObjectResult.Value);
+        var returnedDto = Assert.IsType<ChefsAuthTokenDto>(okObjectResult.Value);
+        Assert.Equal("test-token", returnedDto.Token);
+        Assert.Equal("form-guid-123", returnedDto.FormId);
     }
 
     [Fact]
@@ -115,7 +124,7 @@ public class ChefsControllerTests
         var result = await _controller.GetAuthToken(formKey);
 
         // Assert
-        var badRequestResult = Assert.IsType<ActionResult<string>>(result);
+        var badRequestResult = Assert.IsType<ActionResult<ChefsAuthTokenDto>>(result);
         var badRequest = Assert.IsType<BadRequestObjectResult>(badRequestResult.Result);
         var message = badRequest
             .Value.GetType()
@@ -138,7 +147,7 @@ public class ChefsControllerTests
         var result = await _controller.GetAuthToken(formKey);
 
         // Assert
-        var objectResult = Assert.IsType<ActionResult<string>>(result);
+        var objectResult = Assert.IsType<ActionResult<ChefsAuthTokenDto>>(result);
         var problemResult = Assert.IsType<ObjectResult>(objectResult.Result);
         Assert.Equal(StatusCodes.Status404NotFound, problemResult.StatusCode);
     }
@@ -158,7 +167,7 @@ public class ChefsControllerTests
         var result = await _controller.GetAuthToken(formKey);
 
         // Assert
-        var objectResult = Assert.IsType<ActionResult<string>>(result);
+        var objectResult = Assert.IsType<ActionResult<ChefsAuthTokenDto>>(result);
         var problemResult = Assert.IsType<ObjectResult>(objectResult.Result);
         Assert.Equal(StatusCodes.Status500InternalServerError, problemResult.StatusCode);
     }
@@ -178,7 +187,7 @@ public class ChefsControllerTests
         var result = await _controller.GetAuthToken(formKey);
 
         // Assert
-        var objectResult = Assert.IsType<ActionResult<string>>(result);
+        var objectResult = Assert.IsType<ActionResult<ChefsAuthTokenDto>>(result);
         var problemResult = Assert.IsType<ObjectResult>(objectResult.Result);
         Assert.Equal(StatusCodes.Status502BadGateway, problemResult.StatusCode);
     }
@@ -188,10 +197,11 @@ public class ChefsControllerTests
     {
         // Arrange
         var formKey = "legal";
-        var expectedToken = "test-token";
+        var authTokenDto = new ChefsAuthTokenDto { Token = "test-token", FormId = "form-guid-123" };
+
         _mockService
             .Setup(x => x.GetAuthTokenAsync(formKey, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(expectedToken);
+            .ReturnsAsync(authTokenDto);
 
         // Act
         await _controller.GetAuthToken(formKey);

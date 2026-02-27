@@ -108,7 +108,7 @@ public class ChefsApplicationService : IChefsApplicationService
     }
 
     /// <inheritdoc />
-    public async Task<string> GetAuthTokenAsync(
+    public async Task<ChefsAuthTokenDto> GetAuthTokenAsync(
         string formKey,
         CancellationToken cancellationToken = default
     )
@@ -181,6 +181,6 @@ public class ChefsApplicationService : IChefsApplicationService
             LogSanitizer.Sanitize(formKey)
         );
 
-        return response.Token;
+        return new ChefsAuthTokenDto { Token = response.Token, FormId = formGuid };
     }
 }
