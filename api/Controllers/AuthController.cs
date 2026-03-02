@@ -28,12 +28,39 @@ namespace Probate.Api.Controllers
         /// Initiates the BCeID login flow
         /// </summary>
         /// <param name="returnUrl">Optional URL to redirect to after login</param>
-        [Authorize(AuthenticationSchemes = OpenIdConnectDefaults.AuthenticationScheme)]
         [HttpGet("login")]
-        public IActionResult Login(string returnUrl = "/api")
+        public IActionResult Login(string returnUrl = "/")
         {
             var safeReturnUrl = SanitizeReturnUrl(returnUrl);
-            return Redirect(safeReturnUrl);
+
+            // Nginx strips the path base (e.g. /probate) before forwarding, so
+            // Request.PathBase is empty at the API. Re-attach the base via
+            // X-Base-Href so the post-login redirect lands under the correct
+            // proxy sub-path (e.g. /probate/previous-activity not /previous-activity).
+            var basePath = XForwardedForHelper.ResolveBaseHref(HttpContext.Request).TrimEnd('/');
+            if (
+                basePath.Length > 0
+                && basePath != "/"
+                && !safeReturnUrl.StartsWith(
+                    basePath + "/",
+                    StringComparison.OrdinalIgnoreCase
+                )
+                && !string.Equals(safeReturnUrl, basePath, StringComparison.OrdinalIgnoreCase)
+            )
+            {
+                safeReturnUrl = basePath + safeReturnUrl;
+            }
+
+            if (User.Identity?.IsAuthenticated == true)
+                return Redirect(safeReturnUrl);
+
+            var properties = new AuthenticationProperties
+            {
+                RedirectUri = safeReturnUrl,
+                IsPersistent = true,
+            };
+
+            return Challenge(properties, OpenIdConnectDefaults.AuthenticationScheme);
         }
 
         /// <summary>
@@ -46,7 +73,6 @@ namespace Probate.Api.Controllers
             var idToken = await HttpContext.GetTokenAsync("id_token");
 
             await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
-            await HttpContext.SignOutAsync(OpenIdConnectDefaults.AuthenticationScheme);
 
             var logoutUrl =
                 $"{_configuration.GetNonEmptyValue("Keycloak:Authority")}/protocol/openid-connect/logout";

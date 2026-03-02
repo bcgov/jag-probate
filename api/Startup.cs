@@ -136,14 +136,12 @@ namespace Probate.Api
             // Must be first so Request.Scheme, Request.Host, etc. reflect the
             // external URL for all downstream middleware (OIDC, cookies, etc.).
             app.UseForwardedHeaders();
+            var basePath = Configuration["WEB_BASE_HREF"];
 
-            app.Use(
-                (context, next) =>
-                {
-                    XForwardedForHelper.ApplyPathBase(context.Request);
-                    return next();
-                }
-            );
+            if (!string.IsNullOrWhiteSpace(basePath))
+            {
+                app.UsePathBase(basePath.TrimEnd('/'));
+            }
 
             if (env.IsDevelopment())
             {
