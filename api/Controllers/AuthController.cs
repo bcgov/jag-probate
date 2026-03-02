@@ -36,7 +36,7 @@ namespace Probate.Api.Controllers
             // Nginx strips the path base (e.g. /probate) before forwarding, so
             // Request.PathBase is empty at the API. Re-attach the base via
             // X-Base-Href so the post-login redirect lands under the correct
-            // proxy sub-path (e.g. /probate/previous-activity not /previous-activity).
+            // proxy sub-path
             var basePath = XForwardedForHelper.ResolveBaseHref(HttpContext.Request).TrimEnd('/');
             if (
                 basePath.Length > 0
