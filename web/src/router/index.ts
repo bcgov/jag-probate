@@ -8,7 +8,7 @@ import { createRouter, createWebHistory } from 'vue-router';
  * Auth guard that checks authentication before navigating to protected routes.
  *  1. Calls the backend /api/auth/user endpoint
  *  2. If authenticated, stores user info and allows navigation
- *  3. If 401, HttpService interceptor redirects to /api/auth/login (Keycloak SSO)
+ *  3. If 401, redirects to /<base>/api/auth/login (Keycloak SSO)
  */
 async function authGuard(to: any, _from: any, next: any) {
   const authStore = useAuthStore();
@@ -35,13 +35,13 @@ async function authGuard(to: any, _from: any, next: any) {
       // Not authenticated — redirect to backend login endpoint.
       // Use the intended destination as returnUrl so the user lands
       // on the correct page after Keycloak SSO completes.
-      redirectToLogin(to.fullPath);
+      redirectToLogin(to);
     }
   } catch {
     authStore.setLoading(false);
     // getUserInfo returned 401 — redirect to backend login.
     // Pass the intended destination so the user returns here after SSO.
-    redirectToLogin(to.fullPath);
+    redirectToLogin(to);
   }
 }
 
@@ -50,20 +50,26 @@ async function authGuard(to: any, _from: any, next: any) {
  * the Keycloak OIDC challenge. After successful SSO, the backend
  * redirects to the returnUrl.
  */
-function redirectToLogin(destinationPath: string) {
-  const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+function redirectToLogin(to: any) {
+  const configuredBase = import.meta.env.BASE_URL.replace(/\/$/, '');
+
+  // Detect the actual app sub-path prefix by comparing the live pathname with
+  // the route's matched path. Vue Router always reports `to.path` without the
+  // base, so when the browser is at /probate/previous-activity and the route
+  // path is /previous-activity, the base is /probate.
+  // This is robust even when BASE_URL is misconfigured (e.g. set to "/").
+  const routePath = to.path;
+  const currentPath = window.location.pathname;
+
+  const base =
+    currentPath !== routePath && currentPath.endsWith(routePath)
+      ? currentPath.slice(0, currentPath.length - routePath.length)
+      : configuredBase;
+
   const apiBase = `${base}/api`;
-  console.log(
-    'base',
-    base,
-    'apiBase',
-    apiBase,
-    'destinationPath',
-    destinationPath
-  );
-  window.location.replace(
-    `${apiBase}/auth/login?returnUrl=${base}${destinationPath}`
-  );
+  // Pass just the route path as returnUrl; AuthController prepends the base
+  // path (e.g. /probate) from the X-Base-Href header set by nginx.
+  window.location.replace(`${apiBase}/auth/login?returnUrl=${routePath}`);
 }
 
 const routes: RouteRecordRaw[] = [
