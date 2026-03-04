@@ -15,11 +15,40 @@ public interface IChefsApi
     /// <summary>
     /// Get submissions for a form. Sends form-id as path and header; api-key is added by ChefsApiKeyHandler.
     /// </summary>
-    [Get("/forms/{formId}/submissions")]
+    [Get("/api/v1/forms/{formId}/submissions")]
     Task<ChefsSubmissionsResponse> GetSubmissionsAsync(
         [Header("form-id")] string formId,
         CancellationToken cancellationToken = default
     );
+
+    /// <summary>
+    /// Get a short-lived auth token (JWT) for the CHEFS web component.
+    /// Uses Basic Authentication (formId:apiKey) added by ChefsApiKeyHandler.
+    /// </summary>
+    [Post("/gateway/v1/auth/token/forms/{formId}")]
+    Task<ChefsAuthTokenResponse> GetAuthTokenAsync(
+        string formId,
+        [Body] ChefsAuthTokenRequest request,
+        CancellationToken cancellationToken = default
+    );
+}
+
+/// <summary>
+/// Request body for auth token endpoint.
+/// </summary>
+public class ChefsAuthTokenRequest
+{
+    [System.Text.Json.Serialization.JsonPropertyName("formId")]
+    public string FormId { get; set; } = string.Empty;
+}
+
+/// <summary>
+/// Placeholder for CHEFS auth token response.
+/// </summary>
+public class ChefsAuthTokenResponse
+{
+    [System.Text.Json.Serialization.JsonPropertyName("token")]
+    public string Token { get; set; } = string.Empty;
 }
 
 /// <summary>

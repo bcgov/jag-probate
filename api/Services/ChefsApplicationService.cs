@@ -16,10 +16,6 @@ using Refit;
 
 namespace Probate.Api.Services;
 
-/// <summary>
-/// Retrieves CHEFS applications (submissions) for a form identified by a logical key.
-/// Resolves the logical key to the actual CHEFS form GUID via Chefs:Forms config; the GUID is never exposed to callers.
-/// </summary>
 public class ChefsApplicationService : IChefsApplicationService
 {
     private readonly IChefsApi _chefsApi;
@@ -109,5 +105,82 @@ public class ChefsApplicationService : IChefsApplicationService
             LogSanitizer.Sanitize(formKey)
         );
         return applications;
+    }
+
+    /// <inheritdoc />
+    public async Task<ChefsAuthTokenDto> GetAuthTokenAsync(
+        string formKey,
+        CancellationToken cancellationToken = default
+    )
+    {
+        if (
+            !_options.Forms.TryGetValue(formKey, out var formGuid)
+            || string.IsNullOrWhiteSpace(formGuid)
+        )
+            throw new InvalidOperationException($"Form key '{formKey}' is not configured.");
+
+        _logger.LogInformation(
+            "Fetching CHEFS auth token for form key {FormKey}",
+            LogSanitizer.Sanitize(formKey)
+        );
+
+        ChefsAuthTokenResponse response;
+        try
+        {
+            response = await _chefsApi.GetAuthTokenAsync(
+                formGuid,
+                new ChefsAuthTokenRequest { FormId = formGuid },
+                cancellationToken
+            );
+        }
+        catch (ApiException ex)
+        {
+            _logger.LogWarning(
+                ex,
+                "CHEFS API error for form key {FormKey}: {StatusCode} {Content}",
+                LogSanitizer.Sanitize(formKey),
+                ex.StatusCode,
+                ex.Content
+            );
+            var statusCode = (HttpStatusCode)ex.StatusCode;
+            var message = !string.IsNullOrWhiteSpace(ex.Content)
+                ? $"CHEFS API error: {ex.Content}"
+                : $"CHEFS API returned {(int)ex.StatusCode} ({ex.StatusCode}).";
+            throw new ChefsApiException(message, statusCode, ex);
+        }
+        catch (HttpRequestException ex)
+        {
+            _logger.LogWarning(
+                ex,
+                "CHEFS API request failed for form key {FormKey}",
+                LogSanitizer.Sanitize(formKey)
+            );
+            throw new ChefsApiException(
+                "Unable to reach CHEFS API. Please try again later.",
+                HttpStatusCode.BadGateway,
+                ex
+            );
+        }
+        catch (TaskCanceledException ex) when (cancellationToken.IsCancellationRequested)
+        {
+            throw new OperationCanceledException("Request was cancelled.", ex, cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(
+                ex,
+                "Unexpected error fetching CHEFS auth token for form key {FormKey}. Exception type: {ExceptionType}",
+                LogSanitizer.Sanitize(formKey),
+                ex.GetType().Name
+            );
+            throw;
+        }
+
+        _logger.LogInformation(
+            "Retrieved auth token for form key {FormKey}",
+            LogSanitizer.Sanitize(formKey)
+        );
+
+        return new ChefsAuthTokenDto { Token = response.Token, FormId = formGuid };
     }
 }

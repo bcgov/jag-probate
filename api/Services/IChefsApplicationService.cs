@@ -5,10 +5,6 @@ using Probate.Api.Models;
 
 namespace Probate.Api.Services;
 
-/// <summary>
-/// Provides current and previous CHEFS applications (submissions) for a form.
-/// Callers pass a logical form key; the implementation resolves it to the actual CHEFS form GUID via config.
-/// </summary>
 public interface IChefsApplicationService
 {
     /// <summary>
@@ -16,6 +12,15 @@ public interface IChefsApplicationService
     /// Throws <see cref="InvalidOperationException"/> if <paramref name="formKey"/> is not present in Chefs:Forms config.
     /// </summary>
     Task<IReadOnlyList<ApplicationDto>> GetApplicationsAsync(
+        string formKey,
+        CancellationToken cancellationToken = default
+    );
+
+    /// <summary>
+    /// Gets a short-lived authentication token (JWT) for embedding CHEFS forms via the web component.
+    /// Tokens are typically valid for 15 minutes and should be used immediately for form embedding.
+    /// </summary>
+    Task<ChefsAuthTokenDto> GetAuthTokenAsync(
         string formKey,
         CancellationToken cancellationToken = default
     );
