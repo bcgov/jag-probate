@@ -4,3 +4,10 @@ export interface UserInfo {
   authenticationType: string | null;
   claims: { type: string; value: string }[];
 }
+
+export interface ChefsAuthToken {
+  /** Short-lived JWT for the CHEFS web component. */
+  token: string;
+  /** CHEFS form GUID to load. */
+  formId: string;
+}
