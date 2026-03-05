@@ -10,4 +10,6 @@ export interface ChefsAuthToken {
   token: string;
   /** CHEFS form GUID to load. */
   formId: string;
+  /** CHEFS base URL the web component must use (matches the token issuer). */
+  baseUrl: string;
 }

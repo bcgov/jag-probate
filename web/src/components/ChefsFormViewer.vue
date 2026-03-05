@@ -79,15 +79,12 @@
     errorMessage.value = '';
 
     try {
-      const resolvedBaseUrl =
-        (import.meta.env.VITE_CHEFS_BASE_URL as string | undefined)?.replace(
-          /\/$/,
-          ''
-        ) || props.chefsBaseUrl;
+      const { token, formId, baseUrl } = await chefsService.getAuthToken(
+        props.formKey
+      );
+      const resolvedBaseUrl = baseUrl || props.chefsBaseUrl;
 
       await loadWebComponentScript(resolvedBaseUrl);
-
-      const { token, formId } = await chefsService.getAuthToken(props.formKey);
 
       const container = chefsContainer.value;
       if (!container) throw new Error('Mount point not found');
