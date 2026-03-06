@@ -1,6 +1,6 @@
-import { useAuthStore, useLayoutStore } from '@/stores';
 import AuthService from '@/services/AuthService';
 import HttpService from '@/services/HttpService';
+import { useAuthStore, useLayoutStore } from '@/stores';
 import type { RouteRecordRaw } from 'vue-router';
 import { createRouter, createWebHistory } from 'vue-router';
 
@@ -78,7 +78,7 @@ const routes: RouteRecordRaw[] = [
     name: 'RepresentSomeoneWhoDied',
     component: () => import('../views/landing/LandingPage.vue'),
     meta: {
-      navHeader: 'Represent Someone Who Died',
+      navHeader: 'Probate Application',
       requiresAuth: false,
     },
   },
