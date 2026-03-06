@@ -15,4 +15,9 @@ public class ChefsAuthTokenDto
     /// The CHEFS form GUID associated with this token.
     /// </summary>
     public string FormId { get; set; } = string.Empty;
+
+    /// <summary>
+    /// The CHEFS base URL the web component must use (matches the token issuer).
+    /// </summary>
+    public string BaseUrl { get; set; } = string.Empty;
 }

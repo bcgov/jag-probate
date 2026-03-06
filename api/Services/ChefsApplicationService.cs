@@ -181,6 +181,11 @@ public class ChefsApplicationService : IChefsApplicationService
             LogSanitizer.Sanitize(formKey)
         );
 
-        return new ChefsAuthTokenDto { Token = response.Token, FormId = formGuid };
+        return new ChefsAuthTokenDto
+        {
+            Token = response.Token,
+            FormId = formGuid,
+            BaseUrl = _options.BaseUrl.TrimEnd('/'),
+        };
     }
 }
