@@ -47,7 +47,7 @@
     "globals": "^15.14.0",
     "jsdom": "^27.4.0",
     "prettier": "^3.8.1",
-    "sass": "^1.83.0",
+    "sass": "^1.97.3",
     "typescript": "^5.7.2",
     "unplugin-vue-components": "^0.27.5",
     "vite": "^6.0.7",
