@@ -100,6 +100,26 @@ const routes: RouteRecordRaw[] = [
     component: () => import('../views/NewApplication.vue'),
     meta: { requiresAuth: true },
   },
+  {
+    path: '/error',
+    name: 'Error',
+    component: () => import('../views/ErrorView.vue'),
+    meta: { requiresAuth: false },
+  },
+  {
+    path: '/404',
+    redirect: { name: 'Error', query: { status: '404' } },
+  },
+  {
+    path: '/:pathMatch(.*)*',
+    redirect: () => ({
+      name: 'Error',
+      query: {
+        status: '404',
+        details: `The requested path could not be found.`,
+      },
+    }),
+  },
 ];
 
 const router = createRouter({
