@@ -58,7 +58,7 @@ function redirectToLogin(to: any) {
   // base, so when the browser is at /probate/previous-activity and the route
   // path is /previous-activity, the base is /probate.
   // This is robust even when BASE_URL is misconfigured (e.g. set to "/").
-  const routePath = to.path;
+  const routePath = to.fullPath;
   const currentPath = window.location.pathname;
 
   const base =
@@ -69,7 +69,7 @@ function redirectToLogin(to: any) {
   const apiBase = `${base}/api`;
   // Pass just the route path as returnUrl; AuthController prepends the base
   // path (e.g. /probate) from the X-Base-Href header set by nginx.
-  window.location.replace(`${apiBase}/auth/login?returnUrl=${routePath}`);
+  window.location.replace(`${apiBase}/auth/login?returnUrl=${encodeURIComponent(routePath)}`);
 }
 
 const routes: RouteRecordRaw[] = [

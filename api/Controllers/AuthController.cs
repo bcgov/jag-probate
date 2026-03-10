@@ -40,7 +40,6 @@ namespace Probate.Api.Controllers
             var basePath = XForwardedForHelper.ResolveBaseHref(HttpContext.Request).TrimEnd('/');
             if (
                 basePath.Length > 0
-                && basePath != "/"
                 && !safeReturnUrl.StartsWith(basePath + "/", StringComparison.OrdinalIgnoreCase)
                 && !string.Equals(safeReturnUrl, basePath, StringComparison.OrdinalIgnoreCase)
             )
@@ -54,7 +53,6 @@ namespace Probate.Api.Controllers
             var properties = new AuthenticationProperties
             {
                 RedirectUri = safeReturnUrl,
-                IsPersistent = true,
             };
 
             return Challenge(properties, OpenIdConnectDefaults.AuthenticationScheme);
