@@ -8,8 +8,8 @@
 
 <script setup lang="ts">
   import ErrorComponent from '@/components/ErrorComponent.vue';
-import { computed } from 'vue';
-import { useRoute } from 'vue-router';
+  import { computed } from 'vue';
+  import { useRoute } from 'vue-router';
 
   const route = useRoute();
 
@@ -25,7 +25,11 @@ import { useRoute } from 'vue-router';
     const statusText = getQueryValue(route.query.status as string | string[]);
     const parsedStatus = Number.parseInt(statusText, 10);
 
-    if (!Number.isNaN(parsedStatus) && parsedStatus >= 100 && parsedStatus <= 599) {
+    if (
+      !Number.isNaN(parsedStatus) &&
+      parsedStatus >= 100 &&
+      parsedStatus <= 599
+    ) {
       return parsedStatus;
     }
 
@@ -33,12 +37,16 @@ import { useRoute } from 'vue-router';
   });
 
   const resolvedDescription = computed(() => {
-    const description = getQueryValue(route.query.description as string | string[]).trim();
+    const description = getQueryValue(
+      route.query.description as string | string[]
+    ).trim();
     return description || undefined;
   });
 
   const resolvedDetails = computed(() => {
-    const details = getQueryValue(route.query.details as string | string[]).trim();
+    const details = getQueryValue(
+      route.query.details as string | string[]
+    ).trim();
     return details || undefined;
   });
 </script>
