@@ -1,8 +1,11 @@
 using System;
+
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+
 using Probate.Api.Helpers.Exceptions;
 using Probate.Api.Options;
+
 using Refit;
 
 namespace Probate.Api.Infrastructure.Chefs;
