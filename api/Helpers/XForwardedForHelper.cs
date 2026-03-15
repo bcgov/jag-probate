@@ -1,5 +1,4 @@
 using System;
-
 using Microsoft.AspNetCore.Http;
 
 namespace Probate.Api.Helpers

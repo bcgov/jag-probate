@@ -5,16 +5,13 @@ using System.Net;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
-
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-
 using Probate.Api.Helpers;
 using Probate.Api.Helpers.Exceptions;
 using Probate.Api.Infrastructure.Chefs;
 using Probate.Api.Models;
 using Probate.Api.Options;
-
 using Refit;
 
 namespace Probate.Api.Services;

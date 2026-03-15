@@ -1,9 +1,7 @@
 using System;
 using System.Threading.Tasks;
-
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
-
 using Probate.Db.Models;
 
 namespace Probate.Api.Services
