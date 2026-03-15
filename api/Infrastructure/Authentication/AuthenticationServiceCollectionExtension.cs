@@ -139,7 +139,7 @@ namespace Probate.Api.Infrastructure.Authentication
                     options.GetClaimsFromUserInfoEndpoint = true;
                     options.ResponseType = OpenIdConnectResponseType.Code;
                     options.UsePkce = true;
-                    options.SaveTokens = true;
+                    options.SaveTokens = false;
                     options.CallbackPath = "/api/auth/signin-oidc";
 
                     // Set explicit cookie paths so nginx's proxy_cookie_path directive
