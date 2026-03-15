@@ -15,7 +15,6 @@ csharp_indent_switch_labels = true
 
 # using directives
 dotnet_sort_system_directives_first = true
-dotnet_separate_import_directive_groups = true
 
 # var preferences
 csharp_style_var_for_built_in_types = true:suggestion
