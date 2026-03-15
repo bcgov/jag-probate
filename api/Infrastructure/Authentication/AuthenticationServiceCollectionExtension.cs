@@ -139,7 +139,7 @@ namespace Probate.Api.Infrastructure.Authentication
                     options.GetClaimsFromUserInfoEndpoint = true;
                     options.ResponseType = OpenIdConnectResponseType.Code;
                     options.UsePkce = true;
-                    options.SaveTokens = false;
+                    options.SaveTokens = true;
                     options.CallbackPath = "/api/auth/signin-oidc";
 
                     // Set explicit cookie paths so nginx's proxy_cookie_path directive
@@ -159,9 +159,9 @@ namespace Probate.Api.Infrastructure.Authentication
                         OnTicketReceived = context =>
                         {
                             //id_token_hint for Keycloak logout.
-                            context.Properties.Items.Remove(".Token.access_token");
-                            context.Properties.Items[".TokenNames"] =
-                                "id_token;refresh_token;token_type;expires_at";
+                            context.Properties.UpdateTokenValue("access_token", null);
+                            context.Properties.UpdateTokenValue("refresh_token", null);
+                            context.Properties.Items[".TokenNames"] = "id_token";
                             return Task.CompletedTask;
                         },
                         OnRedirectToIdentityProvider = context =>
