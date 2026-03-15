@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Configuration;
+
 using Probate.Api.Helpers.Exceptions;
 
 namespace Probate.Api.Helpers

@@ -1,6 +1,6 @@
-import { useAuthStore, useLayoutStore } from '@/stores';
 import AuthService from '@/services/AuthService';
 import HttpService from '@/services/HttpService';
+import { useAuthStore, useLayoutStore } from '@/stores';
 import type { RouteRecordRaw } from 'vue-router';
 import { createRouter, createWebHistory } from 'vue-router';
 
@@ -69,7 +69,9 @@ function redirectToLogin(to: any) {
   const apiBase = `${base}/api`;
   // Pass just the route path as returnUrl; AuthController prepends the base
   // path (e.g. /probate) from the X-Base-Href header set by nginx.
-  window.location.replace(`${apiBase}/auth/login?returnUrl=${encodeURIComponent(routePath)}`);
+  window.location.replace(
+    `${apiBase}/auth/login?returnUrl=${encodeURIComponent(routePath)}`
+  );
 }
 
 const routes: RouteRecordRaw[] = [
