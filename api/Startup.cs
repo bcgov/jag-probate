@@ -46,7 +46,7 @@ namespace Probate.Api
                     | ForwardedHeaders.XForwardedProto
                     | ForwardedHeaders.XForwardedHost;
                 // Trust all proxies (nginx runs in the same pod / overlay network)
-                options.KnownNetworks.Clear();
+                options.KnownIPNetworks.Clear();
                 options.KnownProxies.Clear();
             });
 
