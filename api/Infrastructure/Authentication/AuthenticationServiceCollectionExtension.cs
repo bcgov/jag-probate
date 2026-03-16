@@ -159,9 +159,9 @@ namespace Probate.Api.Infrastructure.Authentication
                         OnTicketReceived = context =>
                         {
                             //id_token_hint for Keycloak logout.
-                            context.Properties.Items.Remove(".Token.access_token");
-                            context.Properties.Items[".TokenNames"] =
-                                "id_token;refresh_token;token_type;expires_at";
+                            context.Properties.UpdateTokenValue("access_token", null);
+                            context.Properties.UpdateTokenValue("refresh_token", null);
+                            context.Properties.Items[".TokenNames"] = "id_token";
                             return Task.CompletedTask;
                         },
                         OnRedirectToIdentityProvider = context =>

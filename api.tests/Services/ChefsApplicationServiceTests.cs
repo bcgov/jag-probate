@@ -52,9 +52,9 @@ public class ChefsApplicationServiceTests
         _mockChefsApi
             .Setup(x =>
                 x.GetAuthTokenAsync(
-                It.IsAny<string>(),
-                It.IsAny<ChefsAuthTokenRequest>(),
-                It.IsAny<CancellationToken>()
+                    It.IsAny<string>(),
+                    It.IsAny<ChefsAuthTokenRequest>(),
+                    It.IsAny<CancellationToken>()
                 )
             )
             .ReturnsAsync(response);
@@ -70,9 +70,9 @@ public class ChefsApplicationServiceTests
             x =>
                 x.GetAuthTokenAsync(
                     expectedFormId,
-                It.IsAny<ChefsAuthTokenRequest>(),
-                It.IsAny<CancellationToken>()
-            ),
+                    It.IsAny<ChefsAuthTokenRequest>(),
+                    It.IsAny<CancellationToken>()
+                ),
             Times.Once
         );
     }
@@ -121,9 +121,9 @@ public class ChefsApplicationServiceTests
         _mockChefsApi
             .Setup(x =>
                 x.GetAuthTokenAsync(
-                It.IsAny<string>(),
-                It.IsAny<ChefsAuthTokenRequest>(),
-                It.IsAny<CancellationToken>()
+                    It.IsAny<string>(),
+                    It.IsAny<ChefsAuthTokenRequest>(),
+                    It.IsAny<CancellationToken>()
                 )
             )
             .ThrowsAsync(apiException);
@@ -154,9 +154,9 @@ public class ChefsApplicationServiceTests
         _mockChefsApi
             .Setup(x =>
                 x.GetAuthTokenAsync(
-                It.IsAny<string>(),
-                It.IsAny<ChefsAuthTokenRequest>(),
-                It.IsAny<CancellationToken>()
+                    It.IsAny<string>(),
+                    It.IsAny<ChefsAuthTokenRequest>(),
+                    It.IsAny<CancellationToken>()
                 )
             )
             .ThrowsAsync(apiException);
@@ -176,9 +176,9 @@ public class ChefsApplicationServiceTests
         _mockChefsApi
             .Setup(x =>
                 x.GetAuthTokenAsync(
-                It.IsAny<string>(),
-                It.IsAny<ChefsAuthTokenRequest>(),
-                It.IsAny<CancellationToken>()
+                    It.IsAny<string>(),
+                    It.IsAny<ChefsAuthTokenRequest>(),
+                    It.IsAny<CancellationToken>()
                 )
             )
             .ThrowsAsync(new HttpRequestException("Connection failed"));
@@ -202,9 +202,9 @@ public class ChefsApplicationServiceTests
         _mockChefsApi
             .Setup(x =>
                 x.GetAuthTokenAsync(
-                It.IsAny<string>(),
-                It.IsAny<ChefsAuthTokenRequest>(),
-                It.IsAny<CancellationToken>()
+                    It.IsAny<string>(),
+                    It.IsAny<ChefsAuthTokenRequest>(),
+                    It.IsAny<CancellationToken>()
                 )
             )
             .ThrowsAsync(new TaskCanceledException());
@@ -227,9 +227,9 @@ public class ChefsApplicationServiceTests
         _mockChefsApi
             .Setup(x =>
                 x.GetAuthTokenAsync(
-                It.IsAny<string>(),
-                It.IsAny<ChefsAuthTokenRequest>(),
-                It.IsAny<CancellationToken>()
+                    It.IsAny<string>(),
+                    It.IsAny<ChefsAuthTokenRequest>(),
+                    It.IsAny<CancellationToken>()
                 )
             )
             .ReturnsAsync(response);

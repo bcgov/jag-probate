@@ -46,7 +46,7 @@ namespace Probate.Api
                     | ForwardedHeaders.XForwardedProto
                     | ForwardedHeaders.XForwardedHost;
                 // Trust all proxies (nginx runs in the same pod / overlay network)
-                options.KnownNetworks.Clear();
+                options.KnownIPNetworks.Clear();
                 options.KnownProxies.Clear();
             });
 
@@ -136,14 +136,23 @@ namespace Probate.Api
             // Must be first so Request.Scheme, Request.Host, etc. reflect the
             // external URL for all downstream middleware (OIDC, cookies, etc.).
             app.UseForwardedHeaders();
+            var basePath = Configuration["WEB_BASE_HREF"]?.Trim();
 
-            app.Use(
-                (context, next) =>
+            if (!string.IsNullOrEmpty(basePath))
+            {
+                // Ensure leading slash
+                if (!basePath.StartsWith("/"))
+                    basePath = "/" + basePath;
+
+                // Remove trailing slash except for root
+                basePath = basePath.TrimEnd('/');
+
+                // Skip root or empty
+                if (!string.IsNullOrEmpty(basePath) && basePath != "/")
                 {
-                    XForwardedForHelper.ApplyPathBase(context.Request);
-                    return next();
+                    app.UsePathBase(basePath);
                 }
-            );
+            }
 
             if (env.IsDevelopment())
             {
