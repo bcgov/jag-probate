@@ -1,0 +1,138 @@
+/* =============================================================================
+   1. Layout & Outer Container
+   ============================================================================= */
+
+#status {
+  margin: 0;
+  padding: 0;
+}
+
+.home-content {
+  padding-bottom: 20px;
+  padding-top: 0;
+  width: 80%;
+  color: black;
+  margin: 0 auto;
+}
+
+/* =============================================================================
+   2. Header
+   ============================================================================= */
+
+.home-content h1 {
+  font-size: 1.75rem;
+  font-weight: 600;
+  margin-bottom: 0.75rem;
+  color: #333;
+}
+
+.home-content p.ml-0 {
+  font-size: 0.95rem;
+  color: #555;
+  line-height: 1.5;
+  margin: 0.5rem 0;
+}
+
+.border-gray {
+  border-color: #dee2e6 !important;
+}
+
+/* =============================================================================
+   3. Table
+   ============================================================================= */
+
+.b-table-sticky-header {
+  border: none;
+  margin: 0;
+  padding: 0;
+}
+
+.table {
+  margin-bottom: 0;
+  font-size: 0.9rem;
+}
+
+.table thead th {
+  border-bottom: none;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  padding: 0.75rem 0.5rem;
+}
+
+.table tbody td {
+  padding: 0.75rem 0.5rem;
+  vertical-align: middle;
+}
+
+/* =============================================================================
+   4. Action Buttons (trash / pencil / paper-plane inside table rows)
+   ============================================================================= */
+
+.btn-transparent {
+  background-color: transparent;
+  padding: 0.25rem 0.5rem;
+}
+
+.btn-transparent:hover {
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
+/* =============================================================================
+   5. Button Menu Footer
+   ============================================================================= */
+
+.button-content {
+  margin-top: 2rem;
+  padding: 0;
+}
+
+.application-button {
+  float: right;
+  color: #fff !important;
+  border: 2px solid rgba(0, 51, 102, 0.3); /* gov-mid-blue approximation */
+}
+
+.application-button:active {
+  border: 2px solid rgba(255, 255, 255, 0.8);
+}
+
+/* =============================================================================
+   6. Terms Link
+   ============================================================================= */
+
+.terms {
+  color: #003366; /* gov-mid-blue */
+  cursor: pointer;
+  margin: auto 0;
+}
+
+.terms:hover {
+  text-decoration: underline;
+}
+
+/* =============================================================================
+   7. Modal – Delete Confirmation
+   ============================================================================= */
+
+.modal-header.bg-warning {
+  background-color: #ffc107 !important;
+}
+
+.delete-error-badge {
+  width: 20rem;
+  display: inline-block;
+  cursor: default;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
