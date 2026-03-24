@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "serve": "vite preview",
+    "serve": "cross-env NODE_OPTIONS='--max-http-header-size=100000' vite preview",
     "build": "vite build",
     "dev": "vite",
     "lint": "eslint --ext .ts,.vue --fix src --ignore-pattern \"src/types/**\"",
@@ -41,6 +41,7 @@
     "@vitejs/plugin-basic-ssl": "^2.1.4",
     "@vitejs/plugin-vue": "^5.2.1",
     "@vue/eslint-config-typescript": "^14.1.3",
+    "cross-env": "^10.1.0",
     "eslint": "^9.17.0",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-vue": "^9.31.0",

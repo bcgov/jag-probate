@@ -19,7 +19,6 @@ nginx-runtime/
         └── run             # Main entrypoint - configures and starts nginx
 ```
 
-
 ## Environment Variables
 
 ### Required
@@ -90,7 +89,7 @@ spec:
             - name: API_URL
               value: "http://api:5000/api/"
             - name: WEB_BASE_HREF
-              value: "/"
+              value: "/probate/"
           volumeMounts:
             - name: app-dist
               mountPath: /tmp/app/dist

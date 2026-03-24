@@ -64,6 +64,41 @@ namespace Probate.Api.Tests.Controllers
         }
 
         [Fact]
+        public void Login_WithXBaseHrefHeader_PrependsMissingBasePath()
+        {
+            // Arrange — nginx strips /probate before forwarding and sets X-Base-Href.
+            // Vue Router strips the base from to.fullPath, so the frontend may send
+            // /previous-activity. The API must prepend /probate so the post-login
+            // redirect lands at /probate/previous-activity, not /previous-activity.
+            var httpContext = new DefaultHttpContext();
+            httpContext.Request.Headers["X-Base-Href"] = "/probate/";
+            _controller.ControllerContext = new ControllerContext { HttpContext = httpContext };
+
+            // Act
+            var result = _controller.Login("/previous-activity");
+
+            // Assert
+            var challengeResult = Assert.IsType<ChallengeResult>(result);
+            Assert.Equal("/probate/previous-activity", challengeResult.Properties?.RedirectUri);
+        }
+
+        [Fact]
+        public void Login_WithXBaseHrefHeader_DoesNotDoubleBasePath()
+        {
+            // Arrange — frontend already includes the base path in the returnUrl.
+            var httpContext = new DefaultHttpContext();
+            httpContext.Request.Headers["X-Base-Href"] = "/probate/";
+            _controller.ControllerContext = new ControllerContext { HttpContext = httpContext };
+
+            // Act
+            var result = _controller.Login("/probate/previous-activity");
+
+            // Assert — /probate must not be prepended a second time
+            var challengeResult = Assert.IsType<ChallengeResult>(result);
+            Assert.Equal("/probate/previous-activity", challengeResult.Properties?.RedirectUri);
+        }
+
+        [Fact]
         public void GetAuthStatus_WhenNotAuthenticated_ReturnsNotAuthenticated()
         {
             // Arrange
