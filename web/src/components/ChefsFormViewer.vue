@@ -34,6 +34,7 @@
     formKey: string;
     /** Base URL for the CHEFS service. */
     chefsBaseUrl?: string;
+    token?: Record<string, any>;
   }
 
   const props = withDefaults(defineProps<Props>(), {
@@ -96,19 +97,17 @@
       el.setAttribute('auth-token', token);
       el.setAttribute('base-url', resolvedBaseUrl);
       el.setAttribute('isolate-styles', 'false');
+      if (props.token && Object.keys(props.token).length > 0) {
+        el.setAttribute('token', JSON.stringify(props.token));
+      }
 
       container.appendChild(el);
 
-      el.addEventListener('formio:submit', (e: CustomEvent) => {
-        const submissionId: string =
-          e.detail?.submission?.data?.id ?? e.detail?.submissionId ?? '';
-        emit('submitted', submissionId);
-      });
+      el.addEventListener('formio:submitDone', handleSubmitDone);
 
       el.addEventListener('formio:error', (e: CustomEvent) => {
         emit('form-error', e.detail);
       });
-
       el.load();
 
       state.value = 'ready';
@@ -118,6 +117,28 @@
       state.value = 'error';
     }
   }
+
+  async function handleSubmitDone(e: CustomEvent) {
+    const submission = e.detail?.submission;
+
+    const chefsSubmissionId = submission?.id;
+    const createdBy = props.token?.preferred_username;
+    const applicantName = props.token?.display_name;
+    const status = submission?.submission?.state;
+    const lastUpdatedAt = submission?.updatedAt;
+    const lastFiledAt = submission?.createdAt;
+
+    await chefsService.createLocalSubmission({
+      chefsSubmissionId,
+      createdBy,
+      applicantName,
+      status,
+      lastUpdatedAt,
+      lastFiledAt,
+    });
+
+    emit('submitted', chefsSubmissionId);
+}
 
   // ── Lifecycle ─────────────────────────────────────────────────────────────
   onMounted(() => {

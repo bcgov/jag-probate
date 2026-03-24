@@ -50,7 +50,7 @@ public class ChefsApplicationService : IChefsApplicationService
             LogSanitizer.Sanitize(formKey)
         );
 
-        ChefsSubmissionsResponse response;
+        List<ChefsSubmissionSummary> response;
         try
         {
             response = await _chefsApi.GetSubmissionsAsync(formGuid, cancellationToken);
@@ -88,14 +88,16 @@ public class ChefsApplicationService : IChefsApplicationService
             throw new OperationCanceledException("Request was cancelled.", ex, cancellationToken);
         }
 
-        var applications = (response.Submissions ?? new List<ChefsSubmissionSummary>())
+        var applications = (response ?? new List<ChefsSubmissionSummary>())
             .Select(s => new ApplicationDto
             {
-                Id = s.Id,
-                FormId = s.FormId,
-                Status = s.Status,
+                Id = s.SubmissionId,
+                ConfirmationId = s.ConfirmationId,
+                Status = s.FormSubmissionStatusCode,
                 CreatedAt = s.CreatedAt,
+                CreatedBy = s.CreatedBy,
                 UpdatedAt = s.UpdatedAt,
+                UpdatedBy = s.UpdatedBy,
             })
             .ToList();
 

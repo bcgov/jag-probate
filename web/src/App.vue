@@ -3,8 +3,10 @@
     <NavigationTopbar />
 
     <main
+      id="main-content"
       class="app-main container-fluid position-relative"
       :class="layoutStore.backdropClass"
+      tabindex="-1"
     >
       <router-view />
     </main>

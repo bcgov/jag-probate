@@ -1,4 +1,4 @@
-import type { ChefsAuthToken } from '@/types';
+import type { ChefsAuthToken, SubmissionResponseDto } from '@/types';
 import HttpService from './HttpService';
 
 /**
@@ -23,6 +23,40 @@ class ChefsService {
     return await this.httpService.get<ChefsAuthToken>(
       `api/chefs/auth?formKey=${encodeURIComponent(formKey)}`
     );
+  }
+
+  /**
+   * Fetches all submitted applications for the given logical form key.
+   * Calls GET /api/Chefs/Applications?formKey=...
+   *
+   * @param formKey Logical form key (e.g. "probate").
+   */
+  async getApplications(formKey: string): Promise<any[]> {
+    return await this.httpService.get<any[]>(
+      `api/Chefs/Applications?formKey=${encodeURIComponent(formKey)}`
+    );
+  }
+
+  async getSubmissions(): Promise<SubmissionResponseDto[]> {
+    return await this.httpService.get('/api/submissions');
+  }
+
+  async createLocalSubmission(data: {
+    chefsSubmissionId: string;
+    createdBy: string;
+    applicantName: string;
+    status: string;
+    lastUpdatedAt: string;
+    lastFiledAt: string;
+  }): Promise<void> {
+    await this.httpService.post('/api/submissions', {
+      chefsSubmissionId: data.chefsSubmissionId,
+      applicantName: data.applicantName,
+      createdBy: data.createdBy,
+      status: data.status,
+      lastUpdatedAt: data.lastUpdatedAt,
+      lastFiledAt: data.lastFiledAt,
+    });
   }
 }
 

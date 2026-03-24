@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.Net.Http;
+using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
 using Refit;
@@ -16,8 +18,8 @@ public interface IChefsApi
     /// Get submissions for a form. Sends form-id as path and header; api-key is added by ChefsApiKeyHandler.
     /// </summary>
     [Get("/api/v1/forms/{formId}/submissions")]
-    Task<ChefsSubmissionsResponse> GetSubmissionsAsync(
-        [Header("form-id")] string formId,
+    Task<List<ChefsSubmissionSummary>> GetSubmissionsAsync(
+        string formId,
         CancellationToken cancellationToken = default
     );
 
@@ -38,7 +40,7 @@ public interface IChefsApi
 /// </summary>
 public class ChefsAuthTokenRequest
 {
-    [System.Text.Json.Serialization.JsonPropertyName("formId")]
+    [JsonPropertyName("formId")]
     public string FormId { get; set; } = string.Empty;
 }
 
@@ -47,23 +49,42 @@ public class ChefsAuthTokenRequest
 /// </summary>
 public class ChefsAuthTokenResponse
 {
-    [System.Text.Json.Serialization.JsonPropertyName("token")]
+    [JsonPropertyName("token")]
     public string Token { get; set; } = string.Empty;
-}
-
-/// <summary>
-/// Placeholder for CHEFS submissions response. Adjust properties to match CHEFS API response shape.
-/// </summary>
-public class ChefsSubmissionsResponse
-{
-    public List<ChefsSubmissionSummary> Submissions { get; set; } = new();
 }
 
 public class ChefsSubmissionSummary
 {
-    public string Id { get; set; } = string.Empty;
-    public string FormId { get; set; } = string.Empty;
-    public string Status { get; set; } = string.Empty;
+    [JsonPropertyName("confirmationId")]
+    public string ConfirmationId { get; set; } = string.Empty;
+
+    // [JsonPropertyName("formId")]
+    // public string FormId { get; set; } = string.Empty;
+
+    [JsonPropertyName("formSubmissionStatusCode")]
+    public string FormSubmissionStatusCode { get; set; } = string.Empty;
+
+    [JsonPropertyName("createdAt")]
     public DateTime? CreatedAt { get; set; }
+
+    [JsonPropertyName("updatedAt")]
     public DateTime? UpdatedAt { get; set; }
+
+    [JsonPropertyName("submissionId")]
+    public string SubmissionId { get; set; } = string.Empty;
+
+    [JsonPropertyName("createdBy")]
+    public string CreatedBy { get; set; } = string.Empty;
+
+    [JsonPropertyName("updatedBy")]
+    public string UpdatedBy { get; set; } = string.Empty;
+
+    [JsonPropertyName("formVersionId")]
+    public string FormVersionId { get; set; } = string.Empty;
+
+    [JsonPropertyName("deleted")]
+    public bool Deleted { get; set; } = false;
+
+    [JsonPropertyName("lateEntry")]
+    public bool? LateEntry { get; set; }
 }

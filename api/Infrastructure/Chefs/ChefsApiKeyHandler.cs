@@ -23,50 +23,128 @@ public class ChefsApiKeyHandler : DelegatingHandler
         _options = options.Value;
     }
 
+    /*
+        protected override async Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request,
+            CancellationToken cancellationToken
+        )
+        {
+            var path = request.RequestUri?.AbsolutePath ?? "";
+            string? formId = null;
+            // Check if this is an auth token request
+            if (request.RequestUri?.PathAndQuery.Contains("/gateway/v1/auth/token/forms/") == true)
+            {
+                // Extract formId from the path
+                var segments = request.RequestUri.Segments;
+                var formId = segments.Length > 0 ? segments[^1].TrimEnd('/') : null;
+
+                if (!string.IsNullOrEmpty(formId) && !string.IsNullOrEmpty(_options.ApiKey))
+                {
+                    // Use Basic Auth: formId:apiKey
+                    var authValue = Convert.ToBase64String(
+                        Encoding.UTF8.GetBytes($"{formId}:{_options.ApiKey}")
+                    );
+                    request.Headers.Authorization = new AuthenticationHeaderValue("Basic", authValue);
+
+                    // Log for debugging
+                    System.Diagnostics.Debug.WriteLine(
+                        $"CHEFS Auth Token Request: {request.RequestUri}"
+                    );
+                    System.Diagnostics.Debug.WriteLine($"Using Basic Auth with formId: {formId}");
+                }
+            }
+            else
+            {
+                // For other requests, use api-key header
+                if (!string.IsNullOrEmpty(_options.ApiKey))
+                {
+                    request.Headers.TryAddWithoutValidation("api-key", _options.ApiKey);
+                }
+            }
+
+            var response = await base.SendAsync(request, cancellationToken).ConfigureAwait(false);
+
+            // Log response for debugging
+            if (!response.IsSuccessStatusCode)
+            {
+                var content = await response.Content.ReadAsStringAsync(cancellationToken);
+                System.Diagnostics.Debug.WriteLine(
+                    $"CHEFS API Error Response ({response.StatusCode}): {content.Substring(0, Math.Min(500, content.Length))}"
+                );
+            }
+
+            return response;
+        }
+    */
     protected override async Task<HttpResponseMessage> SendAsync(
         HttpRequestMessage request,
         CancellationToken cancellationToken
     )
     {
-        // Check if this is an auth token request
-        if (request.RequestUri?.PathAndQuery.Contains("/gateway/v1/auth/token/forms/") == true)
+        var path = request.RequestUri?.AbsolutePath ?? "";
+
+        string? formId = null;
+
+        // 1️⃣ Submissions endpoint: /app/api/v1/forms/{formId}/submissions
+        if (path.StartsWith("/app/api/v1/forms/", StringComparison.OrdinalIgnoreCase))
         {
-            // Extract formId from the path
-            var segments = request.RequestUri.Segments;
-            var formId = segments.Length > 0 ? segments[^1].TrimEnd('/') : null;
-
-            if (!string.IsNullOrEmpty(formId) && !string.IsNullOrEmpty(_options.ApiKey))
+            var segments = path.Split('/', StringSplitOptions.RemoveEmptyEntries);
+            if (
+                segments.Length >= 5
+                && segments[3].Equals("forms", StringComparison.OrdinalIgnoreCase)
+            )
             {
-                // Use Basic Auth: formId:apiKey
-                var authValue = Convert.ToBase64String(
-                    Encoding.UTF8.GetBytes($"{formId}:{_options.ApiKey}")
-                );
-                request.Headers.Authorization = new AuthenticationHeaderValue("Basic", authValue);
-
-                // Log for debugging
-                System.Diagnostics.Debug.WriteLine(
-                    $"CHEFS Auth Token Request: {request.RequestUri}"
-                );
-                System.Diagnostics.Debug.WriteLine($"Using Basic Auth with formId: {formId}");
+                formId = segments[4];
             }
+        }
+        // 2️⃣ Auth token endpoint: /gateway/v1/auth/token/forms/{formId}
+        else if (
+            path.StartsWith("/gateway/v1/auth/token/forms/", StringComparison.OrdinalIgnoreCase)
+        )
+        {
+            var segments = path.Split('/', StringSplitOptions.RemoveEmptyEntries);
+            if (
+                segments.Length >= 6
+                && segments[4].Equals("forms", StringComparison.OrdinalIgnoreCase)
+            )
+            {
+                formId = segments[5];
+            }
+        }
+
+        if (!string.IsNullOrEmpty(formId) && !string.IsNullOrEmpty(_options.ApiKey))
+        {
+            // Apply Basic Auth for dynamic formId
+            var authValue = Convert.ToBase64String(
+                Encoding.UTF8.GetBytes($"{formId}:{_options.ApiKey}")
+            );
+            request.Headers.Authorization = new AuthenticationHeaderValue("Basic", authValue);
+
+            // Optional debug logging
+            System.Diagnostics.Debug.WriteLine(
+                $"[CHEFS] Basic Auth applied for formId={formId}, URL={request.RequestUri}"
+            );
         }
         else
         {
-            // For other requests, use api-key header
+            // Fallback: apply API key header for other requests
             if (!string.IsNullOrEmpty(_options.ApiKey))
             {
                 request.Headers.TryAddWithoutValidation("api-key", _options.ApiKey);
+                System.Diagnostics.Debug.WriteLine(
+                    $"[CHEFS] API Key header applied, URL={request.RequestUri}"
+                );
             }
         }
 
         var response = await base.SendAsync(request, cancellationToken).ConfigureAwait(false);
 
-        // Log response for debugging
+        // Optional debug logging for non-success responses
         if (!response.IsSuccessStatusCode)
         {
             var content = await response.Content.ReadAsStringAsync(cancellationToken);
             System.Diagnostics.Debug.WriteLine(
-                $"CHEFS API Error Response ({response.StatusCode}): {content.Substring(0, Math.Min(500, content.Length))}"
+                $"[CHEFS] API Error ({response.StatusCode}) URL={request.RequestUri} Content={content.Substring(0, Math.Min(500, content.Length))}"
             );
         }
 

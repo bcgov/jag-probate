@@ -58,6 +58,8 @@
   top: 0;
   z-index: 10;
   padding: 0.75rem 0.5rem;
+  background-color: #003366 !important;
+  color: #fff !important;
 }
 
 .table tbody td {
@@ -135,4 +137,40 @@
   clip: rect(0, 0, 0, 0);
   white-space: nowrap;
   border: 0;
+}
+/* Makes the page fill the available space between header and footer
+   without pushing the footer off screen */
+.previous-activity {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+/* Table grows to fill available space, scrolls internally */
+.table-section {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  min-height: 0;
+}
+
+/* Button menu stays pinned at the bottom of the page content */
+.button-content {
+  margin-top: auto;
+  padding-top: 1rem;
+  padding-bottom: 1rem;
+  border-top: 1px solid #dee2e6;
+}
+
+/* Align process map and session button row items to center vertically */
+.button-content .row {
+  align-items: flex-end;
+}
+
+/* Process map intro text sits just above its button, no extra gap */
+.process-map-intro-text {
+  margin-bottom: 0.4rem;
+}
+.process-map-button {
+  color: #fff !important;
 }

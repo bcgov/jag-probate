@@ -16,6 +16,7 @@
       <div class="form-area">
         <ChefsFormViewer
           form-key="legal"
+          :token="chefsToken"
           @submitted="onSubmitted"
           @form-error="onFormError"
         />
@@ -25,10 +26,20 @@
 </template>
 
 <script setup lang="ts">
+  import { computed } from 'vue';
   import { useRouter } from 'vue-router';
   import ChefsFormViewer from '@/components/ChefsFormViewer.vue';
+  import { useAuthStore } from '@/stores';
+  import { extractTokenPayload } from '@/utils/claims';
 
   const router = useRouter();
+  const authStore = useAuthStore();
+
+  // Build token payload from Keycloak claims for CHEFS
+  const chefsToken = computed(() => {
+    if (!authStore.userInfo) return {};
+    return extractTokenPayload(authStore.userInfo);
+  });
 
   function onSubmitted(submissionId: string) {
     // Navigate back to previous activity after successful submission

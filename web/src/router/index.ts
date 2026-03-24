@@ -108,6 +108,18 @@ const routes: RouteRecordRaw[] = [
     component: () => import('../views/NewApplication.vue'),
     meta: { requiresAuth: true },
   },
+  {
+    path: '/terms',
+    name: 'terms',
+    component: () => import('@/views/TermsAndConditions.vue'),
+    meta: { requiresAuth: false },
+  },
+  {
+    path: '/qualify',
+    name: 'pre-qualification',
+    component: () => import('@/views/PreQualification.vue'),
+    meta: { requiresAuth: false },
+  },
 ];
 
 const router = createRouter({
