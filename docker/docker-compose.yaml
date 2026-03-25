@@ -2,8 +2,8 @@ services:
   web:
     image: "${COMPOSE_PROJECT_NAME}-web"
     environment:
-      - API_URL=${API_URL}
-      - WEB_BASE_HREF=${WEB_BASE_HREF}
+      - API_URL=${API_URL:-http://api:5000}
+      - WEB_BASE_HREF=${WEB_BASE_HREF:-/probate/}
       - APP_ENVIRONMENT=${APP_ENVIRONMENT}
       - VITE_BCEID_REGISTER_URL=${VITE_BCEID_REGISTER_URL}
       - NODE_ENV=development

@@ -140,10 +140,10 @@ configureEnvironment () {
   export POSTGRESQL_ADMIN_PASSWORD=${POSTGRESQL_ADMIN_PASSWORD:-admin123}
 
   # Default API startup parameters
-  export API_URL=${API_URL-http://api:5000/api/}
+  export API_URL=${API_URL:-http://api:5000}
   
   # Default web startup parameters
-  export WEB_BASE_HREF=${WEB_BASE_HREF}
+  export WEB_BASE_HREF=${WEB_BASE_HREF:-/probate/}
 }
 
 getStartupParams() {
