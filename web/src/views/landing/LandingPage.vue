@@ -181,8 +181,10 @@
 
   const router = useRouter();
 
+  // This is not a secret url and is safe to expose, for production safety its best to fall back to the official BCEID registration page if the environment variable is not set or is misconfigured
   const BCEID_REGISTER_URL =
-    'https://www.bceid.ca/register/basic/account_details.aspx';
+    import.meta.env.VITE_BCEID_REGISTER_URL ||
+    'https://www.bceid.ca/register/basic/account_details.aspx?type=regular&serviceId=7493&eServiceType=all';
 
   const handleRegister = () => {
     window.open(BCEID_REGISTER_URL, '_blank', 'noopener');
