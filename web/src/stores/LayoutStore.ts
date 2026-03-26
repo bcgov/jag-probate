@@ -10,9 +10,9 @@ export type backdropClasses = '' | 'bd-legislature-dome';
 
 export const useLayoutStore = defineStore('LayoutStore', () => {
   // Navigation header state
-  const navHeader = ref<string>('Probate');
+  const navHeader = ref<string>('Probate Application');
   const setNavHeader = (newHeader: string) => (navHeader.value = newHeader);
-  const resetNavHeader = () => (navHeader.value = 'Probate');
+  const resetNavHeader = () => (navHeader.value = 'Probate Application');
 
   // Backdrop class state
   const backdropClass = ref<backdropClasses>('');
