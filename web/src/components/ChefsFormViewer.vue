@@ -28,14 +28,14 @@
   import { inject, onMounted, ref } from 'vue';
   import ChefsService from '@/services/ChefsService';
   import { computed, inject, onMounted, ref } from 'vue';
-import { useAuthStore } from '@/stores';
-import { extractTokenPayload } from '@/utils/claims';
+  import { useAuthStore } from '@/stores';
+  import { extractTokenPayload } from '@/utils/claims';
 
-const authStore = useAuthStore();
-const chefsToken = computed(() => {
-  if (!authStore.userInfo) return {};
-  return extractTokenPayload(authStore.userInfo);
-});
+  const authStore = useAuthStore();
+  const chefsToken = computed(() => {
+    if (!authStore.userInfo) return {};
+    return extractTokenPayload(authStore.userInfo);
+  });
 
   // ── Props ─────────────────────────────────────────────────────────────────
   interface Props {

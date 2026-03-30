@@ -30,7 +30,6 @@
 
   const router = useRouter();
 
-
   function onSubmitted(submissionId: string) {
     // Navigate back to previous activity after successful submission
     router.push({
