@@ -25,7 +25,6 @@
 </template>
 
 <script setup lang="ts">
-  import { inject, onMounted, ref } from 'vue';
   import ChefsService from '@/services/ChefsService';
   import { computed, inject, onMounted, ref } from 'vue';
   import { useAuthStore } from '@/stores';
