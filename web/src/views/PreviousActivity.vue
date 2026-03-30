@@ -42,7 +42,7 @@
               role="table"
               class="table b-table table-striped table-borderless table-sm"
             >
-              <thead role="rowgroup" >
+              <thead role="rowgroup">
                 <tr role="row">
                   <th style="font-size: 11pt; width: 20%">Application ID</th>
                   <th style="font-size: 11pt; width: 20%">Last Updated</th>
@@ -289,51 +289,52 @@
     //router.push({ name: 'NewApplication' });
   };
 
-
   async function loadApplications() {
-  dataLoaded.value = false;
-  try {
-    const applications = await chefsService.getSubmissions();
-    previousApplications.value = (applications ?? []).map((appJson: any) => ({
-      // Display
-      //deceased_name: appJson.applicantName ?? '(the person who died)',
-      deceased_name: '(the person who died)',
-      app_type: 'Probate Grant',
-      status: appJson.status ?? '',
-      packageNum: appJson.chefsSubmissionId ?? '',
+    dataLoaded.value = false;
+    try {
+      const applications = await chefsService.getSubmissions();
+      previousApplications.value = (applications ?? []).map((appJson: any) => ({
+        // Display
+        //deceased_name: appJson.applicantName ?? '(the person who died)',
+        deceased_name: '(the person who died)',
+        app_type: 'Probate Grant',
+        status: appJson.status ?? '',
+        packageNum: appJson.chefsSubmissionId ?? '',
 
-      // Identity
-      id: appJson.id,
-      chefsSubmissionId: appJson.chefsSubmissionId,
+        // Identity
+        id: appJson.id,
+        chefsSubmissionId: appJson.chefsSubmissionId,
 
-      // Last Updated
-      lastUpdated: appJson.lastUpdatedAt
-        ? moment(appJson.lastUpdatedAt).tz('America/Vancouver').diff('2000-01-01', 'minutes')
-        : 0,
-      lastUpdatedDate: appJson.lastUpdatedAt
-        ? moment(appJson.lastUpdatedAt).tz('America/Vancouver').format()
-        : '',
+        // Last Updated
+        lastUpdated: appJson.lastUpdatedAt
+          ? moment(appJson.lastUpdatedAt)
+              .tz('America/Vancouver')
+              .diff('2000-01-01', 'minutes')
+          : 0,
+        lastUpdatedDate: appJson.lastUpdatedAt
+          ? moment(appJson.lastUpdatedAt).tz('America/Vancouver').format()
+          : '',
 
-      // Last Filed
-      lastFiled: appJson.lastFiledAt
-        ? moment(appJson.lastFiledAt).tz('America/Vancouver').diff('2000-01-01', 'minutes')
-        : 0,
-      lastFiledDate: appJson.lastFiledAt
-        ? moment(appJson.lastFiledAt).tz('America/Vancouver').format()
-        : '',
-    }));
-
-    
-  } catch (err: any) {
-    if (err.response?.status === 404) {
-      previousApplications.value = [];
-    } else {
-      error.value = err;
+        // Last Filed
+        lastFiled: appJson.lastFiledAt
+          ? moment(appJson.lastFiledAt)
+              .tz('America/Vancouver')
+              .diff('2000-01-01', 'minutes')
+          : 0,
+        lastFiledDate: appJson.lastFiledAt
+          ? moment(appJson.lastFiledAt).tz('America/Vancouver').format()
+          : '',
+      }));
+    } catch (err: any) {
+      if (err.response?.status === 404) {
+        previousApplications.value = [];
+      } else {
+        error.value = err;
+      }
+    } finally {
+      dataLoaded.value = true;
     }
-  } finally {
-    dataLoaded.value = true;
   }
-}
 
   // ── Resume Application ────────────────────────────────────────────────────────
   async function resumeApplication(applicationId: number) {

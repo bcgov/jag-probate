@@ -58,9 +58,6 @@ public class ChefsSubmissionSummary
     [JsonPropertyName("confirmationId")]
     public string ConfirmationId { get; set; } = string.Empty;
 
-    // [JsonPropertyName("formId")]
-    // public string FormId { get; set; } = string.Empty;
-
     [JsonPropertyName("formSubmissionStatusCode")]
     public string FormSubmissionStatusCode { get; set; } = string.Empty;
 

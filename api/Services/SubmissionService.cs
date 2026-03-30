@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Mapster;
 using Microsoft.EntityFrameworkCore;
 using Probate.Api.Models;
 using Probate.Db;
@@ -35,30 +36,12 @@ namespace Probate.Api.Services
             CancellationToken cancellationToken = default
         )
         {
-            var submission = new Submission
-            {
-                ChefsSubmissionId = dto.ChefsSubmissionId,
-                ApplicantName = dto.ApplicantName,
-                CreatedBy = dto.CreatedBy,
-                Status = dto.Status,
-                LastUpdatedAt = dto.LastUpdatedAt,
-                LastFiledAt = dto.LastFiledAt,
-            };
+            var submission = dto.Adapt<Submission>();
 
             _db.Submissions.Add(submission);
             await _db.SaveChangesAsync(cancellationToken);
 
-            return new SubmissionResponseDto
-            {
-                Id = submission.Id,
-                ChefsSubmissionId = submission.ChefsSubmissionId,
-                ApplicantName = submission.ApplicantName,
-                CreatedBy = submission.CreatedBy,
-                Status = submission.Status,
-                LastUpdatedAt = submission.LastUpdatedAt,
-                LastFiledAt = submission.LastFiledAt,
-                CreatedAt = submission.CreatedAt,
-            };
+            return submission.Adapt<SubmissionResponseDto>();
         }
 
         public async Task<IReadOnlyList<SubmissionResponseDto>> GetSubmissionsByUserAsync(

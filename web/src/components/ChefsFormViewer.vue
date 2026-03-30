@@ -27,6 +27,15 @@
 <script setup lang="ts">
   import { inject, onMounted, ref } from 'vue';
   import ChefsService from '@/services/ChefsService';
+  import { computed, inject, onMounted, ref } from 'vue';
+import { useAuthStore } from '@/stores';
+import { extractTokenPayload } from '@/utils/claims';
+
+const authStore = useAuthStore();
+const chefsToken = computed(() => {
+  if (!authStore.userInfo) return {};
+  return extractTokenPayload(authStore.userInfo);
+});
 
   // ── Props ─────────────────────────────────────────────────────────────────
   interface Props {
@@ -34,7 +43,6 @@
     formKey: string;
     /** Base URL for the CHEFS service. */
     chefsBaseUrl?: string;
-    token?: Record<string, any>;
   }
 
   const props = withDefaults(defineProps<Props>(), {
@@ -97,8 +105,8 @@
       el.setAttribute('auth-token', token);
       el.setAttribute('base-url', resolvedBaseUrl);
       el.setAttribute('isolate-styles', 'false');
-      if (props.token && Object.keys(props.token).length > 0) {
-        el.setAttribute('token', JSON.stringify(props.token));
+      if (chefsToken.value && Object.keys(chefsToken.value).length > 0) {
+        el.setAttribute('token', JSON.stringify(chefsToken.value));
       }
 
       container.appendChild(el);
@@ -122,8 +130,8 @@
     const submission = e.detail?.submission;
 
     const chefsSubmissionId = submission?.id;
-    const createdBy = props.token?.preferred_username;
-    const applicantName = props.token?.display_name;
+    const createdBy = chefsToken.value?.preferred_username;
+    const applicantName = chefsToken.value?.display_name;
     const status = submission?.submission?.state;
     const lastUpdatedAt = submission?.updatedAt;
     const lastFiledAt = submission?.createdAt;
@@ -138,7 +146,7 @@
     });
 
     emit('submitted', chefsSubmissionId);
-}
+  }
 
   // ── Lifecycle ─────────────────────────────────────────────────────────────
   onMounted(() => {

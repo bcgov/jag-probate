@@ -3,6 +3,8 @@ import type { UserInfo } from '@/types';
 /**
  * Flattens UserInfo claims array into a plain object suitable
  * for passing as the CHEFS form 'token' attribute.
+ * https://developer.gov.bc.ca/docs/default/component/chefs-techdocs/Capabilities/Integrations/Embedding-Webcomponent/#advanced-configuration
+ *
  *
  * Example output:
  * {
