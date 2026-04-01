@@ -32,6 +32,6 @@ describe('Router', () => {
       .find((route) => route.name === 'RepresentSomeoneWhoDied');
     expect(representRoute).toBeDefined();
     expect(representRoute?.path).toBe('/represent-someone-who-died');
-    expect(representRoute?.meta.navHeader).toBe('Represent Someone Who Died');
+    expect(representRoute?.meta.navHeader).toBe('Probate Application');
   });
 });
