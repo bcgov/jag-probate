@@ -15,15 +15,14 @@ namespace Probate.Db.Migrations
                 name: "deleted_at",
                 table: "submissions",
                 type: "timestamp with time zone",
-                nullable: true);
+                nullable: true
+            );
         }
 
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.DropColumn(
-                name: "deleted_at",
-                table: "submissions");
+            migrationBuilder.DropColumn(name: "deleted_at", table: "submissions");
         }
     }
 }

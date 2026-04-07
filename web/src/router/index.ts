@@ -120,9 +120,10 @@ const routes: RouteRecordRaw[] = [
     component: () => import('@/views/NewApplication.vue'),
     meta: { requiresAuth: true },
   },
+  {
     path: '/error',
     name: 'Error',
-    component: () => import('../views/ErrorView.vue'),
+    component: () => import('@/views/ErrorView.vue'),
     meta: { requiresAuth: false },
   },
   {
