@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Mapster;
+using MapsterMapper;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -73,17 +74,7 @@ namespace Probate.Api.Services
             return await _db
                 .Submissions.Where(s => s.CreatedBy == username && s.DeletedAt == null)
                 .OrderByDescending(s => s.CreatedAt)
-                .Select(s => new SubmissionResponseDto
-                {
-                    Id = s.Id,
-                    ChefsSubmissionId = s.ChefsSubmissionId,
-                    ApplicantName = s.ApplicantName,
-                    CreatedBy = s.CreatedBy,
-                    Status = s.Status,
-                    LastUpdatedAt = s.LastUpdatedAt,
-                    LastFiledAt = s.LastFiledAt,
-                    CreatedAt = s.CreatedAt,
-                })
+                .ProjectToType<SubmissionResponseDto>()
                 .ToListAsync(cancellationToken);
         }
 
@@ -92,10 +83,6 @@ namespace Probate.Api.Services
             CancellationToken cancellationToken = default
         )
         {
-            _logger.LogInformation(
-                "Upsert called with ChefsSubmissionId: {ChefsSubmissionId}",
-                dto.ChefsSubmissionId
-            );
             var existing = await _db.Submissions.FirstOrDefaultAsync(
                 s => s.ChefsSubmissionId == dto.ChefsSubmissionId,
                 cancellationToken
