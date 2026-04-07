@@ -1,174 +1,129 @@
 <template>
-  <div id="status" class="card bg-white border-white" style="min-height: 784px">
-    <div class="card home-content border-white">
+  <div id="status" class="card bg-white border-white previous-activity">
+    <div class="card home-content border-white p-0">
+      <!-- Error Banner -->
+      <div class="alert alert-danger mt-4" v-if="error">{{ error }}</div>
+
       <!-- Header Section -->
-      <div name="info-content-header" class="header-section">
-        <h1 class="page-title">Previous Activity</h1>
+      <div name="info-content-header" class="pt-5">
+        <h1>Previous Activity</h1>
         <div class="card bg-white border-white">
-          <p class="instruction-text">
+          <p class="ml-0 mb-1">
             To resume a previous session, click the Resume button next to the
             activity. To start a new session, click the Begin New Session button
             at the bottom of the page.
           </p>
         </div>
-        <div class="header-divider"></div>
+        <div
+          class="mb-4 border border-gray border-right-0 border-left-0 border-bottom-0"
+        ></div>
       </div>
 
       <!-- Table Section -->
-      <div style="height: 525px">
-        <div class="card bg-white border-white" style="height: 525px">
+      <div v-if="dataLoaded" class="table-section">
+        <!-- Empty State -->
+        <div
+          class="card bg-white border-white"
+          v-if="!previousApplications.length"
+        >
+          <span class="text-muted ml-4 mb-5">No previous applications.</span>
+        </div>
+
+        <!-- Applications Table -->
+        <div v-else class="card bg-white border-white table-section">
           <div
             class="mx-0 b-table-sticky-header table-responsive-sm"
             style="max-height: 600px; overflow-y: auto"
           >
             <table
               role="table"
-              aria-busy="false"
-              aria-colcount="6"
               class="table b-table table-striped table-borderless table-sm"
             >
-              <thead role="rowgroup" class="thead-dark">
+              <thead role="rowgroup">
                 <tr role="row">
-                  <th
-                    role="columnheader"
-                    scope="col"
-                    tabindex="0"
-                    aria-colindex="1"
-                    class="b-table-sort-icon-left"
-                    style="font-size: 11pt; width: 20%"
-                  >
-                    <div>Application</div>
-                    <span class="sr-only"> (Click to sort Ascending)</span>
-                  </th>
-                  <th
-                    role="columnheader"
-                    scope="col"
-                    tabindex="0"
-                    aria-colindex="2"
-                    aria-sort="descending"
-                    class="b-table-sort-icon-left"
-                    style="font-size: 11pt; width: 20%"
-                  >
-                    <div>Last Updated</div>
-                    <span class="sr-only"> (Click to sort Ascending)</span>
-                  </th>
-                  <th
-                    role="columnheader"
-                    scope="col"
-                    tabindex="0"
-                    aria-colindex="3"
-                    class="b-table-sort-icon-left"
-                    style="font-size: 11pt; width: 20%"
-                  >
-                    <div>Last Filed</div>
-                    <span class="sr-only"> (Click to sort Ascending)</span>
-                  </th>
-                  <th
-                    role="columnheader"
-                    scope="col"
-                    tabindex="0"
-                    aria-colindex="4"
-                    class="b-table-sort-icon-left"
-                    style="font-size: 10pt; width: 15%"
-                  >
-                    <div>Status</div>
-                    <span class="sr-only"> (Click to sort Ascending)</span>
-                  </th>
-                  <th
-                    role="columnheader"
-                    scope="col"
-                    tabindex="0"
-                    aria-colindex="5"
-                    style="font-size: 10pt; width: 15%"
-                  >
-                    <div>Package#</div>
-                    <span class="sr-only"> (Click to clear sorting)</span>
-                  </th>
-                  <th
-                    role="columnheader"
-                    scope="col"
-                    tabindex="0"
-                    aria-colindex="6"
-                    aria-label="Edit"
-                    style="font-size: 10pt; width: 10%"
-                  >
-                    <div></div>
-                    <span class="sr-only"> (Click to clear sorting)</span>
-                  </th>
+                  <th style="font-size: 11pt; width: 20%">Application ID</th>
+                  <th style="font-size: 11pt; width: 20%">Last Updated</th>
+                  <th style="font-size: 11pt; width: 20%">Last Filed</th>
+                  <th style="font-size: 10pt; width: 15%">Status</th>
+                  <th style="font-size: 10pt; width: 15%">Package#</th>
+                  <th style="font-size: 10pt; width: 10%"></th>
                 </tr>
               </thead>
               <tbody role="rowgroup">
-                <tr v-for="caseItem in cases" :key="caseItem.id" role="row">
-                  <td aria-colindex="1" role="cell" class="border-top">
-                    <span>{{ caseItem.title }}</span>
+                <tr
+                  v-for="app in previousApplications"
+                  :key="app.id"
+                  role="row"
+                >
+                  <td class="border-top">
+                    {{ formatFullName(app.deceased_name) }}
                   </td>
-                  <td aria-colindex="2" role="cell" class="border-top">
-                    <span>{{ formatDateTime(caseItem.filedDate) }}</span>
+                  <td class="border-top">
+                    {{ beautifyDate(app.lastUpdatedDate) }}
                   </td>
-                  <td aria-colindex="3" role="cell" class="border-top">
-                    <span></span>
+                  <td class="border-top">
+                    {{ beautifyDate(app.lastFiledDate ?? app.createdAt) }}
                   </td>
-                  <td aria-colindex="4" role="cell" class="border-top">
-                    {{ caseItem.status }}
-                  </td>
-                  <td aria-colindex="5" role="cell" class="border-top">
-                    {{ caseItem.caseNumber }}
-                  </td>
-                  <td aria-colindex="6" role="cell" class="border-top">
+                  <td class="border-top">{{ app.status }}</td>
+                  <td class="border-top">{{ app.chefsSubmissionId }}</td>
+                  <td class="border-top">
+                    <!-- Trash: only shown when application has never been filed -->
                     <button
+                      v-if="app.lastFiled === 0"
                       title="Remove Application"
                       type="button"
                       class="btn my-0 py-0 border-0 btn-transparent btn-sm"
-                      @click="removeCase(caseItem.id)"
+                      @click="removeApplication(app)"
                     >
                       <svg
                         viewBox="0 0 16 16"
-                        width="1em"
-                        height="1em"
-                        focusable="false"
-                        role="img"
-                        aria-label="trash fill"
-                        xmlns="http://www.w3.org/2000/svg"
+                        width="1.25em"
+                        height="1.25em"
                         fill="currentColor"
-                        class="bi-trash-fill b-icon bi text-danger"
-                        style="font-size: 125%"
+                        class="text-danger"
+                        xmlns="http://www.w3.org/2000/svg"
                       >
-                        <g>
-                          <path
-                            fill-rule="evenodd"
-                            d="M2.5 1a1 1 0 0 0-1 1v1a1 1 0 0 0 1 1H3v9a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2V4h.5a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1H10a1 1 0 0 0-1-1H7a1 1 0 0 0-1 1H2.5zm3 4a.5.5 0 0 1 .5.5v7a.5.5 0 0 1-1 0v-7a.5.5 0 0 1 .5-.5zM8 5a.5.5 0 0 1 .5.5v7a.5.5 0 0 1-1 0v-7A.5.5 0 0 1 8 5zm3 .5a.5.5 0 0 0-1 0v7a.5.5 0 0 0 1 0v-7z"
-                          ></path>
-                        </g>
+                        <path
+                          fill-rule="evenodd"
+                          d="M2.5 1a1 1 0 0 0-1 1v1a1 1 0 0 0 1 1H3v9a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2V4h.5a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1H10a1 1 0 0 0-1-1H7a1 1 0 0 0-1 1H2.5zm3 4a.5.5 0 0 1 .5.5v7a.5.5 0 0 1-1 0v-7a.5.5 0 0 1 .5-.5zM8 5a.5.5 0 0 1 .5.5v7a.5.5 0 0 1-1 0v-7A.5.5 0 0 1 8 5zm3 .5a.5.5 0 0 0-1 0v7a.5.5 0 0 0 1 0v-7z"
+                        />
                       </svg>
                     </button>
+
+                    <!-- Resume (pencil) -->
                     <button
                       title="Resume Application"
                       type="button"
                       class="btn my-0 py-0 border-0 btn-transparent btn-sm"
-                      @click="resumeCase(caseItem.id)"
+                      @click="resumeApplication(app)"
                     >
                       <svg
                         viewBox="0 0 16 16"
-                        width="1em"
-                        height="1em"
-                        focusable="false"
-                        role="img"
-                        aria-label="pencil square"
-                        xmlns="http://www.w3.org/2000/svg"
+                        width="1.25em"
+                        height="1.25em"
                         fill="currentColor"
-                        class="bi-pencil-square b-icon bi text-primary"
-                        style="font-size: 125%"
+                        class="text-primary"
+                        xmlns="http://www.w3.org/2000/svg"
                       >
-                        <g>
-                          <path
-                            d="M15.502 1.94a.5.5 0 0 1 0 .706L14.459 3.69l-2-2L13.502.646a.5.5 0 0 1 .707 0l1.293 1.293zm-1.75 2.456l-2-2L4.939 9.21a.5.5 0 0 0-.121.196l-.805 2.414a.25.25 0 0 0 .316.316l2.414-.805a.5.5 0 0 0 .196-.12l6.813-6.814z"
-                          ></path>
-                          <path
-                            fill-rule="evenodd"
-                            d="M1 13.5A1.5 1.5 0 0 0 2.5 15h11a1.5 1.5 0 0 0 1.5-1.5v-6a.5.5 0 0 0-1 0v6a.5.5 0 0 1-.5.5h-11a.5.5 0 0 1-.5-.5v-11a.5.5 0 0 1 .5-.5H9a.5.5 0 0 0 0-1H2.5A1.5 1.5 0 0 0 1 2.5v11z"
-                          ></path>
-                        </g>
+                        <path
+                          d="M15.502 1.94a.5.5 0 0 1 0 .706L14.459 3.69l-2-2L13.502.646a.5.5 0 0 1 .707 0l1.293 1.293zm-1.75 2.456l-2-2L4.939 9.21a.5.5 0 0 0-.121.196l-.805 2.414a.25.25 0 0 0 .316.316l2.414-.805a.5.5 0 0 0 .196-.12l6.813-6.814z"
+                        />
+                        <path
+                          fill-rule="evenodd"
+                          d="M1 13.5A1.5 1.5 0 0 0 2.5 15h11a1.5 1.5 0 0 0 1.5-1.5v-6a.5.5 0 0 0-1 0v6a.5.5 0 0 1-.5.5h-11a.5.5 0 0 1-.5-.5v-11a.5.5 0 0 1 .5-.5H9a.5.5 0 0 0 0-1H2.5A1.5 1.5 0 0 0 1 2.5v11z"
+                        />
                       </svg>
+                    </button>
+
+                    <!-- Paper plane: only shown when application has been filed -->
+                    <button
+                      v-if="app.lastFiled !== 0"
+                      title="Navigate To Submitted Application"
+                      type="button"
+                      class="btn my-0 py-0 border-0 btn-transparent btn-sm"
+                      @click="navigateToEFilingHub(app.id)"
+                    >
+                      <span class="fa fa-paper-plane text-info" />
                     </button>
                   </td>
                 </tr>
@@ -177,226 +132,247 @@
           </div>
         </div>
       </div>
+    </div>
 
-      <!-- Button Menu Section -->
-      <div name="button-menu" class="card button-content bg-white border-white">
-        <div class="card-body p-3">
-          <div class="button-row">
+    <div name="button-menu" class="card button-content border-white bg-white">
+      <div class="card-body">
+        <p class="process-map-intro-text">
+          <strong
+            >The Process Map provides a general overview for a Representation
+            Grant.</strong
+          >
+        </p>
+        <div class="d-flex align-items-center justify-content-between">
+          <button
+            type="button"
+            class="btn btn-success process-map-button"
+            @click="showProcessMap = true"
+            aria-haspopup="dialog"
+          >
+            View/Print Process Map
+            <span class="fa fa-print ms-1" aria-hidden="true"></span>
+          </button>
+          <div class="d-flex align-items-center gap-3">
             <button
               type="button"
-              class="btn btn-success begin-session-btn"
+              class="btn btn-success application-button"
               @click="createCase"
             >
               Begin NEW Session
             </button>
-            <a class="terms-link" @click="showTerms"> Terms and Conditions </a>
+            <a class="terms" @click="openTerms" style="cursor: pointer">
+              Terms and Conditions
+            </a>
           </div>
         </div>
       </div>
     </div>
+    <!-- Delete Confirmation Modal -->
+    <div v-if="confirmDelete" class="modal d-block" tabindex="-1" role="dialog">
+      <div class="modal-dialog" role="document">
+        <div class="modal-content">
+          <div class="modal-header bg-warning text-light">
+            <h2 class="modal-title mb-0 text-light">
+              Confirm Delete Application
+            </h2>
+            <button
+              type="button"
+              class="btn btn-outline-warning text-light"
+              @click="confirmDelete = false"
+            >
+              &times;
+            </button>
+          </div>
+          <div class="modal-body">
+            <div v-if="deleteError" class="mb-3">
+              <span
+                class="badge bg-danger text-white p-2 delete-error-badge"
+                :title="deleteErrorMsgDesc"
+              >
+                {{ deleteErrorMsg }}
+                <button
+                  type="button"
+                  class="btn-close btn-close-white ms-3"
+                  @click="deleteError = false"
+                />
+              </span>
+            </div>
+            <h4>
+              Are you sure you want to delete your
+              <b>"{{ applicationToDelete?.app_type }}"</b> application?
+            </h4>
+          </div>
+          <div class="modal-footer">
+            <button
+              type="button"
+              class="btn btn-danger"
+              @click="confirmRemoveApplication"
+            >
+              Confirm
+            </button>
+            <button
+              type="button"
+              class="btn btn-primary"
+              @click="confirmDelete = false"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div v-if="confirmDelete" class="modal-backdrop fade show"></div>
   </div>
 </template>
 
 <script setup lang="ts">
-  import { ref, onMounted } from 'vue';
+  //import { useApplicationStore } from '@/stores/PreviousApplicationStore';
+  import ChefsService from '@/services/ChefsService';
+  import moment from 'moment-timezone';
+  import { inject, onMounted, onUnmounted, ref } from 'vue';
   import { useRouter } from 'vue-router';
-  import axios from 'axios';
 
-  interface Case {
-    id: number;
-    caseNumber: string;
-    title: string;
-    status: string;
-    filedDate: string;
-    description: string;
-  }
+  import '../styles/PreviousActivity.styles.css';
 
+  const chefsService = inject<ChefsService>('chefsService')!;
+
+  // ── Router & Store ────────────────────────────────────────────────────────────
   const router = useRouter();
-  const cases = ref<Case[]>([]);
-  const loading = ref(true);
+
+  //const applicationStore = useApplicationStore();
+
+  // ── State ─────────────────────────────────────────────────────────────────────
+  const previousApplications = ref<any[]>([]);
+  const dataLoaded = ref(false);
   const error = ref('');
 
-  const fetchCases = async () => {
-    try {
-      loading.value = true;
-      const response = await axios.get(`${import.meta.env.BASE_URL}api/cases`);
-      cases.value = response.data;
-    } catch (err: any) {
-      error.value = err.response?.data?.message || 'Failed to load cases';
-    } finally {
-      loading.value = false;
-    }
-  };
+  const confirmDelete = ref(false);
+  const applicationToDelete = ref<any>({});
+  const deleteError = ref(false);
+  const deleteErrorMsg = ref('');
+  const deleteErrorMsgDesc = ref('');
 
+  // ── Helpers ───────────────────────────────────────────────────────────────────
+  function formatFullName(name: any): string {
+    if (!name) return '';
+    if (typeof name === 'string') return name;
+    const { first = '', middle = '', last = '' } = name;
+    return [first, middle, last].filter(Boolean).join(' ');
+  }
+
+  function beautifyDate(dateStr: string): string {
+    if (!dateStr) return '';
+    return moment(dateStr)
+      .tz('America/Vancouver')
+      .format('ddd, MMM DD YYYY HH:mm');
+  }
+
+  // ── Navigation ────────────────────────────────────────────────────────────────
+  // function preQualify() {
+  //     router.push({ name: 'pre-qualification' });
+  // }
+
+  function openTerms() {
+    router.push({ name: 'terms' });
+  }
+
+  function navigateToEFilingHub(id: number) {
+    console.log('going to hub', id);
+    // TODO: replace with actual eFiling hub URL
+  }
   const createCase = () => {
     router.push('/get-started');
+    //router.push({ name: 'NewApplication' });
   };
 
-  const resumeCase = (id: number) => {
-    router.push(`/cases/${id}`);
-  };
+  async function loadApplications() {
+    dataLoaded.value = false;
+    try {
+      const applications = await chefsService.getSubmissions();
+      previousApplications.value = (applications ?? []).map((appJson: any) => ({
+        // Display
+        //deceased_name: appJson.applicantName ?? '(the person who died)',
+        deceased_name: '(the person who died)',
+        app_type: 'Probate Grant',
+        status: appJson.status ?? '',
+        packageNum: appJson.chefsSubmissionId ?? '',
 
-  const removeCase = async (id: number) => {
-    if (confirm('Are you sure you want to remove this application?')) {
-      try {
-        await axios.delete(`${import.meta.env.BASE_URL}api/cases/${id}`);
-        await fetchCases();
-      } catch (err: any) {
-        alert(err.response?.data?.message || 'Failed to remove case');
+        // Identity
+        id: appJson.id,
+        chefsSubmissionId: appJson.chefsSubmissionId,
+
+        // Last Updated
+        lastUpdated: appJson.lastUpdatedAt
+          ? moment(appJson.lastUpdatedAt)
+              .tz('America/Vancouver')
+              .diff('2000-01-01', 'minutes')
+          : 0,
+        lastUpdatedDate: appJson.lastUpdatedAt
+          ? moment(appJson.lastUpdatedAt).tz('America/Vancouver').format()
+          : '',
+
+        // Last Filed
+        lastFiled: appJson.lastFiledAt
+          ? moment(appJson.lastFiledAt)
+              .tz('America/Vancouver')
+              .diff('2000-01-01', 'minutes')
+          : 0,
+        lastFiledDate: appJson.lastFiledAt
+          ? moment(appJson.lastFiledAt).tz('America/Vancouver').format()
+          : '',
+      }));
+    } catch (err: any) {
+      if (err.response?.status === 404) {
+        previousApplications.value = [];
+      } else {
+        error.value = err;
       }
+    } finally {
+      dataLoaded.value = true;
     }
-  };
+  }
 
-  const showTerms = () => {
-    // Implement terms and conditions modal/page
-    alert('Terms and Conditions');
-  };
+  // ── Resume Application ────────────────────────────────────────────────────────
+  function resumeApplication(app: any) {
+    router.push({
+      name: 'ResumeApplication',
+      params: { submissionId: app.chefsSubmissionId },
+    });
+  }
 
-  const formatDateTime = (date: string) => {
-    if (!date) return '';
-    const d = new Date(date);
-    const options: Intl.DateTimeFormatOptions = {
-      weekday: 'short',
-      year: 'numeric',
-      month: 'short',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: false,
-    };
-    return d.toLocaleString('en-US', options).replace(',', '');
-  };
+  // ── Delete Application ────────────────────────────────────────────────────────
+  function removeApplication(application: any) {
+    deleteError.value = false;
+    deleteErrorMsg.value = '';
+    deleteErrorMsgDesc.value = '';
+    applicationToDelete.value = application;
+    confirmDelete.value = true;
+  }
 
+  async function confirmRemoveApplication() {
+    try {
+      await chefsService.deleteSubmission(applicationToDelete.value.id);
+      previousApplications.value = previousApplications.value.filter(
+        (app) => app.id !== applicationToDelete.value.id
+      );
+      confirmDelete.value = false;
+    } catch (err: any) {
+      const errMsg =
+        err.response?.data?.error ??
+        err.response?.data?.message ??
+        'Unknown error';
+      deleteErrorMsg.value =
+        errMsg.slice(0, 60) + (errMsg.length > 60 ? ' ...' : '');
+      deleteErrorMsgDesc.value = errMsg;
+      deleteError.value = true;
+      confirmDelete.value = false;
+    }
+  }
+
+  // ── Lifecycle ─────────────────────────────────────────────────────────────────
   onMounted(() => {
-    fetchCases();
+    loadApplications();
   });
+
+  onUnmounted(() => {});
 </script>
-
-<style scoped>
-  #status {
-    margin: 0;
-    padding: 0;
-  }
-
-  .card {
-    border-radius: 0;
-    border: none;
-  }
-
-  .home-content {
-    padding: 2rem 6rem;
-    max-width: 100%;
-  }
-
-  .header-section {
-    padding: 0 0 1rem 0;
-    margin: 0;
-  }
-
-  .page-title {
-    font-size: 1.75rem;
-    font-weight: 600;
-    margin-bottom: 0.75rem;
-    color: #333;
-  }
-
-  .instruction-text {
-    margin: 0.5rem 0;
-    padding: 0;
-    font-size: 0.95rem;
-    color: #555;
-    line-height: 1.5;
-  }
-
-  .header-divider {
-    margin: 1rem 0;
-    border-top: 1px solid #dee2e6;
-  }
-
-  .b-table-sticky-header {
-    border: none;
-    margin: 0;
-    padding: 0;
-  }
-
-  .table {
-    margin-bottom: 0;
-    font-size: 0.9rem;
-  }
-
-  .table thead th {
-    border-bottom: none;
-    position: sticky;
-    top: 0;
-    z-index: 10;
-    padding: 0.75rem 0.5rem;
-  }
-
-  .table tbody td {
-    padding: 0.75rem 0.5rem;
-    vertical-align: middle;
-  }
-
-  .btn-transparent {
-    background-color: transparent;
-    padding: 0.25rem 0.5rem;
-  }
-
-  .btn-transparent:hover {
-    background-color: rgba(0, 0, 0, 0.05);
-  }
-
-  .button-content {
-    margin-top: 2rem;
-    padding: 0;
-  }
-
-  .button-row {
-    display: flex;
-    align-items: center;
-    justify-content: flex-end;
-    gap: 2rem;
-    padding: 1rem 0;
-  }
-
-  .begin-session-btn {
-    padding: 0.5rem 2rem;
-    font-size: 1rem;
-    font-weight: 500;
-    background-color: #5a8f5a;
-    border: none;
-    border-radius: 4px;
-  }
-
-  .begin-session-btn:hover {
-    background-color: #4a7a4a;
-  }
-
-  .terms-link {
-    color: #007bff;
-    text-decoration: underline;
-    cursor: pointer;
-    font-size: 0.95rem;
-  }
-
-  .terms-link:hover {
-    color: #0056b3;
-    text-decoration: underline;
-  }
-
-  .border-gray {
-    border-color: #dee2e6 !important;
-  }
-
-  .sr-only {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    padding: 0;
-    margin: -1px;
-    overflow: hidden;
-    clip: rect(0, 0, 0, 0);
-    white-space: nowrap;
-    border: 0;
-  }
-</style>

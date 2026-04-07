@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using Probate.Db.Models;
@@ -11,9 +12,11 @@ using Probate.Db.Models;
 namespace Probate.Db.Migrations
 {
     [DbContext(typeof(ProbateDbContext))]
-    partial class ProbateDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260324212748_AddSubmissions")]
+    partial class AddSubmissions
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -172,10 +175,6 @@ namespace Probate.Db.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)")
                         .HasColumnName("created_by");
-
-                    b.Property<DateTime?>("DeletedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("deleted_at");
 
                     b.Property<DateTime?>("LastFiledAt")
                         .HasColumnType("timestamp with time zone")

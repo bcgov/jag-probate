@@ -25,6 +25,7 @@ namespace Probate.Db.Models
         public DbSet<Case> Cases { get; set; }
         public DbSet<User> Users { get; set; }
         public DbSet<Document> Documents { get; set; }
+        public DbSet<Submission> Submissions { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -34,7 +35,17 @@ namespace Probate.Db.Models
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
             if (!optionsBuilder.IsConfigured)
-                optionsBuilder.UseNpgsql("Name=DatabaseConnectionString");
+            {
+                var host = Environment.GetEnvironmentVariable("DB_HOST");
+                var port = Environment.GetEnvironmentVariable("DB_PORT");
+                var username = Environment.GetEnvironmentVariable("DB_USERNAME");
+                var password = Environment.GetEnvironmentVariable("DB_PASSWORD");
+                var database = Environment.GetEnvironmentVariable("DB_NAME");
+
+                optionsBuilder.UseNpgsql(
+                    $"Host={host};Port={port};Username={username};Password={password};Database={database};"
+                );
+            }
         }
     }
 }

@@ -16,6 +16,7 @@
       <div class="form-area">
         <ChefsFormViewer
           form-key="legal"
+          :submission-id="submissionId"
           @submitted="onSubmitted"
           @form-error="onFormError"
         />
@@ -25,10 +26,15 @@
 </template>
 
 <script setup lang="ts">
-  import { useRouter } from 'vue-router';
+  import { useRoute, useRouter } from 'vue-router';
+  import { computed } from 'vue';
   import ChefsFormViewer from '@/components/ChefsFormViewer.vue';
 
+  const route = useRoute();
   const router = useRouter();
+  const submissionId = computed(
+    () => route.params.submissionId as string | undefined
+  );
 
   function onSubmitted(submissionId: string) {
     // Navigate back to previous activity after successful submission

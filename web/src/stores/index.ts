@@ -11,3 +11,5 @@ export default pinia;
 
 export { useAuthStore } from './AuthStore';
 export { useLayoutStore } from './LayoutStore';
+export { useLocationStore } from './LocationStore';
+export { useApplicationStore } from './PreviousApplicationStore';

@@ -13,3 +13,14 @@ export interface ChefsAuthToken {
   /** CHEFS base URL the web component must use (matches the token issuer). */
   baseUrl: string;
 }
+
+export interface SubmissionResponseDto {
+  id: number;
+  chefsSubmissionId: string;
+  applicantName: string;
+  createdBy: string;
+  status: string;
+  lastUpdatedAt: string;
+  lastFiledAt: string;
+  createdAt: string;
+}

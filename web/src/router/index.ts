@@ -105,13 +105,25 @@ const routes: RouteRecordRaw[] = [
   {
     path: '/get-started',
     name: 'NewApplication',
-    component: () => import('../views/NewApplication.vue'),
+    component: () => import('../views/ApplicationForm.vue'),
+    meta: { requiresAuth: true },
+  },
+  {
+    path: '/terms',
+    name: 'terms',
+    component: () => import('@/views/TermsAndConditions.vue'),
+    meta: { requiresAuth: false },
+  },
+  {
+    path: '/resume/:submissionId',
+    name: 'ResumeApplication',
+    component: () => import('@/views/ApplicationForm.vue'),
     meta: { requiresAuth: true },
   },
   {
     path: '/error',
     name: 'Error',
-    component: () => import('../views/ErrorView.vue'),
+    component: () => import('@/views/ErrorView.vue'),
     meta: { requiresAuth: false },
   },
   {

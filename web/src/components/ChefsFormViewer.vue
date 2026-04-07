@@ -25,8 +25,16 @@
 </template>
 
 <script setup lang="ts">
-  import { inject, onMounted, ref } from 'vue';
   import ChefsService from '@/services/ChefsService';
+  import { useAuthStore } from '@/stores';
+  import { extractTokenPayload } from '@/utils/claims';
+  import { computed, inject, onMounted, ref } from 'vue';
+
+  const authStore = useAuthStore();
+  const chefsToken = computed(() => {
+    if (!authStore.userInfo) return {};
+    return extractTokenPayload(authStore.userInfo);
+  });
 
   // ── Props ─────────────────────────────────────────────────────────────────
   interface Props {
@@ -34,6 +42,7 @@
     formKey: string;
     /** Base URL for the CHEFS service. */
     chefsBaseUrl?: string;
+    submissionId?: string;
   }
 
   const props = withDefaults(defineProps<Props>(), {
@@ -96,19 +105,21 @@
       el.setAttribute('auth-token', token);
       el.setAttribute('base-url', resolvedBaseUrl);
       el.setAttribute('isolate-styles', 'false');
+      if (chefsToken.value && Object.keys(chefsToken.value).length > 0) {
+        el.setAttribute('token', JSON.stringify(chefsToken.value));
+      }
+      if (props.submissionId) {
+        el.setAttribute('submission-id', props.submissionId);
+        el.setAttribute('read-only', 'false'); // allow editing resumed draft
+      }
 
       container.appendChild(el);
 
-      el.addEventListener('formio:submit', (e: CustomEvent) => {
-        const submissionId: string =
-          e.detail?.submission?.data?.id ?? e.detail?.submissionId ?? '';
-        emit('submitted', submissionId);
-      });
+      el.addEventListener('formio:submitDone', handleSubmitDone);
 
       el.addEventListener('formio:error', (e: CustomEvent) => {
         emit('form-error', e.detail);
       });
-
       el.load();
 
       state.value = 'ready';
@@ -117,6 +128,28 @@
         err?.response?.data?.message ?? err?.message ?? 'Unknown error.';
       state.value = 'error';
     }
+  }
+
+  async function handleSubmitDone(e: CustomEvent) {
+    const submission = e.detail?.submission;
+
+    const chefsSubmissionId = props.submissionId ?? submission?.id;
+    const createdBy = chefsToken.value?.preferred_username;
+    const applicantName = chefsToken.value?.display_name;
+    const status = submission?.submission?.state;
+    const lastUpdatedAt = submission?.updatedAt;
+    const lastFiledAt = status === 'submitted' ? submission?.updatedAt : null;
+
+    await chefsService.upsertSubmission({
+      chefsSubmissionId,
+      createdBy,
+      applicantName,
+      status,
+      lastUpdatedAt,
+      lastFiledAt,
+    });
+
+    emit('submitted', chefsSubmissionId);
   }
 
   // ── Lifecycle ─────────────────────────────────────────────────────────────
