@@ -33,6 +33,13 @@ public interface IChefsApi
         [Body] ChefsAuthTokenRequest request,
         CancellationToken cancellationToken = default
     );
+
+    [Delete("/api/v1/forms/{formId}/submissions/{submissionId}")]
+    Task DeleteSubmissionAsync(
+        string formId,
+        string submissionId,
+        CancellationToken cancellationToken = default
+    );
 }
 
 /// <summary>

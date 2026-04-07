@@ -114,6 +114,12 @@ const routes: RouteRecordRaw[] = [
     component: () => import('@/views/TermsAndConditions.vue'),
     meta: { requiresAuth: false },
   },
+  {
+    path: '/resume/:submissionId',
+    name: 'ResumeApplication',
+    component: () => import('@/views/NewApplication.vue'),
+    meta: { requiresAuth: true },
+  },
 ];
 
 const router = createRouter({

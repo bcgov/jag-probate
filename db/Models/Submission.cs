@@ -23,5 +23,6 @@ namespace Probate.Db.Models
         public DateTime? LastUpdatedAt { get; set; }
 
         public DateTime? LastFiledAt { get; set; }
+        public DateTime? DeletedAt { get; set; }
     }
 }

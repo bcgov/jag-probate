@@ -41,22 +41,12 @@ class ChefsService {
     return await this.httpService.get('/api/submissions');
   }
 
-  async createLocalSubmission(data: {
-    chefsSubmissionId: string;
-    createdBy: string;
-    applicantName: string;
-    status: string;
-    lastUpdatedAt: string;
-    lastFiledAt: string;
-  }): Promise<void> {
-    await this.httpService.post('/api/submissions', {
-      chefsSubmissionId: data.chefsSubmissionId,
-      applicantName: data.applicantName,
-      createdBy: data.createdBy,
-      status: data.status,
-      lastUpdatedAt: data.lastUpdatedAt,
-      lastFiledAt: data.lastFiledAt,
-    });
+  async upsertSubmission(data: any): Promise<any> {
+    return await this.httpService.post<any>('api/Submissions/upsert', data);
+  }
+
+  async deleteSubmission(id: number): Promise<void> {
+    await this.httpService.delete<void>(`api/Submissions/${id}`);
   }
 }
 

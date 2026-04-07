@@ -19,9 +19,6 @@
         ></div>
       </div>
 
-      <!-- Loading Spinner -->
-      <loading-spinner v-if="!dataLoaded" waitingText="Loading ..." />
-
       <!-- Table Section -->
       <div v-if="dataLoaded" class="table-section">
         <!-- Empty State -->
@@ -98,7 +95,7 @@
                       title="Resume Application"
                       type="button"
                       class="btn my-0 py-0 border-0 btn-transparent btn-sm"
-                      @click="resumeApplication(app.id)"
+                      @click="resumeApplication(app)"
                     >
                       <svg
                         viewBox="0 0 16 16"
@@ -230,11 +227,10 @@
 
 <script setup lang="ts">
   //import { useApplicationStore } from '@/stores/PreviousApplicationStore';
-  import axios from 'axios';
+  import ChefsService from '@/services/ChefsService';
   import moment from 'moment-timezone';
   import { inject, onMounted, onUnmounted, ref } from 'vue';
   import { useRouter } from 'vue-router';
-  import ChefsService from '@/services/ChefsService';
 
   import '../styles/PreviousActivity.styles.css';
 
@@ -337,17 +333,11 @@
   }
 
   // ── Resume Application ────────────────────────────────────────────────────────
-  async function resumeApplication(applicationId: number) {
-    try {
-      // const response = await axios.get(`/app/${applicationId}/`);
-      // applicationStore.setCurrentApplication(response.data);
-      // applicationStore.setExistingApplication(true);
-      // applicationStore.updateStPgNo();
-      // router.push({ name: 'surveys' });
-      console.log('going to application, ', applicationId);
-    } catch (err: any) {
-      error.value = err;
-    }
+  function resumeApplication(app: any) {
+    router.push({
+      name: 'ResumeApplication',
+      params: { submissionId: app.chefsSubmissionId },
+    });
   }
 
   // ── Delete Application ────────────────────────────────────────────────────────
@@ -361,13 +351,16 @@
 
   async function confirmRemoveApplication() {
     try {
-      await axios.delete(`/app/${applicationToDelete.value.id}/`);
+      await chefsService.deleteSubmission(applicationToDelete.value.id);
       previousApplications.value = previousApplications.value.filter(
         (app) => app.id !== applicationToDelete.value.id
       );
       confirmDelete.value = false;
     } catch (err: any) {
-      const errMsg = err.response?.data?.error ?? 'Unknown error';
+      const errMsg =
+        err.response?.data?.error ??
+        err.response?.data?.message ??
+        'Unknown error';
       deleteErrorMsg.value =
         errMsg.slice(0, 60) + (errMsg.length > 60 ? ' ...' : '');
       deleteErrorMsgDesc.value = errMsg;

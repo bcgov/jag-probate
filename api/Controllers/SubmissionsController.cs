@@ -70,5 +70,47 @@ namespace Probate.Api.Controllers
             );
             return Ok(submissions);
         }
+
+        /// <summary>
+        /// Creates or updates a local submission record by ChefsSubmissionId.
+        /// If a record with the same ChefsSubmissionId exists, it is updated.
+        /// Otherwise a new record is created.
+        /// </summary>
+        [HttpPost("upsert")]
+        [ProducesResponseType(typeof(SubmissionResponseDto), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+        public async Task<ActionResult<SubmissionResponseDto>> UpsertSubmission(
+            [FromBody] CreateSubmissionDto dto,
+            CancellationToken cancellationToken = default
+        )
+        {
+            if (string.IsNullOrWhiteSpace(dto.ChefsSubmissionId))
+                return BadRequest(new { message = "ChefsSubmissionId is required." });
+
+            var result = await _submissionService.UpsertSubmissionAsync(dto, cancellationToken);
+            return Ok(result);
+        }
+
+        /// <summary>
+        /// Soft deletes a local submission record and deletes it from CHEFS.
+        /// </summary>
+        [HttpDelete("{id}")]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> DeleteSubmission(
+            int id,
+            CancellationToken cancellationToken = default
+        )
+        {
+            try
+            {
+                await _submissionService.DeleteSubmissionAsync(id, cancellationToken);
+                return NoContent();
+            }
+            catch (KeyNotFoundException)
+            {
+                return NotFound(new { message = $"Submission {id} not found." });
+            }
+        }
     }
 }
