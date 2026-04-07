@@ -19,7 +19,7 @@
           />
         </a>
 
-        <div class="navbar-brand">
+        <div class="navbar-brand me-auto">
           <h1 class="m-0 text-white d-none d-sm-inline">
             {{ layoutStore.navHeader }}
             <small

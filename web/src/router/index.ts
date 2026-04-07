@@ -86,7 +86,7 @@ const routes: RouteRecordRaw[] = [
     name: 'RepresentSomeoneWhoDied',
     component: () => import('../views/landing/LandingPage.vue'),
     meta: {
-      navHeader: 'Represent Someone Who Died',
+      navHeader: 'Probate Application',
       requiresAuth: false,
     },
   },
@@ -119,6 +119,25 @@ const routes: RouteRecordRaw[] = [
     name: 'ResumeApplication',
     component: () => import('@/views/NewApplication.vue'),
     meta: { requiresAuth: true },
+  },
+    path: '/error',
+    name: 'Error',
+    component: () => import('../views/ErrorView.vue'),
+    meta: { requiresAuth: false },
+  },
+  {
+    path: '/404',
+    redirect: { name: 'Error', query: { status: '404' } },
+  },
+  {
+    path: '/:pathMatch(.*)*',
+    redirect: () => ({
+      name: 'Error',
+      query: {
+        status: '404',
+        details: `The requested path could not be found.`,
+      },
+    }),
   },
 ];
 

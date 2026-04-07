@@ -143,7 +143,7 @@ configureEnvironment () {
   export API_URL=${API_URL-http://api:5000/}
   
   # Default web startup parameters
-  export WEB_BASE_HREF=${WEB_BASE_HREF}
+  export WEB_BASE_HREF=${WEB_BASE_HREF:-/probate/}
 }
 
 getStartupParams() {

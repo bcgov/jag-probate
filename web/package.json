@@ -10,7 +10,7 @@
     "lint": "eslint --ext .ts,.vue --fix src --ignore-pattern \"src/types/**\"",
     "prettier:check": "prettier --check \"src/**/*.{ts,vue,js,json}\"",
     "prettier:fix": "prettier --write \"src/**/*.{ts,vue,js,json}\"",
-    "test": "vitest"
+    "test": "vitest run"
   },
   "dependencies": {
     "@bcgov/bootstrap-v5-theme": "^1.0.1",
@@ -47,13 +47,13 @@
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-vue": "^9.31.0",
     "globals": "^17.3.0",
-    "jsdom": "^27.4.0",
+    "happy-dom": "^20.8.3",
     "prettier": "^3.8.1",
     "sass": "^1.97.3",
     "typescript": "^5.7.2",
     "unplugin-vue-components": "^0.27.5",
     "vite": "^6.0.7",
     "vite-svg-loader": "^5.1.0",
-    "vitest": "^4.0.16"
+    "vitest": "^4.0.18"
   }
 }
