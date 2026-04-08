@@ -5,7 +5,11 @@ interface ImportMetaEnv {
 }
 
 interface ImportMeta {
-  readonly env: ImportMetaEnv;
+  readonly env: ImportMetaEnv & { readonly BASE_URL: string };
+}
+
+interface Window {
+  staticBaseUrl: string;
 }
 
 declare module '*.vue' {

@@ -100,6 +100,8 @@
 
       container.innerHTML = '';
 
+      window.staticBaseUrl = `${window.location.origin}${import.meta.env.BASE_URL}`;
+
       const el = document.createElement('chefs-form-viewer') as any;
       el.setAttribute('form-id', formId);
       el.setAttribute('auth-token', token);
