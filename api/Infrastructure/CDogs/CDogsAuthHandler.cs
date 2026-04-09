@@ -36,7 +36,7 @@ namespace Probate.Api.Infrastructure.CDogs
         private async Task RefreshTokenAsync(CancellationToken ct)
         {
             using var client = new HttpClient();
-            var body = new FormUrlEncodedContent(
+            using var body = new FormUrlEncodedContent(
                 new Dictionary<string, string>
                 {
                     ["grant_type"] = "client_credentials",
