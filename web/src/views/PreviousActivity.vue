@@ -41,20 +41,52 @@
             >
               <thead role="rowgroup">
                 <tr role="row">
-                  <th style="font-size: 11pt; width: 20%">Application ID</th>
-                  <th style="font-size: 11pt; width: 20%">Last Updated</th>
-                  <th style="font-size: 11pt; width: 20%">Last Filed</th>
-                  <th style="font-size: 10pt; width: 15%">Status</th>
+                  <th
+                    style="font-size: 11pt; width: 20%; cursor: pointer"
+                    @click="setSort('deceased_name')"
+                  >
+                    <SortIcon
+                      column="deceased_name"
+                      :sort-key="sortKey"
+                      :sort-desc="sortDesc"
+                    />Application
+                  </th>
+                  <th
+                    style="font-size: 11pt; width: 20%; cursor: pointer"
+                    @click="setSort('lastUpdated')"
+                  >
+                    <SortIcon
+                      column="lastUpdated"
+                      :sort-key="sortKey"
+                      :sort-desc="sortDesc"
+                    />Last Updated
+                  </th>
+                  <th
+                    style="font-size: 11pt; width: 20%; cursor: pointer"
+                    @click="setSort('lastFiled')"
+                  >
+                    <SortIcon
+                      column="lastFiled"
+                      :sort-key="sortKey"
+                      :sort-desc="sortDesc"
+                    />Last Filed
+                  </th>
+                  <th
+                    style="font-size: 10pt; width: 15%; cursor: pointer"
+                    @click="setSort('status')"
+                  >
+                    <SortIcon
+                      column="status"
+                      :sort-key="sortKey"
+                      :sort-desc="sortDesc"
+                    />Status
+                  </th>
                   <th style="font-size: 10pt; width: 15%">Package#</th>
                   <th style="font-size: 10pt; width: 10%"></th>
                 </tr>
               </thead>
               <tbody role="rowgroup">
-                <tr
-                  v-for="app in previousApplications"
-                  :key="app.id"
-                  role="row"
-                >
+                <tr v-for="app in sortedApplications" :key="app.id" role="row">
                   <td class="border-top">
                     {{ formatFullName(app.deceased_name) }}
                   </td>
@@ -160,9 +192,6 @@
             >
               Begin NEW Session
             </button>
-            <a class="terms" @click="openTerms" style="cursor: pointer">
-              Terms and Conditions
-            </a>
           </div>
         </div>
       </div>
@@ -229,8 +258,9 @@
   //import { useApplicationStore } from '@/stores/PreviousApplicationStore';
   import ChefsService from '@/services/ChefsService';
   import moment from 'moment-timezone';
-  import { inject, onMounted, onUnmounted, ref } from 'vue';
+  import { inject, onMounted, onUnmounted, computed, ref } from 'vue';
   import { useRouter } from 'vue-router';
+  import SortIcon from '@/components/shared/SortIcon.vue';
 
   import '../styles/PreviousActivity.styles.css';
 
@@ -252,6 +282,35 @@
   const deleteErrorMsg = ref('');
   const deleteErrorMsgDesc = ref('');
 
+  const sortKey = ref<string>('lastUpdated');
+  const sortDesc = ref<boolean>(true);
+
+  const sortedApplications = computed(() => {
+    if (!sortKey.value) return previousApplications.value;
+
+    return [...previousApplications.value].sort((a, b) => {
+      const valA = a[sortKey.value];
+      const valB = b[sortKey.value];
+
+      let result = 0;
+      if (valA == null) result = -1;
+      else if (valB == null) result = 1;
+      else if (typeof valA === 'string') result = valA.localeCompare(valB);
+      else result = valA - valB;
+
+      return sortDesc.value ? -result : result;
+    });
+  });
+
+  function setSort(key: string) {
+    if (sortKey.value === key) {
+      sortDesc.value = !sortDesc.value;
+    } else {
+      sortKey.value = key;
+      sortDesc.value = false;
+    }
+  }
+
   // ── Helpers ───────────────────────────────────────────────────────────────────
   function formatFullName(name: any): string {
     if (!name) return '';
@@ -272,10 +331,6 @@
   //     router.push({ name: 'pre-qualification' });
   // }
 
-  function openTerms() {
-    router.push({ name: 'terms' });
-  }
-
   function navigateToEFilingHub(id: number) {
     console.log('going to hub', id);
     // TODO: replace with actual eFiling hub URL
@@ -290,18 +345,15 @@
     try {
       const applications = await chefsService.getSubmissions();
       previousApplications.value = (applications ?? []).map((appJson: any) => ({
-        // Display
-        //deceased_name: appJson.applicantName ?? '(the person who died)',
-        deceased_name: '(the person who died)',
+        deceased_name:
+          [appJson.lastNameFamilyNameOrSurname, appJson.firstNameGivenName]
+            .filter(Boolean)
+            .join(', ') || '(the person who died)',
         app_type: 'Probate Grant',
         status: appJson.status ?? '',
         packageNum: appJson.chefsSubmissionId ?? '',
-
-        // Identity
         id: appJson.id,
         chefsSubmissionId: appJson.chefsSubmissionId,
-
-        // Last Updated
         lastUpdated: appJson.lastUpdatedAt
           ? moment(appJson.lastUpdatedAt)
               .tz('America/Vancouver')
@@ -310,8 +362,6 @@
         lastUpdatedDate: appJson.lastUpdatedAt
           ? moment(appJson.lastUpdatedAt).tz('America/Vancouver').format()
           : '',
-
-        // Last Filed
         lastFiled: appJson.lastFiledAt
           ? moment(appJson.lastFiledAt)
               .tz('America/Vancouver')

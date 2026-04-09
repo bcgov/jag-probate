@@ -60,13 +60,18 @@ namespace Probate.Api.Controllers
         )
         {
             var username = User.FindFirstValue("preferred_username");
-
+            _logger.LogInformation("Fetching submissions for username: {Username}", username);
             if (string.IsNullOrWhiteSpace(username))
                 return Unauthorized(new { message = "Unable to identify current user." });
 
             var submissions = await _submissionService.GetSubmissionsByUserAsync(
                 username,
                 cancellationToken
+            );
+            _logger.LogInformation(
+                "Fetched {number} of submissions for username: {Username}",
+                submissions.Count,
+                username
             );
             return Ok(submissions);
         }

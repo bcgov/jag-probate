@@ -14,6 +14,9 @@
             </a>
           </li>
           <li class="nav-item">
+            <RouterLink class="nav-link" to="/terms"> Terms of Use </RouterLink>
+          </li>
+          <li class="nav-item">
             <a
               class="nav-link"
               href="https://www2.gov.bc.ca/gov/content/home/privacy"
