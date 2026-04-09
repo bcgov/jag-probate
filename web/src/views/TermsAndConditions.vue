@@ -6,8 +6,8 @@
 
         <div class="terms-content ms-4">
           <p>
-            Represent Someone Who Died is a service provided by the Government
-            of British Columbia to help you apply for a
+            Probate Application is a service provided by the Government of
+            British Columbia to help you apply for a
             <ToolTip term="Representation Grant" />.
           </p>
 
@@ -51,23 +51,7 @@
               >.
             </li>
           </ul>
-
-          <p>
-            You previously agreed to these terms when you clicked "Continue" on
-            the first page of this service entitled
-            <RouterLink :to="{ name: 'pre-qualification' }" target="_blank">
-              Is this service right for your situation?</RouterLink
-            >
-          </p>
         </div>
-
-        <button
-          type="button"
-          class="btn btn-primary btn-lg ms-4 fw-bold accept-btn"
-          @click="navigate"
-        >
-          Accept
-        </button>
       </div>
     </div>
   </div>
@@ -75,13 +59,10 @@
 
 <script setup lang="ts">
   import ToolTip from '@/components/shared/glossary/ToolTip.vue';
-  import { useRouter } from 'vue-router';
+  import { useLayoutStore } from '@/stores';
 
-  const router = useRouter();
-
-  function navigate() {
-    router.push({ name: 'PreviousActivity' });
-  }
+  const layoutStore = useLayoutStore();
+  layoutStore.setBackdropClass('');
 </script>
 
 <style scoped>
