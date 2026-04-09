@@ -1,0 +1,15 @@
+[
+  { "label": "Alberta", "value": "alberta" },
+  { "label": "British Columbia", "value": "britishColumbia" },
+  { "label": "Manitoba", "value": "manitoba" },
+  { "label": "New Brunswick", "value": "newBrunswick" },
+  { "label": "Newfoundland and Labrador", "value": "newfoundlandAndLabrador" },
+  { "label": "Northwest Territories", "value": "northwestTerritories" },
+  { "label": "Nova Scotia", "value": "novaScotia" },
+  { "label": "Nunavut", "value": "nunavut" },
+  { "label": "Ontario", "value": "ontario" },
+  { "label": "Prince Edward Island", "value": "princeEdwardIsland" },
+  { "label": "Quebec", "value": "quebec" },
+  { "label": "Saskatchewan", "value": "saskatchewan" },
+  { "label": "Yukon", "value": "yukon" }
+]
