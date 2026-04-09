@@ -12,6 +12,7 @@ using Newtonsoft.Json.Converters;
 using Newtonsoft.Json.Serialization;
 using Probate.Api.Helpers;
 using Probate.Api.Infrastructure.Authentication;
+using Probate.Api.Infrastructure.CDogs;
 using Probate.Api.Infrastructure.Chefs;
 using Probate.Api.Infrastructure.Options;
 using Probate.Api.Services;
@@ -59,6 +60,7 @@ namespace Probate.Api
             services.AddHttpClient();
 
             services.AddChefsApi(Configuration);
+            services.AddCDogsApi(Configuration);
 
             services.AddDbContext<ProbateDbContext>(options =>
             {
