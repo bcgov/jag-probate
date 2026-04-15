@@ -10,7 +10,17 @@ Local Development: `http://localhost:5000`
 
 ## Authentication
 
-Authentication will be configured in future iterations.
+CDogs uses OAuth2 client credentials for authentication. To obtain a token and get your `ClientId` and `ClientSecret`, register or find the CDogs API through the BC Government API Directory:
+
+https://api.gov.bc.ca/devportal/api-directory
+
+Once you have your credentials, set the following in your `.env` file:
+
+```env
+CDOGS_TOKEN_URL=https://loginproxy.gov.bc.ca/auth/realms/comsvcauth/protocol/openid-connect/token
+CDOGS_CLIENT_ID=<your-client-id>
+CDOGS_CLIENT_SECRET=<your-client-secret>
+```
 
 ### Health Check
 

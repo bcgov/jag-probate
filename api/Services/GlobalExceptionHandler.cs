@@ -32,95 +32,86 @@ namespace Probate.Api.Services
                 return true;
             }
 
-            if (exception is ChefsApiException chefsEx)
+            var problemDetails = exception switch
             {
-                var statusCode = (int)chefsEx.StatusCode;
-                if (statusCode < 400 || statusCode >= 600)
-                    statusCode = StatusCodes.Status502BadGateway;
+                ChefsApiException ex => HandleChefsApiException(ex, httpContext),
+                KeyNotFoundException ex => HandleKeyNotFoundException(ex, httpContext),
+                InvalidOperationException ex => HandleInvalidOperationException(ex, httpContext),
+                DbUpdateConcurrencyException ex => HandleConcurrencyException(ex, httpContext),
+                _ => HandleUnknownException(exception, httpContext),
+            };
 
-                _logger.LogWarning(chefsEx, "CHEFS API error: {Message}", chefsEx.Message);
+            await httpContext.Response.WriteAsJsonAsync(problemDetails, cancellationToken);
+            return true;
+        }
 
-                var problemDetails = new ProblemDetails
-                {
-                    Status = statusCode,
-                    Title = "CHEFS API error",
-                    Detail = chefsEx.Message,
-                };
+        private ProblemDetails HandleChefsApiException(ChefsApiException ex, HttpContext httpContext)
+        {
+            var statusCode = (int)ex.StatusCode;
+            if (statusCode < 400 || statusCode >= 600)
+                statusCode = StatusCodes.Status502BadGateway;
 
-                httpContext.Response.StatusCode = statusCode;
-                await httpContext.Response.WriteAsJsonAsync(problemDetails, cancellationToken);
-                return true;
-            }
+            _logger.LogWarning(ex, "CHEFS API error: {Message}", ex.Message);
+            httpContext.Response.StatusCode = statusCode;
 
-            if (exception is KeyNotFoundException keyEx)
+            return new ProblemDetails
             {
-                _logger.LogInformation(keyEx, "Resource not found: {Message}", keyEx.Message);
+                Status = statusCode,
+                Title = "CHEFS API error",
+                Detail = ex.Message,
+            };
+        }
 
-                var problemDetails = new ProblemDetails
-                {
-                    Status = StatusCodes.Status404NotFound,
-                    Title = "Resource not found.",
-                    Detail = keyEx.Message,
-                };
+        private ProblemDetails HandleKeyNotFoundException(KeyNotFoundException ex, HttpContext httpContext)
+        {
+            _logger.LogInformation(ex, "Resource not found: {Message}", ex.Message);
+            httpContext.Response.StatusCode = StatusCodes.Status404NotFound;
 
-                httpContext.Response.StatusCode = StatusCodes.Status404NotFound;
-                await httpContext.Response.WriteAsJsonAsync(problemDetails, cancellationToken);
-                return true;
-            }
-
-            if (exception is InvalidOperationException invalidOpEx)
+            return new ProblemDetails
             {
-                _logger.LogInformation(
-                    invalidOpEx,
-                    "Invalid operation: {Message}",
-                    invalidOpEx.Message
-                );
+                Status = StatusCodes.Status404NotFound,
+                Title = "Resource not found.",
+                Detail = ex.Message,
+            };
+        }
 
-                var problemDetails = new ProblemDetails
-                {
-                    Status = StatusCodes.Status400BadRequest,
-                    Title = "Invalid request.",
-                    Detail = invalidOpEx.Message,
-                };
+        private ProblemDetails HandleInvalidOperationException(InvalidOperationException ex, HttpContext httpContext)
+        {
+            _logger.LogInformation(ex, "Invalid operation: {Message}", ex.Message);
+            httpContext.Response.StatusCode = StatusCodes.Status400BadRequest;
 
-                httpContext.Response.StatusCode = StatusCodes.Status400BadRequest;
-                await httpContext.Response.WriteAsJsonAsync(problemDetails, cancellationToken);
-                return true;
-            }
-
-            if (exception is DbUpdateConcurrencyException concurrencyEx)
+            return new ProblemDetails
             {
-                _logger.LogWarning(
-                    concurrencyEx,
-                    "Concurrency conflict: {Message}",
-                    concurrencyEx.Message
-                );
+                Status = StatusCodes.Status400BadRequest,
+                Title = "Invalid request.",
+                Detail = ex.Message,
+            };
+        }
 
-                var problemDetails = new ProblemDetails
-                {
-                    Status = StatusCodes.Status409Conflict,
-                    Title = "Conflict.",
-                    Detail = "The resource was modified by another request. Please retry.",
-                };
+        private ProblemDetails HandleConcurrencyException(DbUpdateConcurrencyException ex, HttpContext httpContext)
+        {
+            _logger.LogWarning(ex, "Concurrency conflict: {Message}", ex.Message);
+            httpContext.Response.StatusCode = StatusCodes.Status409Conflict;
 
-                httpContext.Response.StatusCode = StatusCodes.Status409Conflict;
-                await httpContext.Response.WriteAsJsonAsync(problemDetails, cancellationToken);
-                return true;
-            }
+            return new ProblemDetails
+            {
+                Status = StatusCodes.Status409Conflict,
+                Title = "Conflict.",
+                Detail = "The resource was modified by another request. Please retry.",
+            };
+        }
 
-            _logger.LogError(exception, "An unhandled exception occurred");
+        private ProblemDetails HandleUnknownException(Exception ex, HttpContext httpContext)
+        {
+            _logger.LogError(ex, "An unhandled exception occurred");
+            httpContext.Response.StatusCode = StatusCodes.Status500InternalServerError;
 
-            var problemDetails500 = new ProblemDetails
+            return new ProblemDetails
             {
                 Status = StatusCodes.Status500InternalServerError,
                 Title = "An error occurred while processing your request.",
-                Detail = exception.Message,
+                Detail = ex.Message,
             };
-
-            httpContext.Response.StatusCode = StatusCodes.Status500InternalServerError;
-            await httpContext.Response.WriteAsJsonAsync(problemDetails500, cancellationToken);
-
-            return true;
         }
     }
 }
