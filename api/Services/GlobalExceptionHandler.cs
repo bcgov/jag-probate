@@ -45,7 +45,10 @@ namespace Probate.Api.Services
             return true;
         }
 
-        private ProblemDetails HandleChefsApiException(ChefsApiException ex, HttpContext httpContext)
+        private ProblemDetails HandleChefsApiException(
+            ChefsApiException ex,
+            HttpContext httpContext
+        )
         {
             var statusCode = (int)ex.StatusCode;
             if (statusCode < 400 || statusCode >= 600)
@@ -62,7 +65,10 @@ namespace Probate.Api.Services
             };
         }
 
-        private ProblemDetails HandleKeyNotFoundException(KeyNotFoundException ex, HttpContext httpContext)
+        private ProblemDetails HandleKeyNotFoundException(
+            KeyNotFoundException ex,
+            HttpContext httpContext
+        )
         {
             _logger.LogInformation(ex, "Resource not found: {Message}", ex.Message);
             httpContext.Response.StatusCode = StatusCodes.Status404NotFound;
@@ -75,7 +81,10 @@ namespace Probate.Api.Services
             };
         }
 
-        private ProblemDetails HandleInvalidOperationException(InvalidOperationException ex, HttpContext httpContext)
+        private ProblemDetails HandleInvalidOperationException(
+            InvalidOperationException ex,
+            HttpContext httpContext
+        )
         {
             _logger.LogInformation(ex, "Invalid operation: {Message}", ex.Message);
             httpContext.Response.StatusCode = StatusCodes.Status400BadRequest;
@@ -88,7 +97,10 @@ namespace Probate.Api.Services
             };
         }
 
-        private ProblemDetails HandleConcurrencyException(DbUpdateConcurrencyException ex, HttpContext httpContext)
+        private ProblemDetails HandleConcurrencyException(
+            DbUpdateConcurrencyException ex,
+            HttpContext httpContext
+        )
         {
             _logger.LogWarning(ex, "Concurrency conflict: {Message}", ex.Message);
             httpContext.Response.StatusCode = StatusCodes.Status409Conflict;
