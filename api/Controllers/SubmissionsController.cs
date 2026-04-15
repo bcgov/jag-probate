@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 using Probate.Api.Models;
 using Probate.Api.Services;
 
@@ -16,10 +17,15 @@ namespace Probate.Api.Controllers
     public class SubmissionsController : ControllerBase
     {
         private readonly ISubmissionService _submissionService;
+        private readonly ILogger<SubmissionsController> _logger;
 
-        public SubmissionsController(ISubmissionService submissionService)
+        public SubmissionsController(
+            ISubmissionService submissionService,
+            ILogger<SubmissionsController> logger
+        )
         {
             _submissionService = submissionService;
+            _logger = logger;
         }
 
         /// <summary>

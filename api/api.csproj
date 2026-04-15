@@ -4,6 +4,7 @@
         <TargetFramework>net10.0</TargetFramework>
         <RootNamespace>Probate.Api</RootNamespace>
         <UserSecretsId>probate-api-secrets-2025</UserSecretsId>
+        <Nullable>enable</Nullable>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
         <DocumentationFile>bin\$(Configuration)\net10.0\api.xml</DocumentationFile>
@@ -28,7 +29,7 @@
             Include="Microsoft.AspNetCore.Authentication.OpenIdConnect"
             Version="10.0.0"
         />
-        <PackageReference Include="Mapster" Version="8.4.0" />
+        <PackageReference Include="Mapster" Version="10.0.0" />
         <PackageReference Include="IdentityModel" Version="7.0.0" />
         <PackageReference Include="Swashbuckle.AspNetCore" Version="7.2.0" />
         <PackageReference Include="Swashbuckle.AspNetCore.Newtonsoft" Version="7.2.0" />
