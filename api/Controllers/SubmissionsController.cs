@@ -107,15 +107,8 @@ namespace Probate.Api.Controllers
             CancellationToken cancellationToken = default
         )
         {
-            try
-            {
-                await _submissionService.DeleteSubmissionAsync(id, cancellationToken);
-                return NoContent();
-            }
-            catch (KeyNotFoundException)
-            {
-                return NotFound(new { message = $"Submission {id} not found." });
-            }
+            await _submissionService.DeleteSubmissionAsync(id, cancellationToken);
+            return NoContent();
         }
     }
 }
