@@ -5,7 +5,6 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Logging;
 using Probate.Api.Models;
 using Probate.Api.Services;
 
@@ -17,15 +16,10 @@ namespace Probate.Api.Controllers
     public class SubmissionsController : ControllerBase
     {
         private readonly ISubmissionService _submissionService;
-        private readonly ILogger<SubmissionsController> _logger;
 
-        public SubmissionsController(
-            ISubmissionService submissionService,
-            ILogger<SubmissionsController> logger
-        )
+        public SubmissionsController(ISubmissionService submissionService)
         {
             _submissionService = submissionService;
-            _logger = logger;
         }
 
         /// <summary>
@@ -102,15 +96,8 @@ namespace Probate.Api.Controllers
             CancellationToken cancellationToken = default
         )
         {
-            try
-            {
-                await _submissionService.DeleteSubmissionAsync(id, cancellationToken);
-                return NoContent();
-            }
-            catch (KeyNotFoundException)
-            {
-                return NotFound(new { message = $"Submission {id} not found." });
-            }
+            await _submissionService.DeleteSubmissionAsync(id, cancellationToken);
+            return NoContent();
         }
     }
 }

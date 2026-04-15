@@ -1,9 +1,11 @@
 using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Probate.Api.Helpers.Exceptions;
 
@@ -24,6 +26,12 @@ namespace Probate.Api.Services
             CancellationToken cancellationToken
         )
         {
+            if (exception is OperationCanceledException)
+            {
+                httpContext.Response.StatusCode = 499; // Client Closed Request
+                return true;
+            }
+
             if (exception is ChefsApiException chefsEx)
             {
                 var statusCode = (int)chefsEx.StatusCode;
@@ -40,6 +48,62 @@ namespace Probate.Api.Services
                 };
 
                 httpContext.Response.StatusCode = statusCode;
+                await httpContext.Response.WriteAsJsonAsync(problemDetails, cancellationToken);
+                return true;
+            }
+
+            if (exception is KeyNotFoundException keyEx)
+            {
+                _logger.LogInformation(keyEx, "Resource not found: {Message}", keyEx.Message);
+
+                var problemDetails = new ProblemDetails
+                {
+                    Status = StatusCodes.Status404NotFound,
+                    Title = "Resource not found.",
+                    Detail = keyEx.Message,
+                };
+
+                httpContext.Response.StatusCode = StatusCodes.Status404NotFound;
+                await httpContext.Response.WriteAsJsonAsync(problemDetails, cancellationToken);
+                return true;
+            }
+
+            if (exception is InvalidOperationException invalidOpEx)
+            {
+                _logger.LogInformation(
+                    invalidOpEx,
+                    "Invalid operation: {Message}",
+                    invalidOpEx.Message
+                );
+
+                var problemDetails = new ProblemDetails
+                {
+                    Status = StatusCodes.Status400BadRequest,
+                    Title = "Invalid request.",
+                    Detail = invalidOpEx.Message,
+                };
+
+                httpContext.Response.StatusCode = StatusCodes.Status400BadRequest;
+                await httpContext.Response.WriteAsJsonAsync(problemDetails, cancellationToken);
+                return true;
+            }
+
+            if (exception is DbUpdateConcurrencyException concurrencyEx)
+            {
+                _logger.LogWarning(
+                    concurrencyEx,
+                    "Concurrency conflict: {Message}",
+                    concurrencyEx.Message
+                );
+
+                var problemDetails = new ProblemDetails
+                {
+                    Status = StatusCodes.Status409Conflict,
+                    Title = "Conflict.",
+                    Detail = "The resource was modified by another request. Please retry.",
+                };
+
+                httpContext.Response.StatusCode = StatusCodes.Status409Conflict;
                 await httpContext.Response.WriteAsJsonAsync(problemDetails, cancellationToken);
                 return true;
             }

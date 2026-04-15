@@ -62,21 +62,12 @@ namespace Probate.Api.Controllers
                 return BadRequest(new { message = "ID mismatch" });
             }
 
-            _dbContext.Entry(updatedCase).State = EntityState.Modified;
+            if (!await _dbContext.Cases.AnyAsync(c => c.Id == id))
+                return NotFound(new { message = $"Case with ID {id} not found" });
 
-            try
-            {
-                await _dbContext.SaveChangesAsync();
-                _logger.LogInformation("Updated case with ID: {CaseId}", id);
-            }
-            catch (DbUpdateConcurrencyException)
-            {
-                if (!await _dbContext.Cases.AnyAsync(c => c.Id == id))
-                {
-                    return NotFound(new { message = $"Case with ID {id} not found" });
-                }
-                throw;
-            }
+            _dbContext.Entry(updatedCase).State = EntityState.Modified;
+            await _dbContext.SaveChangesAsync();
+            _logger.LogInformation("Updated case with ID: {CaseId}", id);
 
             return Ok(updatedCase);
         }

@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
 using System.Threading;
@@ -6,8 +5,6 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Logging;
-using Probate.Api.Helpers.Exceptions;
 using Probate.Api.Models;
 using Probate.Api.Services;
 
@@ -29,15 +26,10 @@ public class ChefsController : ControllerBase
     private static readonly Regex FormKeyPattern = new(@"^[a-zA-Z0-9_-]+$", RegexOptions.Compiled);
 
     private readonly IChefsApplicationService _chefsApplicationService;
-    private readonly ILogger<ChefsController> _logger;
 
-    public ChefsController(
-        IChefsApplicationService chefsApplicationService,
-        ILogger<ChefsController> logger
-    )
+    public ChefsController(IChefsApplicationService chefsApplicationService)
     {
         _chefsApplicationService = chefsApplicationService;
-        _logger = logger;
     }
 
     /// <summary>
@@ -63,45 +55,11 @@ public class ChefsController : ControllerBase
         if (!FormKeyPattern.IsMatch(formKey))
             return BadRequest(new { message = "formKey contains invalid characters." });
 
-        try
-        {
-            var applications = await _chefsApplicationService.GetApplicationsAsync(
-                formKey,
-                cancellationToken
-            );
-            return Ok(applications);
-        }
-        catch (InvalidOperationException ex)
-        {
-            _logger.LogInformation(
-                ex,
-                "Invalid request for CHEFS applications: {Message}",
-                ex.Message
-            );
-            return BadRequest(new { message = ex.Message });
-        }
-        catch (ChefsApiException ex)
-        {
-            var statusCode = (int)ex.StatusCode;
-            if (statusCode >= 400 && statusCode < 600)
-            {
-                return Problem(
-                    detail: ex.Message,
-                    title: "CHEFS API error",
-                    statusCode: statusCode
-                );
-            }
-
-            return Problem(
-                detail: ex.Message,
-                title: "CHEFS API error",
-                statusCode: StatusCodes.Status502BadGateway
-            );
-        }
-        catch (OperationCanceledException)
-        {
-            return StatusCode(499); // Client Closed Request
-        }
+        var applications = await _chefsApplicationService.GetApplicationsAsync(
+            formKey,
+            cancellationToken
+        );
+        return Ok(applications);
     }
 
     /// <summary>
@@ -128,44 +86,10 @@ public class ChefsController : ControllerBase
         if (!FormKeyPattern.IsMatch(formKey))
             return BadRequest(new { message = "formKey contains invalid characters." });
 
-        try
-        {
-            var tokenResponse = await _chefsApplicationService.GetAuthTokenAsync(
-                formKey,
-                cancellationToken
-            );
-            return Ok(tokenResponse);
-        }
-        catch (InvalidOperationException ex)
-        {
-            _logger.LogInformation(
-                ex,
-                "Invalid request for CHEFS auth token: {Message}",
-                ex.Message
-            );
-            return BadRequest(new { message = ex.Message });
-        }
-        catch (ChefsApiException ex)
-        {
-            var statusCode = (int)ex.StatusCode;
-            if (statusCode >= 400 && statusCode < 600)
-            {
-                return Problem(
-                    detail: ex.Message,
-                    title: "CHEFS API error",
-                    statusCode: statusCode
-                );
-            }
-
-            return Problem(
-                detail: ex.Message,
-                title: "CHEFS API error",
-                statusCode: StatusCodes.Status502BadGateway
-            );
-        }
-        catch (OperationCanceledException)
-        {
-            return StatusCode(499); // Client Closed Request
-        }
+        var tokenResponse = await _chefsApplicationService.GetAuthTokenAsync(
+            formKey,
+            cancellationToken
+        );
+        return Ok(tokenResponse);
     }
 }

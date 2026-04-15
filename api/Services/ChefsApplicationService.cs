@@ -167,16 +167,6 @@ public class ChefsApplicationService : IChefsApplicationService
         {
             throw new OperationCanceledException("Request was cancelled.", ex, cancellationToken);
         }
-        catch (Exception ex)
-        {
-            _logger.LogError(
-                ex,
-                "Unexpected error fetching CHEFS auth token for form key {FormKey}. Exception type: {ExceptionType}",
-                LogSanitizer.Sanitize(formKey),
-                ex.GetType().Name
-            );
-            throw;
-        }
 
         _logger.LogInformation(
             "Retrieved auth token for form key {FormKey}",
