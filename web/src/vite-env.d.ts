@@ -1,9 +1,5 @@
 /// <reference types="vite/client" />
 
-interface ImportMetaEnv {
-  readonly VITE_BCEID_REGISTER_URL?: string;
-}
-
 interface ImportMeta {
   readonly env: ImportMetaEnv & { readonly BASE_URL: string };
 }

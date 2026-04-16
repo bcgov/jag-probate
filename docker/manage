@@ -12,6 +12,7 @@ fi
 
 SCRIPT_HOME="$(cd "$(dirname "$0")" && pwd)"
 export COMPOSE_PROJECT_NAME="${COMPOSE_PROJECT_NAME:-jag-probate}"
+export DOCKER_BUILD_PROGRESS="${DOCKER_BUILD_PROGRESS:-plain}"
 
 # =================================================================================================================
 # Usage:
@@ -79,6 +80,7 @@ build-api() {
   echo -e "Building api image using docker ..."
   echo -e "----------------------------------------------------------------------------------------------------"
   docker build \
+    --progress "${DOCKER_BUILD_PROGRESS}" \
     -t "${COMPOSE_PROJECT_NAME}-api" \
     -f './api/Dockerfile.dev' '..'
 
@@ -93,6 +95,7 @@ build-web() {
   echo -e "Building the ${COMPOSE_PROJECT_NAME}-web (dev) image using Docker ..."
   echo -e "----------------------------------------------------------------------------------------------------"
   docker build \
+    --progress "${DOCKER_BUILD_PROGRESS}" \
     -t "${COMPOSE_PROJECT_NAME}-web" \
     --build-arg NODE_VERSION=22 \
     --build-arg VITE_PORT=8080 \
@@ -109,6 +112,7 @@ build-web-prod() {
   echo -e "Building the ${COMPOSE_PROJECT_NAME}-web-prod (production) image using Docker ..."
   echo -e "----------------------------------------------------------------------------------------------------"
   docker build \
+    --progress "${DOCKER_BUILD_PROGRESS}" \
     -t "${COMPOSE_PROJECT_NAME}-web-prod" \
     --build-arg NODE_VERSION=22 \
     --build-arg WEB_SRC='../web' \

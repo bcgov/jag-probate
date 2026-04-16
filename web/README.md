@@ -99,15 +99,18 @@ Uses Pinia for state management. Stores will be added in `src/store/` as needed.
 - Custom CSS in `src/assets/main.css`
 - Scoped styles in individual components
 
-## Environment Variables
+## Runtime Configuration
 
-Environment variables can be added to `.env` files:
+The frontend reads `/config.json` on startup and stores the values in Pinia before the app mounts.
 
-- `.env` - Default environment variables
-- `.env.local` - Local overrides (not committed)
-- `.env.production` - Production variables
+This keeps deployment-specific settings out of the Vite build and allows OpenShift ConfigMaps or environment variables to update runtime behavior without rebuilding the image.
 
-Access via `import.meta.env.VITE_*`
+Current runtime config keys:
+
+- `environment`
+- `bceidRegisterUrl`
+
+The container startup scripts generate this file from runtime environment variables such as `APP_ENVIRONMENT` and `BCEID_REGISTER_URL`.
 
 ## Building for Production
 
