@@ -172,22 +172,18 @@
 
 <script setup lang="ts">
   import ToolTip from '@/components/shared/glossary/ToolTip.vue';
-  import { useLayoutStore } from '@/stores';
+  import { useLayoutStore, useRuntimeConfigStore } from '@/stores';
   import { useRouter } from 'vue-router';
 
   const layoutStore = useLayoutStore();
+  const runtimeConfigStore = useRuntimeConfigStore();
   layoutStore.setBackdropClass('bd-legislature-dome');
   layoutStore.setNavHeader('Probate Application');
 
   const router = useRouter();
 
-  // This is not a secret url and is safe to expose, for production safety its best to fall back to the official BCEID registration page if the environment variable is not set or is misconfigured
-  const BCEID_REGISTER_URL =
-    import.meta.env.VITE_BCEID_REGISTER_URL ||
-    'https://www.bceid.ca/register/basic/account_details.aspx?type=regular&serviceId=7493&eServiceType=all';
-
   const handleRegister = () => {
-    window.open(BCEID_REGISTER_URL, '_blank', 'noopener');
+    window.open(runtimeConfigStore.bceidRegisterUrl, '_blank', 'noopener');
   };
 
   const handleReturning = () => {

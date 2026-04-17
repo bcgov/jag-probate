@@ -18,8 +18,9 @@ RUN npm install
 COPY ${WEB_SRC} .
 
 COPY ./docker/web/dev-entrypoint.sh /opt/app-root/src/
+COPY ./docker/web/generate-runtime-config.sh /opt/app-root/src/
 
-RUN chmod +x /opt/app-root/src/dev-entrypoint.sh
+RUN chmod +x /opt/app-root/src/dev-entrypoint.sh /opt/app-root/src/generate-runtime-config.sh
 
 ENV VITE_PORT=${VITE_PORT}
 

@@ -32,6 +32,7 @@ COPY ${NGINX_RUNTIME_SRC}/nginx.conf.template /tmp/
 
 # Copy run script
 COPY ${NGINX_RUNTIME_SRC}/s2i/bin/run /usr/libexec/s2i/run
+COPY ./docker/web/generate-runtime-config.sh /usr/libexec/s2i/generate-runtime-config
 
 # =================================================================================
 # Fix up permissions
@@ -41,8 +42,9 @@ COPY ${NGINX_RUNTIME_SRC}/s2i/bin/run /usr/libexec/s2i/run
 # - The container dynamically configures nginx on startup
 # - The application artifacts live in /tmp
 # ---------------------------------------------------------------------------------
-RUN chmod -R g+rwx $STI_SCRIPTS_PATH
-RUN chmod g+rw /var/cache/nginx \ 
+RUN chmod -R g+rwx $STI_SCRIPTS_PATH && \
+    chmod 755 /usr/libexec/s2i/generate-runtime-config && \
+    chmod g+rw /var/cache/nginx \
     /var/run \
     /var/log/nginx \
     /etc/nginx/nginx.conf \
@@ -96,8 +98,9 @@ COPY ${VUE_ON_NGINX_SRC}/s2i/bin/fix-base-url /usr/libexec/s2i/fix-base-url
 
 # Fix permissions.
 USER root
-RUN chmod 674 /usr/libexec/s2i/fix-base-url
-RUN chmod -R 674 /tmp/app/dist/
+RUN chmod 674 /usr/libexec/s2i/fix-base-url && \
+    chmod 755 /usr/libexec/s2i/generate-runtime-config && \
+    chmod -R 674 /tmp/app/dist/
 
 # From nginx-runtime.
 USER 104
@@ -106,4 +109,4 @@ USER 104
 # short circuit the s2i lifecycle.
 # The runtime image "loses" its s2i runtime voodoo when it 
 # is used in a dockerSrategy, which is why the explicit `CMD` is necessary
-CMD  /usr/libexec/s2i/fix-base-url
+CMD ["/usr/libexec/s2i/fix-base-url"]

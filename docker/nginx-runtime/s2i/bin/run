@@ -202,11 +202,7 @@ REPLACE_VARS="
 sed "$(makeReplacementPattern $REPLACE_VARS)" /tmp/nginx.conf.template > /etc/nginx/nginx.conf
 
 echo "---> Generating runtime config ..."
-cat > /tmp/app/dist/config.json <<EOF
-{
-  "environment": "${APP_ENVIRONMENT:-dev}"
-}
-EOF
+/usr/libexec/s2i/generate-runtime-config /tmp/app/dist/config.json
 
 if [ ! -z "${USE_SELF_SIGNED_SSL}" ]; then
 echo "---> Using self-signed SSH keys ..."

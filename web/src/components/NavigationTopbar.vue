@@ -45,11 +45,16 @@
 </template>
 
 <script setup lang="ts">
-  import { useAuthStore, useLayoutStore } from '@/stores';
-  import { computed, onMounted, ref } from 'vue';
+  import {
+    useAuthStore,
+    useLayoutStore,
+    useRuntimeConfigStore,
+  } from '@/stores';
+  import { computed } from 'vue';
 
   const layoutStore = useLayoutStore();
   const authStore = useAuthStore();
+  const runtimeConfigStore = useRuntimeConfigStore();
 
   /**
    * Logs the user out by clearing the auth store and redirecting
@@ -57,32 +62,10 @@
    */
   const handleLogout = () => {
     authStore.clearUserInfo();
-    window.location.href = `${import.meta.env.BASE_URL}api/auth/logout`;
+    globalThis.location.href = `${import.meta.env.BASE_URL}api/auth/logout`;
   };
 
-  // Environment from runtime config
-  const runtimeEnv = ref<string>('dev');
-
-  // Fetch runtime config on mount
-  onMounted(async () => {
-    try {
-      const response = await fetch(`${import.meta.env.BASE_URL}config.json`);
-      const config = await response.json();
-      runtimeEnv.value = config.environment || 'dev';
-    } catch {
-      console.warn('Could not load runtime config, defaulting to dev');
-      runtimeEnv.value = 'dev';
-    }
-  });
-
-  // Display environment
-  const environment = computed(() => {
-    const env = runtimeEnv.value.toLowerCase();
-    if (env === 'dev' || env === 'development') return 'DEV';
-    if (env === 'test') return 'TEST';
-    if (env === 'prod' || env === 'production') return 'PROD';
-    return env.toUpperCase();
-  });
+  const environment = computed(() => runtimeConfigStore.environmentLabel);
 
   // Badge color based on environment
   const envBadgeClass = computed(() => {
