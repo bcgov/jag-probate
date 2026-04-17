@@ -23,37 +23,26 @@
               </h2>
               <ul class="list-unstyled mb-0 checklist">
                 <li>
-                  <font-awesome-icon
-                    icon="fas-solid fa-circle-check"
-                    class="text-success me-2"
-                    aria-hidden="true"
-                  />The <strong>deceased did not leave a will</strong>.
+                  <font-awesome-icon icon="fas-solid fa-circle-check" class="text-success me-2" aria-hidden="true" />The
+                  <strong>deceased did not leave a will</strong>.
                 </li>
                 <li>
-                  <font-awesome-icon
-                    icon="fas-solid fa-circle-check"
-                    class="text-success me-2"
-                    aria-hidden="true"
-                  /><strong>Only one person</strong> is applying for the
+                  <font-awesome-icon icon="fas-solid fa-circle-check" class="text-success me-2"
+                    aria-hidden="true" /><strong>Only one person</strong> is applying for the
                   Representation Grant.
                 </li>
                 <li class="d-block">
                   <p>
-                    <font-awesome-icon
-                      icon="fas-solid fa-circle-check"
-                      class="text-success me-2"
-                      aria-hidden="true"
-                    />You are <strong>one of the following</strong>:
+                    <font-awesome-icon icon="fas-solid fa-circle-check" class="text-success me-2"
+                      aria-hidden="true" />You are <strong>one of the following</strong>:
                   </p>
                   <ul class="disc-list ms-4">
                     <li>The <strong>spouse</strong> of the deceased</li>
                     <li>A <strong>child</strong> of the deceased</li>
                     <li>
                       A
-                      <strong
-                        >legal guardian, nominee, or personal
-                        representative</strong
-                      >
+                      <strong>legal guardian, nominee, or personal
+                        representative</strong>
                       acting for someone listed above
                     </li>
                     <li>
@@ -73,20 +62,14 @@
               <h2 class="h4 fw-bold mb-3">This service CANNOT be used if:</h2>
               <ul class="list-unstyled mb-0 checklist">
                 <li>
-                  <font-awesome-icon
-                    icon="fas-solid fa-circle-xmark"
-                    class="text-danger me-2"
-                    aria-hidden="true"
-                  />One of the deceased's
+                  <font-awesome-icon icon="fas-solid fa-circle-xmark" class="text-danger me-2" aria-hidden="true" />One
+                  of the deceased's
                   <strong>children passed away before them</strong> and that
                   child has children of their own.
                 </li>
                 <li>
-                  <font-awesome-icon
-                    icon="fas-solid fa-circle-xmark"
-                    class="text-danger me-2"
-                    aria-hidden="true"
-                  />There is
+                  <font-awesome-icon icon="fas-solid fa-circle-xmark" class="text-danger me-2"
+                    aria-hidden="true" />There is
                   <strong>no surviving spouse, descendant, or creditor</strong>
                   (other than yourself) who can be identified at this time.
                 </li>
@@ -96,9 +79,7 @@
         </div>
       </div>
 
-      <div
-        class="card shadow-sm border-0 info-card info-card-blue text-white mb-4"
-      >
+      <div class="card shadow-sm border-0 info-card info-card-blue text-white mb-4">
         <div class="card-body">
           <div class="row align-items-start">
             <div class="col-12 text-center">
@@ -127,13 +108,9 @@
               <p>
                 Once you're done with the questionnaire, you will need to print
                 your court forms and file them at your local
-                <a
-                  class="link-light fw-semibold"
+                <a class="link-light fw-semibold"
                   href="https://www2.gov.bc.ca/gov/content/justice/courthouse-services/courthouse-locations"
-                  target="_blank"
-                  rel="noreferrer"
-                  >Supreme Court registry</a
-                >.
+                  target="_blank" rel="noreferrer">Supreme Court registry</a>.
               </p>
             </div>
           </div>
@@ -143,11 +120,7 @@
       <div class="row g-4 align-items-center text-center">
         <div class="col-12 col-lg-6">
           <h3 class="text-uppercase fw-semibold text-white mb-1">New Users</h3>
-          <button
-            type="button"
-            class="btn btn-primary btn-lg px-4 mt-2"
-            @click="handleRegister"
-          >
+          <button type="button" class="btn btn-primary btn-lg px-4 mt-2" @click="handleRegister">
             Register for a <strong>Basic</strong> BCeID
           </button>
         </div>
@@ -155,11 +128,7 @@
           <h3 class="text-uppercase fw-semibold text-white mb-1">
             Returning Users
           </h3>
-          <button
-            type="button"
-            class="btn btn-warning btn-lg px-4 mt-2"
-            @click="handleReturning"
-          >
+          <button type="button" class="btn btn-warning btn-lg px-4 mt-2" @click="handleReturning">
             Use an existing <strong>Basic</strong> BCeID
           </button>
         </div>
@@ -171,44 +140,45 @@
 </template>
 
 <script setup lang="ts">
-  import ToolTip from '@/components/shared/glossary/ToolTip.vue';
-  import { useLayoutStore, useRuntimeConfigStore } from '@/stores';
-  import { useRouter } from 'vue-router';
+import ToolTip from '@/components/shared/glossary/ToolTip.vue';
+import { useLayoutStore, useRuntimeConfigStore } from '@/stores';
+import { useRouter } from 'vue-router';
 
-  const layoutStore = useLayoutStore();
-  const runtimeConfigStore = useRuntimeConfigStore();
-  layoutStore.setBackdropClass('bd-legislature-dome');
-  layoutStore.setNavHeader('Probate Application');
+const layoutStore = useLayoutStore();
+const runtimeConfigStore = useRuntimeConfigStore();
+layoutStore.setBackdropClass('bd-legislature-dome');
+layoutStore.setNavHeader('Probate Application');
 
-  const router = useRouter();
+const router = useRouter();
 
-  const handleRegister = () => {
-    window.open(runtimeConfigStore.bceidRegisterUrl, '_blank', 'noopener');
-  };
+const handleRegister = () => {
+  globalThis.location.replace(runtimeConfigStore.bceidRegisterUrl);
+};
 
-  const handleReturning = () => {
-    router.push({ name: 'PreviousActivity' });
-  };
+const handleReturning = () => {
+  router.push({ name: 'PreviousActivity' });
+};
 </script>
 
 <style scoped lang="scss">
-  .info-card {
-    border-radius: 1rem;
-    background-color: rgba(255, 255, 255, 0.8);
-  }
+.info-card {
+  border-radius: 1rem;
+  background-color: rgba(255, 255, 255, 0.8);
+}
 
-  .info-card-blue {
-    background-color: rgba(0, 51, 102, 0.8);
-  }
+.info-card-blue {
+  background-color: rgba(0, 51, 102, 0.8);
+}
 
-  ul.disc-list li {
-    list-style-type: disc;
-  }
+ul.disc-list li {
+  list-style-type: disc;
+}
 
-  @media (max-width: 767.98px) {
-    .info-card,
-    .cta-card {
-      border-radius: 0.75rem;
-    }
+@media (max-width: 767.98px) {
+
+  .info-card,
+  .cta-card {
+    border-radius: 0.75rem;
   }
+}
 </style>
