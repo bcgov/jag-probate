@@ -11,20 +11,24 @@ import { initializePinia, registerPinia } from './stores';
 import './styles/backdrop.scss';
 import './styles/index.scss';
 
-const app = createApp(App);
+async function bootstrap() {
+  const app = createApp(App);
 
-// Add Pinia store with extensible registration function
-registerPinia(app);
-await initializePinia();
-registerFontAwesomeAndLibrary(app);
+  // Add Pinia store with extensible registration function
+  registerPinia(app);
+  await initializePinia();
+  registerFontAwesomeAndLibrary(app);
 
-// Register services (HttpService, AuthService) as provide/inject singletons
-registerServices(app);
+  // Register services (HttpService, AuthService) as provide/inject singletons
+  registerServices(app);
 
-// Add Vue Router
-app.use(router);
+  // Add Vue Router
+  app.use(router);
 
-// Register Boostrap-Vue-Next
-app.use(createBootstrap());
+  // Register Boostrap-Vue-Next
+  app.use(createBootstrap());
 
-app.mount('#app');
+  app.mount('#app');
+}
+
+bootstrap();
