@@ -183,7 +183,7 @@
   const router = useRouter();
 
   const handleRegister = () => {
-    window.open(runtimeConfigStore.bceidRegisterUrl, '_blank', 'noopener');
+    globalThis.location.replace(runtimeConfigStore.bceidRegisterUrl);
   };
 
   const handleReturning = () => {
