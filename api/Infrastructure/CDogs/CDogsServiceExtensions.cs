@@ -1,6 +1,8 @@
 using System;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Serialization;
 using Probate.Api.Infrastructure.Options;
 using Refit;
 
@@ -19,8 +21,18 @@ namespace Probate.Api.Infrastructure.CDogs
 
             services.AddTransient<CDogsAuthHandler>();
 
+            var refitSettings = new RefitSettings
+            {
+                ContentSerializer = new NewtonsoftJsonContentSerializer(
+                    new JsonSerializerSettings
+                    {
+                        ContractResolver = new CamelCasePropertyNamesContractResolver(),
+                    }
+                ),
+            };
+
             services
-                .AddRefitClient<ICDogsApi>()
+                .AddRefitClient<ICDogsApi>(refitSettings)
                 .ConfigureHttpClient(c => c.BaseAddress = new Uri(options.BaseUrl))
                 .AddHttpMessageHandler<CDogsAuthHandler>();
 
