@@ -345,8 +345,7 @@
     try {
       const applications = await chefsService.getSubmissions();
       previousApplications.value = (applications ?? []).map((appJson: any) => ({
-        deceased_name:
-          appJson.applicantName || '(the person who died)',
+        deceased_name: appJson.applicantName || '(the person who died)',
         app_type: 'Probate Grant',
         status: appJson.status ?? '',
         packageNum: appJson.chefsSubmissionId ?? '',
