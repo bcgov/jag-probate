@@ -137,7 +137,7 @@
 
     const chefsSubmissionId = props.submissionId ?? submission?.id;
     const createdBy = chefsToken.value?.preferred_username;
-    const applicantName = submission?.data?.firstNameGivenName || '';
+    const applicantName = submission?.submission?.data?.deceasedName || '';
     const status = submission?.submission?.state;
     const lastUpdatedAt = submission?.updatedAt;
     const lastFiledAt = status === 'submitted' ? submission?.updatedAt : null;
