@@ -69,7 +69,7 @@ function redirectToLogin(to: any) {
   const apiBase = `${base}/api`;
   // Pass just the route path as returnUrl; AuthController prepends the base
   // path (e.g. /probate) from the X-Base-Href header set by nginx.
-  window.location.replace(
+  window.location.assign(
     `${apiBase}/auth/login?returnUrl=${encodeURIComponent(routePath)}`
   );
 }

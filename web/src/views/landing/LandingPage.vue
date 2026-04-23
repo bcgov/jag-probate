@@ -183,7 +183,7 @@
   const router = useRouter();
 
   const handleRegister = () => {
-    globalThis.location.replace(runtimeConfigStore.bceidRegisterUrl);
+    globalThis.location.assign(runtimeConfigStore.bceidRegisterUrl);
   };
 
   const handleReturning = () => {
