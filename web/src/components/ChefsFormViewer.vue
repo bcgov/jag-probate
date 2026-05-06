@@ -106,7 +106,10 @@
       el.setAttribute('form-id', formId);
       el.setAttribute('auth-token', token);
       el.setAttribute('base-url', resolvedBaseUrl);
-      el.setAttribute('isolate-styles', 'false');
+      el.setAttribute(
+        'theme-css',
+        `${window.location.origin}${import.meta.env.BASE_URL}chefs-theme.css`
+      );
       if (chefsToken.value && Object.keys(chefsToken.value).length > 0) {
         el.setAttribute('token', JSON.stringify(chefsToken.value));
       }
