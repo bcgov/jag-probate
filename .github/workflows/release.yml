@@ -82,11 +82,17 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Get short SHA
+        id: short_sha
+        run: echo "SHORT_SHA=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+
       - id: meta
         uses: docker/metadata-action@030e881283bb7a6894de51c315a6bfe6a94e05cf # v6.0.0
         with:
           images: ${{ env.GITHUB_IMAGE_REPO }}/api
-          tags: type=raw,value=${{ needs.setup.outputs.image_tag }}
+          tags: |
+            type=raw,value=${{ needs.setup.outputs.image_tag }}
+            type=raw,value=${{ steps.short_sha.outputs.SHORT_SHA }}
 
       - uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd # v4.0.0
 
@@ -118,11 +124,17 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Get short SHA
+        id: short_sha
+        run: echo "SHORT_SHA=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+
       - id: meta
         uses: docker/metadata-action@030e881283bb7a6894de51c315a6bfe6a94e05cf # v6.0.0
         with:
           images: ${{ env.GITHUB_IMAGE_REPO }}/web
-          tags: type=raw,value=${{ needs.setup.outputs.image_tag }}
+          tags: |
+            type=raw,value=${{ needs.setup.outputs.image_tag }}
+            type=raw,value=${{ steps.short_sha.outputs.SHORT_SHA }}
 
       - uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd # v4.0.0
         with:

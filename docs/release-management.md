@@ -6,7 +6,7 @@ Releases are managed from `bcgov/jag-probate` with the `Release` GitHub Actions 
 
 ```text
 GitHub Release or manual workflow_dispatch
-  -> build API and web images tagged from the release tag
+  -> build API and web images tagged with both semver and commit SHA
   -> update tenant-gitops develop branch for dev
   -> wait for GitHub Environment approval for test
   -> update tenant-gitops test branch for test
@@ -26,7 +26,12 @@ The workflow updates `bcgov-c/tenant-gitops-a94b15` using the existing `update-a
 | Test | `test` | `test` | `services/probate/overlays/test` |
 | Prod | `prod` | `main` | `services/probate/overlays/prod` |
 
-The image tags are semantic versions derived from the release tag. For example, `v1.2.3` becomes `1.2.3`.
+Each release image is pushed with two tags:
+
+- semantic version from the release tag, for normal promotion. For example, `v1.2.3` becomes `1.2.3`.
+- short commit SHA, for rollback, audit, and SHA pinning when needed.
+
+The release workflow updates GitOps overlays to the semver tag by default. Operators can still pin an overlay to the short SHA tag manually if a semver tag must be avoided.
 
 ## Required app repo setup
 
