@@ -9,7 +9,8 @@ on:
       - 'docker/web/**'
       - 'docker/nginx-runtime/**'
       - 'docker/vue-on-nginx/**'
-      - '.github/workflows/publish-web.yml'
+      - '.github/workflows/cd-web.yml'
+      - '.github/workflows/actions/update-argo-kustomize/**'
 
   workflow_dispatch:
 

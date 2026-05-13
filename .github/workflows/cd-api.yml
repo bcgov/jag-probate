@@ -8,7 +8,8 @@ on:
       - 'api/**'
       - 'db/**'
       - 'docker/api/**'
-      - '.github/workflows/publish-api.yml'
+      - '.github/workflows/cd-api.yml'
+      - '.github/workflows/actions/update-argo-kustomize/**'
 
   workflow_dispatch:
 

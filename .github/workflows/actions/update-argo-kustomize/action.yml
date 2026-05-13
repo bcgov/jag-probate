@@ -17,6 +17,14 @@ inputs:
   new_image:
     description: The new full image reference (e.g., ghcr.io/org/repo:tag)
     required: true
+  image_name_2:
+    description: Optional second current image name to update in kustomization.yaml
+    required: false
+    default: ''
+  new_image_2:
+    description: Optional second new full image reference
+    required: false
+    default: ''
   kustomize_path:
     description: Path to the directory containing kustomization.yaml
     required: true
@@ -39,20 +47,38 @@ runs:
       if: steps.gitops.outcome == 'success'
       shell: bash
       run: |
+        set -euo pipefail
+
         # Run kustomize edit set image using the kustomize container
         # Note: gitops/ prefix is the local checkout directory from the previous step
         # inputs.kustomize_path is relative to the gitops repo root (e.g., services/whisper/overlays/dev)
+        if [ -n "${{ inputs.image_name_2 }}" ] && [ -z "${{ inputs.new_image_2 }}" ]; then
+          echo "new_image_2 is required when image_name_2 is provided."
+          exit 1
+        fi
+        if [ -z "${{ inputs.image_name_2 }}" ] && [ -n "${{ inputs.new_image_2 }}" ]; then
+          echo "image_name_2 is required when new_image_2 is provided."
+          exit 1
+        fi
+
+        image_updates=("${{ inputs.image_name }}=${{ inputs.new_image }}")
+        if [ -n "${{ inputs.image_name_2 }}" ]; then
+          image_updates+=("${{ inputs.image_name_2 }}=${{ inputs.new_image_2 }}")
+        fi
+
         docker run --rm \
           -v "${{ github.workspace }}/gitops/${{ inputs.kustomize_path }}:/workspace" \
           -w /workspace \
           registry.k8s.io/kustomize/kustomize:v5.6.0@sha256:b5f56e6becd1ba93a1a775a149763e3841a177beb10191624100bed81b44d297 \
-          edit set image ${{ inputs.image_name }}=${{ inputs.new_image }}
+          edit set image "${image_updates[@]}"
 
     - name: Commit and Push Changes
       id: commit
       if: steps.kustomize.outcome == 'success'
       shell: bash
       run: |
+        set -euo pipefail
+
         # Navigate into the gitops repository directory
         cd gitops
 
@@ -68,7 +94,11 @@ runs:
           echo "No changes to commit; skipping git commit and push."
         else
           DATETIME=$(date +'%Y-%m-%d %H:%M:%S')
-          git commit -m "Update image ${{ inputs.image_name }} to ${{ inputs.new_image }}" -m "Updated on $DATETIME"
+          COMMIT_SUBJECT="Update image ${{ inputs.image_name }} to ${{ inputs.new_image }}"
+          if [ -n "${{ inputs.image_name_2 }}" ]; then
+            COMMIT_SUBJECT="Update images in ${{ inputs.kustomize_path }}"
+          fi
+          git commit -m "${COMMIT_SUBJECT}" -m "Updated on $DATETIME"
 
           BRANCH="${{ inputs.gitops_branch }}"
           MAX_RETRIES=3
@@ -90,7 +120,11 @@ runs:
 
             echo "Push to origin ${BRANCH} failed (attempt $attempt); fetching latest remote changes."
             git fetch origin "${BRANCH}"
-            git rebase "origin/${BRANCH}"
+            if ! git rebase "origin/${BRANCH}"; then
+              echo "Rebase failed; likely due to conflicting image updates in ${BRANCH}."
+              git rebase --abort
+              exit 1
+            fi
 
             echo "Retrying in ${RETRY_DELAY} seconds..."
             sleep "$RETRY_DELAY"
