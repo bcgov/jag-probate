@@ -27,11 +27,9 @@ env:
 
 permissions:
   contents: read
-  id-token: write
-  packages: write
 
 concurrency:
-  group: release-${{ github.event.release.tag_name || github.event.inputs.tag }}
+  group: release-${{ github.workflow }}-${{ github.event.release.tag_name || github.event.inputs.tag || github.run_id }}
   cancel-in-progress: false
 
 jobs:
@@ -45,22 +43,35 @@ jobs:
     steps:
       - name: Resolve tag and pre-release flag
         id: resolve
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+          RELEASE_PRERELEASE: ${{ github.event.release.prerelease }}
+          INPUT_TAG: ${{ github.event.inputs.tag }}
         run: |
-          if [ "${{ github.event_name }}" = "release" ]; then
-            RAW_TAG="${{ github.event.release.tag_name }}"
-            IS_PRERELEASE="${{ github.event.release.prerelease }}"
+          set -euo pipefail
+
+          if [ "${EVENT_NAME}" = "release" ]; then
+            RAW_TAG="${RELEASE_TAG}"
+            IS_PRERELEASE="${RELEASE_PRERELEASE}"
           else
-            RAW_TAG="${{ github.event.inputs.tag }}"
+            RAW_TAG="${INPUT_TAG}"
           fi
+
+          if [[ ! "${RAW_TAG}" =~ ^v?[0-9]+\.[0-9]+\.[0-9]+(-[A-Za-z0-9.-]+)?$ ]]; then
+            echo "Release tag must match vMAJOR.MINOR.PATCH or vMAJOR.MINOR.PATCH-prerelease, for example v1.2.3 or v1.2.3-rc1."
+            exit 1
+          fi
+
           IMAGE_TAG="${RAW_TAG#v}"
           if [ "${IS_PRERELEASE:-false}" = "true" ] || [[ "${IMAGE_TAG}" == *-* ]]; then
             IS_PRERELEASE="true"
           else
             IS_PRERELEASE="false"
           fi
-          echo "IMAGE_TAG=${IMAGE_TAG}" >> $GITHUB_OUTPUT
-          echo "RELEASE_REF=${RAW_TAG}" >> $GITHUB_OUTPUT
-          echo "IS_PRERELEASE=${IS_PRERELEASE}" >> $GITHUB_OUTPUT
+          printf 'IMAGE_TAG=%s\n' "${IMAGE_TAG}" >> "$GITHUB_OUTPUT"
+          printf 'RELEASE_REF=%s\n' "${RAW_TAG}" >> "$GITHUB_OUTPUT"
+          printf 'IS_PRERELEASE=%s\n' "${IS_PRERELEASE}" >> "$GITHUB_OUTPUT"
 
   build-api:
     name: Build and Push API Image
@@ -137,8 +148,6 @@ jobs:
             type=raw,value=${{ steps.short_sha.outputs.SHORT_SHA }}
 
       - uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd # v4.0.0
-        with:
-          driver: docker
 
       - uses: docker/build-push-action@d08e5c354a6adb9ed34480a06d141179aa583294 # v7.0.0
         with:
