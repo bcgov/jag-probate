@@ -81,7 +81,7 @@ jobs:
           done
 
       - name: Build API codebase
-        uses: ./.github/workflows/actions/build-api
+        uses: ./.github/actions/build-api
         with:
           working_directory: ${{ env.WORKING_DIRECTORY }}
           dotnet_version: 10.0

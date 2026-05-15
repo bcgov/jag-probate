@@ -4,6 +4,7 @@ obj/
 *.user
 *.suo
 *.userosscache
+*.lscache
 *.sln.docstates
 *.userprefs
 *.pidb
