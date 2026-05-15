@@ -34,7 +34,7 @@ jobs:
       - name: Get all related csproj files
         id: filter
         run: |
-          echo "csharp-projects=$(find api db -name '*.csproj' | tr '\n' ' ')" >> $GITHUB_OUTPUT
+          echo "csharp-projects=$(find api db -name '*.csproj' | tr '\n' ' ')" >> "$GITHUB_OUTPUT"
 
   build-and-test-api:
     name: Build and Test API

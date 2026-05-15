@@ -47,7 +47,7 @@ jobs:
       - name: Get short SHA
         id: short_sha
         run: |
-          echo "SHORT_SHA=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+          echo "SHORT_SHA=$(git rev-parse --short HEAD)" >> "$GITHUB_OUTPUT"
 
       - name: Setup Image Metadata
         id: meta

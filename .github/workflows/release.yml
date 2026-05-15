@@ -68,9 +68,11 @@ jobs:
           else
             IS_PRERELEASE="false"
           fi
-          printf 'IMAGE_TAG=%s\n' "${IMAGE_TAG}" >> "$GITHUB_OUTPUT"
-          printf 'RELEASE_REF=%s\n' "${RAW_TAG}" >> "$GITHUB_OUTPUT"
-          printf 'IS_PRERELEASE=%s\n' "${IS_PRERELEASE}" >> "$GITHUB_OUTPUT"
+          {
+            printf 'IMAGE_TAG=%s\n' "${IMAGE_TAG}"
+            printf 'RELEASE_REF=%s\n' "${RAW_TAG}"
+            printf 'IS_PRERELEASE=%s\n' "${IS_PRERELEASE}"
+          } >> "$GITHUB_OUTPUT"
 
   build-images:
     name: Build and Push ${{ matrix.name }} Image
@@ -109,7 +111,7 @@ jobs:
 
       - name: Get short SHA
         id: short_sha
-        run: echo "SHORT_SHA=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+        run: echo "SHORT_SHA=$(git rev-parse --short HEAD)" >> "$GITHUB_OUTPUT"
 
       - id: meta
         uses: docker/metadata-action@030e881283bb7a6894de51c315a6bfe6a94e05cf # v6.0.0
