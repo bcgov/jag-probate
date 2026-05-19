@@ -10,6 +10,7 @@ namespace Probate.Api.Models
         public string Status { get; set; }
         public DateTime? LastUpdatedAt { get; set; }
         public DateTime? LastFiledAt { get; set; }
+        public string? SubmissionData { get; set; }
     }
 
     public class SubmissionResponseDto

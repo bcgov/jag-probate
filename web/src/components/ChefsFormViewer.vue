@@ -149,6 +149,7 @@
       status,
       lastUpdatedAt,
       lastFiledAt,
+      submissionData: submission ? JSON.stringify(submission) : null,
     });
 
     emit('submitted', chefsSubmissionId);
