@@ -9,7 +9,8 @@ on:
       - 'docker/web/**'
       - 'docker/nginx-runtime/**'
       - 'docker/vue-on-nginx/**'
-      - '.github/workflows/publish-web.yml'
+      - '.github/workflows/cd-web.yml'
+      - '.github/actions/update-argo-kustomize/**'
 
   workflow_dispatch:
 
@@ -50,7 +51,7 @@ jobs:
       - name: Get short SHA
         id: short_sha
         run: |
-          echo "SHORT_SHA=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+          echo "SHORT_SHA=$(git rev-parse --short HEAD)" >> "$GITHUB_OUTPUT"
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd # v4.0.0
@@ -93,7 +94,7 @@ jobs:
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
       - name: Update ArgoCD Kustomize Repo with new Image
-        uses: ./.github/workflows/actions/update-argo-kustomize
+        uses: ./.github/actions/update-argo-kustomize
         with:
           licence_plate: ${{ env.GITOPS_LICENCE_PLATE }}
           gitops_branch: ${{ env.GITOPS_BRANCH }}

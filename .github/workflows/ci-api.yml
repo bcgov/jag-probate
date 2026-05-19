@@ -34,7 +34,7 @@ jobs:
       - name: Get all related csproj files
         id: filter
         run: |
-          echo "csharp-projects=$(find api db -name '*.csproj' | tr '\n' ' ')" >> $GITHUB_OUTPUT
+          echo "csharp-projects=$(find api db -name '*.csproj' | tr '\n' ' ')" >> "$GITHUB_OUTPUT"
 
   build-and-test-api:
     name: Build and Test API
@@ -81,7 +81,7 @@ jobs:
           done
 
       - name: Build API codebase
-        uses: ./.github/workflows/actions/build-api
+        uses: ./.github/actions/build-api
         with:
           working_directory: ${{ env.WORKING_DIRECTORY }}
           dotnet_version: 10.0
