@@ -5,8 +5,6 @@
 #   - "dev"  : no approval gates required (auto-deploys on release publish)
 #   - "test" : configure required reviewers for manual approval before promotion
 #   - "prod" : configure required reviewers for manual approval before promotion
-#
-# The "prod" deployment is additionally skipped for pre-release tags.
 
 name: Release
 
@@ -38,21 +36,18 @@ jobs:
     outputs:
       image_tag: ${{ steps.resolve.outputs.IMAGE_TAG }}
       release_ref: ${{ steps.resolve.outputs.RELEASE_REF }}
-      is_prerelease: ${{ steps.resolve.outputs.IS_PRERELEASE }}
     steps:
-      - name: Resolve tag and pre-release flag
+      - name: Resolve tag
         id: resolve
         env:
           EVENT_NAME: ${{ github.event_name }}
           RELEASE_TAG: ${{ github.event.release.tag_name }}
-          RELEASE_PRERELEASE: ${{ github.event.release.prerelease }}
           INPUT_TAG: ${{ github.event.inputs.tag }}
         run: |
           set -euo pipefail
 
           if [ "${EVENT_NAME}" = "release" ]; then
             RAW_TAG="${RELEASE_TAG}"
-            IS_PRERELEASE="${RELEASE_PRERELEASE}"
           else
             RAW_TAG="${INPUT_TAG}"
           fi
@@ -63,15 +58,9 @@ jobs:
           fi
 
           IMAGE_TAG="${RAW_TAG#v}"
-          if [ "${IS_PRERELEASE:-false}" = "true" ] || [[ "${IMAGE_TAG}" == *-* ]]; then
-            IS_PRERELEASE="true"
-          else
-            IS_PRERELEASE="false"
-          fi
           {
             printf 'IMAGE_TAG=%s\n' "${IMAGE_TAG}"
             printf 'RELEASE_REF=%s\n' "${RAW_TAG}"
-            printf 'IS_PRERELEASE=%s\n' "${IS_PRERELEASE}"
           } >> "$GITHUB_OUTPUT"
 
   build-images:
@@ -179,7 +168,6 @@ jobs:
   deploy-prod:
     name: Deploy to Prod
     needs: [setup, build-images, deploy-test]
-    if: ${{ needs.setup.outputs.is_prerelease != 'true' }}
     runs-on: ubuntu-latest
     environment: prod
     permissions:
