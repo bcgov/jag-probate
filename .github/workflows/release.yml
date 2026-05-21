@@ -1,10 +1,11 @@
 # Release workflow: builds versioned API and Web images from a GitHub Release tag,
-# then promotes them through dev -> test -> prod environments via ArgoCD/Kustomize.
+# then promotes them through dev -> test environments via ArgoCD/Kustomize
+# and opens a GitOps pull request for prod promotion.
 #
 # Prerequisites - GitHub Environments must be configured in repo Settings -> Environments:
 #   - "dev"  : no approval gates required (auto-deploys on release publish)
 #   - "test" : configure required reviewers for manual approval before promotion
-#   - "prod" : configure required reviewers for manual approval before promotion
+#   - "prod" : configure required reviewers for manual approval before opening the prod GitOps PR
 
 name: Release
 
@@ -186,3 +187,13 @@ jobs:
           image_name_2: jag-probate-web
           new_image_2: ${{ env.GITHUB_IMAGE_REPO }}/web:${{ needs.setup.outputs.image_tag }}
           kustomize_path: services/probate/overlays/prod
+          create_pull_request: 'true'
+          pull_request_branch: release/promote-${{ needs.setup.outputs.release_ref }}-to-prod
+          pull_request_base: main
+          pull_request_title: Promote probate ${{ needs.setup.outputs.release_ref }} to prod
+          pull_request_body: |
+            Automated prod promotion PR for probate release ${{ needs.setup.outputs.release_ref }}.
+
+            Images:
+            - ${{ env.GITHUB_IMAGE_REPO }}/api:${{ needs.setup.outputs.image_tag }}
+            - ${{ env.GITHUB_IMAGE_REPO }}/web:${{ needs.setup.outputs.image_tag }}
