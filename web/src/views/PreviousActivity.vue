@@ -336,6 +336,9 @@
     // TODO: replace with actual eFiling hub URL
   }
   const createCase = () => {
+    sessionStorage.removeItem('resumeSubmissionId');
+    sessionStorage.removeItem('resumeDbId');
+    sessionStorage.removeItem('resumeStatus');
     router.push('/get-started');
     //router.push({ name: 'NewApplication' });
   };
@@ -381,10 +384,10 @@
 
   // ── Resume Application ────────────────────────────────────────────────────────
   function resumeApplication(app: any) {
-    router.push({
-      name: 'ResumeApplication',
-      params: { submissionId: app.chefsSubmissionId },
-    });
+    sessionStorage.setItem('resumeSubmissionId', app.chefsSubmissionId);
+    sessionStorage.setItem('resumeDbId', String(app.id));
+    sessionStorage.setItem('resumeStatus', app.status ?? '');
+    router.push({ name: 'ResumeApplication' });
   }
 
   // ── Delete Application ────────────────────────────────────────────────────────

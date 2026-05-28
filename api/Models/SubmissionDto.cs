@@ -4,6 +4,7 @@ namespace Probate.Api.Models
 {
     public class CreateSubmissionDto
     {
+        public int? Id { get; set; }
         public string ChefsSubmissionId { get; set; }
         public string ApplicantName { get; set; }
         public string CreatedBy { get; set; }

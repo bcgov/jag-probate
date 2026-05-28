@@ -28,7 +28,7 @@
   import ChefsService from '@/services/ChefsService';
   import { useAuthStore } from '@/stores';
   import { extractTokenPayload } from '@/utils/claims';
-  import { computed, inject, onMounted, ref } from 'vue';
+  import { computed, inject, onMounted, onUnmounted, ref } from 'vue';
 
   const authStore = useAuthStore();
   const chefsToken = computed(() => {
@@ -43,10 +43,13 @@
     /** Base URL for the CHEFS service. */
     chefsBaseUrl?: string;
     submissionId?: string;
+    /** Auto-save interval in milliseconds. 0 disables auto-save. Default: 3000. */
+    autoSaveThrottle?: number;
   }
 
   const props = withDefaults(defineProps<Props>(), {
     chefsBaseUrl: 'https://submit.digital.gov.bc.ca/app',
+    autoSaveThrottle: 3000,
   });
 
   // ── Emits ─────────────────────────────────────────────────────────────────
@@ -61,6 +64,26 @@
   const state = ref<ViewState>('loading');
   const errorMessage = ref('');
   const chefsContainer = ref<HTMLElement | null>(null);
+
+  /**
+   * The CHEFS submission ID currently loaded in the form.
+   * CHEFS creates a new submission ID on every save (POST-only),
+   * so this value changes after each save.
+   */
+  const currentSubmissionId = ref<string | undefined>(props.submissionId);
+
+  /**
+   * Our internal DB row ID – loaded from sessionStorage on resume,
+   * or set after the first upsert on a new session.
+   */
+  const currentDbId = ref<number | undefined>(
+    sessionStorage.getItem('resumeDbId')
+      ? Number(sessionStorage.getItem('resumeDbId'))
+      : undefined
+  );
+
+  /** Whether this submission is already submitted (read-only, no auto-save). */
+  const isSubmitted = sessionStorage.getItem('resumeStatus') === 'submitted';
 
   const chefsService = inject<ChefsService>('chefsService')!;
 
@@ -110,20 +133,23 @@
       if (chefsToken.value && Object.keys(chefsToken.value).length > 0) {
         el.setAttribute('token', JSON.stringify(chefsToken.value));
       }
-      if (props.submissionId) {
-        el.setAttribute('submission-id', props.submissionId);
-        el.setAttribute('read-only', 'false'); // allow editing resumed draft
+      if (currentSubmissionId.value) {
+        el.setAttribute('submission-id', currentSubmissionId.value);
+        el.setAttribute('read-only', isSubmitted ? 'true' : 'false');
       }
 
       container.appendChild(el);
 
       el.addEventListener('formio:submitDone', handleSubmitDone);
-
       el.addEventListener('formio:error', (e: CustomEvent) => {
         emit('form-error', e.detail);
       });
       el.load();
 
+      // Listen for form changes and auto-save with debounce
+      if (props.autoSaveThrottle > 0 && !isSubmitted) {
+        setupAutoSave(el);
+      }
       state.value = 'ready';
     } catch (err: any) {
       errorMessage.value =
@@ -132,31 +158,182 @@
     }
   }
 
+  // ── Shared save handler ───────────────────────────────────────────────────
+
+  /**
+   * Syncs a CHEFS submit event to our DB and navigates away.
+   * Called when the user clicks the form's Submit button.
+   */
+  async function syncSave(newChefsId: string, submissionPayload: any) {
+    // Always advance our tracked CHEFS ID to the latest one.
+    currentSubmissionId.value = newChefsId;
+
+    const createdBy = chefsToken.value?.preferred_username;
+    const applicantName =
+      submissionPayload?.submission?.data?.deceasedName ||
+      submissionPayload?.data?.deceasedName ||
+      '';
+    const now = new Date().toISOString();
+    const lastUpdatedAt =
+      submissionPayload?.updatedAt ?? submissionPayload?.modified ?? now;
+
+    try {
+      const response = await chefsService.upsertSubmission({
+        id: currentDbId.value,
+        chefsSubmissionId: newChefsId,
+        createdBy,
+        applicantName,
+        status: 'submitted',
+        lastUpdatedAt,
+        lastFiledAt: now,
+      });
+      currentDbId.value = response?.id;
+      if (response?.id) {
+        sessionStorage.setItem('resumeDbId', String(response.id));
+      }
+    } catch (err) {
+      console.error('[ChefsFormViewer] upsert failed:', err);
+    }
+
+    // Navigate back so the user can resume from Previous Activity.
+    emit('submitted', newChefsId);
+  }
+
+  // ── Event handlers ────────────────────────────────────────────────────────
+
   async function handleSubmitDone(e: CustomEvent) {
     const submission = e.detail?.submission;
+    const newId: string | undefined = submission?.id ?? submission?._id;
+    if (!newId) return;
 
-    const chefsSubmissionId = props.submissionId ?? submission?.id;
-    const createdBy = chefsToken.value?.preferred_username;
-    const applicantName = submission?.submission?.data?.deceasedName || '';
-    const status = submission?.submission?.state;
-    const lastUpdatedAt = submission?.updatedAt;
-    const lastFiledAt = status === 'submitted' ? submission?.updatedAt : null;
+    await syncSave(newId, submission);
+  }
 
-    await chefsService.upsertSubmission({
-      chefsSubmissionId,
-      createdBy,
-      applicantName,
-      status,
-      lastUpdatedAt,
-      lastFiledAt,
+  // ── Auto-save (change-driven with debounce + lock) ─────────────────────
+  let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+  let isSaving = false;
+  let pendingSave = false;
+  let formReady = false;
+
+  function setupAutoSave(el: any) {
+    teardownAutoSave();
+    // Skip initial load events — wait for form to settle, then start listening
+    setTimeout(() => {
+      formReady = true;
+    }, 2000);
+    el.addEventListener('formio:change', () => {
+      if (formReady) scheduleAutoSave(el);
     });
+  }
 
-    emit('submitted', chefsSubmissionId);
+  function scheduleAutoSave(el: any) {
+    // If currently saving, mark that another save is needed after lock expires
+    if (isSaving) {
+      pendingSave = true;
+      return;
+    }
+    // Debounce: reset timer on every change, fire after 5s of quiet
+    if (debounceTimer) clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(
+      () => performAutoSave(el),
+      props.autoSaveThrottle
+    );
+  }
+
+  async function performAutoSave(el: any) {
+    if (isSaving) {
+      pendingSave = true;
+      return;
+    }
+    isSaving = true;
+    pendingSave = false;
+
+    try {
+      if (!el.formioInstance) return;
+
+      const currentData =
+        el.formioInstance?.submission?.data ||
+        (typeof el.formioInstance.getValue === 'function'
+          ? el.formioInstance.getValue()
+          : el.formioInstance?.data) ||
+        {};
+
+      const submitUrl = el._resolveUrl?.('submit');
+      if (!submitUrl) return;
+
+      const authHeaders = el._buildAuthHeader?.(submitUrl) || {};
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+        ...authHeaders,
+      };
+
+      const res = await fetch(submitUrl, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          submission: { data: currentData },
+          draft: true,
+        }),
+      });
+
+      if (res.ok) {
+        const result = await res.json();
+        const newId = result?.id;
+        if (newId) {
+          currentSubmissionId.value = newId;
+
+          // Update sessionStorage so a browser refresh loads the latest draft
+          sessionStorage.setItem('resumeSubmissionId', newId);
+          if (currentDbId.value) {
+            sessionStorage.setItem('resumeDbId', String(currentDbId.value));
+          }
+
+          try {
+            const createdBy = chefsToken.value?.preferred_username;
+            const applicantName = currentData?.deceasedName || '';
+            const response = await chefsService.upsertSubmission({
+              id: currentDbId.value,
+              chefsSubmissionId: newId,
+              createdBy,
+              applicantName,
+              status: 'draft',
+              lastUpdatedAt: result?.updatedAt ?? new Date().toISOString(),
+              lastFiledAt: null,
+            });
+            currentDbId.value = response?.id;
+          } catch (err) {
+            console.error('[ChefsFormViewer] auto-save upsert failed:', err);
+          }
+        }
+      } else {
+        console.warn('[ChefsFormViewer] auto-save draft response:', res.status);
+      }
+    } catch (err) {
+      console.warn('[ChefsFormViewer] auto-save draft failed:', err);
+    } finally {
+      isSaving = false;
+      // If changes occurred during save, schedule another save
+      if (pendingSave) {
+        pendingSave = false;
+        scheduleAutoSave(el);
+      }
+    }
+  }
+
+  function teardownAutoSave() {
+    if (debounceTimer) {
+      clearTimeout(debounceTimer);
+      debounceTimer = null;
+    }
   }
 
   // ── Lifecycle ─────────────────────────────────────────────────────────────
   onMounted(() => {
     initForm();
+  });
+
+  onUnmounted(() => {
+    teardownAutoSave();
   });
 </script>
 

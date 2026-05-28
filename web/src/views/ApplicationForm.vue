@@ -26,14 +26,13 @@
 </template>
 
 <script setup lang="ts">
-  import { useRoute, useRouter } from 'vue-router';
+  import { useRouter } from 'vue-router';
   import { computed } from 'vue';
   import ChefsFormViewer from '@/components/ChefsFormViewer.vue';
 
-  const route = useRoute();
   const router = useRouter();
   const submissionId = computed(
-    () => route.params.submissionId as string | undefined
+    () => sessionStorage.getItem('resumeSubmissionId') || undefined
   );
 
   function onSubmitted(submissionId: string) {

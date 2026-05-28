@@ -83,15 +83,20 @@ namespace Probate.Api.Services
             CancellationToken cancellationToken = default
         )
         {
-            var existing = await _db.Submissions.FirstOrDefaultAsync(
-                s => s.ChefsSubmissionId == dto.ChefsSubmissionId,
-                cancellationToken
-            );
-            _logger.LogInformation("Existing record found: {Found}", existing != null);
+            Submission? existing = null;
+
+            // Primary lookup by DB record ID
+            if (dto.Id.HasValue)
+            {
+                existing = await _db.Submissions.FirstOrDefaultAsync(
+                    s => s.Id == dto.Id.Value && s.DeletedAt == null,
+                    cancellationToken
+                );
+            }
 
             if (existing != null)
             {
-                // Update existing record
+                existing.ChefsSubmissionId = dto.ChefsSubmissionId;
                 existing.ApplicantName = dto.ApplicantName;
                 existing.Status = dto.Status;
                 existing.LastUpdatedAt = dto.LastUpdatedAt;
