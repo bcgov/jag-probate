@@ -8,7 +8,8 @@ on:
       - 'api/**'
       - 'db/**'
       - 'docker/api/**'
-      - '.github/workflows/publish-api.yml'
+      - '.github/workflows/cd-api.yml'
+      - '.github/actions/update-argo-kustomize/**'
 
   workflow_dispatch:
 
@@ -46,7 +47,7 @@ jobs:
       - name: Get short SHA
         id: short_sha
         run: |
-          echo "SHORT_SHA=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+          echo "SHORT_SHA=$(git rev-parse --short HEAD)" >> "$GITHUB_OUTPUT"
 
       - name: Setup Image Metadata
         id: meta
@@ -81,7 +82,7 @@ jobs:
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
       - name: Update ArgoCD Kustomize Repo with new Image
-        uses: ./.github/workflows/actions/update-argo-kustomize
+        uses: ./.github/actions/update-argo-kustomize
         with:
           licence_plate: ${{ env.GITOPS_LICENCE_PLATE }}
           gitops_branch: ${{ env.GITOPS_BRANCH }}
