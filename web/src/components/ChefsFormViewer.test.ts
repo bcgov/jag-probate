@@ -40,8 +40,7 @@ describe('ChefsFormViewer – sessionStorage state management', () => {
   it('detects submitted status from sessionStorage', () => {
     sessionStorage.setItem('resumeStatus', 'submitted');
 
-    const isSubmitted =
-      sessionStorage.getItem('resumeStatus') === 'submitted';
+    const isSubmitted = sessionStorage.getItem('resumeStatus') === 'submitted';
 
     expect(isSubmitted).toBe(true);
   });
@@ -49,15 +48,13 @@ describe('ChefsFormViewer – sessionStorage state management', () => {
   it('detects non-submitted (draft) status', () => {
     sessionStorage.setItem('resumeStatus', 'draft');
 
-    const isSubmitted =
-      sessionStorage.getItem('resumeStatus') === 'submitted';
+    const isSubmitted = sessionStorage.getItem('resumeStatus') === 'submitted';
 
     expect(isSubmitted).toBe(false);
   });
 
   it('detects non-submitted when resumeStatus is absent', () => {
-    const isSubmitted =
-      sessionStorage.getItem('resumeStatus') === 'submitted';
+    const isSubmitted = sessionStorage.getItem('resumeStatus') === 'submitted';
 
     expect(isSubmitted).toBe(false);
   });
@@ -123,7 +120,7 @@ describe('ChefsFormViewer – auto-save debounce logic', () => {
   it('does not schedule when isSaving is true (queues pendingSave)', () => {
     const performAutoSave = vi.fn();
     const autoSaveThrottle = 5000;
-    let isSaving = true;
+    const isSaving = true;
     let pendingSave = false;
 
     let debounceTimer: ReturnType<typeof setTimeout> | null = null;
@@ -241,8 +238,7 @@ describe('ChefsFormViewer – read-only and auto-save disable for submitted', ()
 
   it('should not setup auto-save when status is submitted', () => {
     sessionStorage.setItem('resumeStatus', 'submitted');
-    const isSubmitted =
-      sessionStorage.getItem('resumeStatus') === 'submitted';
+    const isSubmitted = sessionStorage.getItem('resumeStatus') === 'submitted';
     const autoSaveThrottle = 5000;
 
     const shouldSetupAutoSave = autoSaveThrottle > 0 && !isSubmitted;
@@ -252,8 +248,7 @@ describe('ChefsFormViewer – read-only and auto-save disable for submitted', ()
 
   it('should setup auto-save when status is draft', () => {
     sessionStorage.setItem('resumeStatus', 'draft');
-    const isSubmitted =
-      sessionStorage.getItem('resumeStatus') === 'submitted';
+    const isSubmitted = sessionStorage.getItem('resumeStatus') === 'submitted';
     const autoSaveThrottle = 5000;
 
     const shouldSetupAutoSave = autoSaveThrottle > 0 && !isSubmitted;
@@ -263,8 +258,7 @@ describe('ChefsFormViewer – read-only and auto-save disable for submitted', ()
 
   it('should set read-only attribute to true when submitted', () => {
     sessionStorage.setItem('resumeStatus', 'submitted');
-    const isSubmitted =
-      sessionStorage.getItem('resumeStatus') === 'submitted';
+    const isSubmitted = sessionStorage.getItem('resumeStatus') === 'submitted';
 
     const readOnlyValue = isSubmitted ? 'true' : 'false';
 
@@ -273,8 +267,7 @@ describe('ChefsFormViewer – read-only and auto-save disable for submitted', ()
 
   it('should set read-only attribute to false when draft', () => {
     sessionStorage.setItem('resumeStatus', 'draft');
-    const isSubmitted =
-      sessionStorage.getItem('resumeStatus') === 'submitted';
+    const isSubmitted = sessionStorage.getItem('resumeStatus') === 'submitted';
 
     const readOnlyValue = isSubmitted ? 'true' : 'false';
 
