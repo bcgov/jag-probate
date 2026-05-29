@@ -173,6 +173,7 @@
       submissionPayload?.submission?.data?.deceasedName ||
       submissionPayload?.data?.deceasedName ||
       '';
+    const status = submissionPayload?.submission?.state;
     const now = new Date().toISOString();
     const lastUpdatedAt =
       submissionPayload?.updatedAt ?? submissionPayload?.modified ?? now;
@@ -183,9 +184,9 @@
         chefsSubmissionId: newChefsId,
         createdBy,
         applicantName,
-        status: 'submitted',
+        status: status,
         lastUpdatedAt,
-        lastFiledAt: now,
+        lastFiledAt: status === 'submitted' ? now : null,
       });
       currentDbId.value = response?.id;
       if (response?.id) {
