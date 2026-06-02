@@ -1,7 +1,7 @@
 <template>
   <div id="new-application" class="card bg-white border-white">
     <div class="card home-content border-white">
-    <!-- CHEFS Form -->
+      <!-- CHEFS Form -->
       <div class="form-area">
         <ChefsFormViewer
           form-key="legal"
