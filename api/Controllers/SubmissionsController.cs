@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Security.Claims;
 using System.Threading;
@@ -43,7 +44,24 @@ namespace Probate.Api.Controllers
                 return BadRequest(new { message = "ChefsSubmissionId is required." });
 
             var result = await _submissionService.CreateSubmissionAsync(dto, cancellationToken);
-            return CreatedAtAction(nameof(CreateSubmission), new { id = result.Id }, result);
+            return CreatedAtAction(nameof(CreateSubmission), new { id = result.PublicId }, result);
+        }
+
+        /// <summary>
+        /// Gets a single submission by its DB id.
+        /// </summary>
+        [HttpGet("{id}")]
+        [ProducesResponseType(typeof(SubmissionResponseDto), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+        public async Task<ActionResult<SubmissionResponseDto>> GetSubmission(
+            Guid id,
+            CancellationToken cancellationToken = default
+        )
+        {
+            var result = await _submissionService.GetSubmissionByIdAsync(id, cancellationToken);
+            if (result is null)
+                return NotFound(new { message = $"Submission {id} not found." });
+            return Ok(result);
         }
 
         /// <summary>
@@ -103,7 +121,7 @@ namespace Probate.Api.Controllers
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
         public async Task<IActionResult> DeleteSubmission(
-            int id,
+            Guid id,
             CancellationToken cancellationToken = default
         )
         {

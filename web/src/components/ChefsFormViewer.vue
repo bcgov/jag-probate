@@ -3,9 +3,9 @@
     <!-- Loading state -->
     <div v-if="state === 'loading'" class="chefs-form-loading">
       <div class="spinner-border text-primary" role="status">
-        <span class="sr-only">Loading form…</span>
+        <span class="sr-only">Loading, please wait…</span>
       </div>
-      <p class="mt-2 text-muted">Loading form…</p>
+      <p class="mt-2 text-muted">Loading, please wait…</p>
     </div>
 
     <!-- Error state -->
@@ -19,13 +19,18 @@
       </div>
     </div>
 
-    <!-- Mount point -->
-    <div ref="chefsContainer" class="chefs-form-viewer"></div>
+    <!-- Mount point: hidden while loading so the form renders in the background but stays invisible -->
+    <div
+      v-show="state === 'ready'"
+      ref="chefsContainer"
+      class="chefs-form-viewer"
+    ></div>
   </div>
 </template>
 
 <script setup lang="ts">
   import ChefsService from '@/services/ChefsService';
+  import type { UpsertSubmissionDto } from '@/types';
   import { useAuthStore } from '@/stores';
   import { extractTokenPayload } from '@/utils/claims';
   import { computed, inject, onMounted, onUnmounted, ref } from 'vue';
@@ -43,6 +48,10 @@
     /** Base URL for the CHEFS service. */
     chefsBaseUrl?: string;
     submissionId?: string;
+    /** Our internal DB row ID (Guid) for this submission (used by upsert to avoid duplicates). */
+    dbId?: string;
+    /** When true, render the form in read-only mode (no auto-save, no submit). */
+    readOnly?: boolean;
     /** Auto-save interval in milliseconds. 0 disables auto-save. Default: 3000. */
     autoSaveThrottle?: number;
   }
@@ -56,6 +65,8 @@
   const emit = defineEmits<{
     (e: 'submitted', submissionId: string): void;
     (e: 'form-error', error: unknown): void;
+    /** Fired after every successful DB upsert with the current publicId. */
+    (e: 'saved', publicId: string): void;
   }>();
 
   // ── State ─────────────────────────────────────────────────────────────────
@@ -73,17 +84,12 @@
   const currentSubmissionId = ref<string | undefined>(props.submissionId);
 
   /**
-   * Our internal DB row ID – loaded from sessionStorage on resume,
-   * or set after the first upsert on a new session.
+   * Updated after each upsert so subsequent saves can find the same DB row.
    */
-  const currentDbId = ref<number | undefined>(
-    sessionStorage.getItem('resumeDbId')
-      ? Number(sessionStorage.getItem('resumeDbId'))
-      : undefined
-  );
+  const currentDbId = ref<string | undefined>(props.dbId);
 
-  /** Whether this submission is already submitted (read-only, no auto-save). */
-  const isSubmitted = sessionStorage.getItem('resumeStatus') === 'submitted';
+  /** When true, the form is read-only (already submitted). */
+  const isSubmitted = props.readOnly ?? false;
 
   const chefsService = inject<ChefsService>('chefsService')!;
 
@@ -144,13 +150,34 @@
       el.addEventListener('formio:error', (e: CustomEvent) => {
         emit('form-error', e.detail);
       });
+
+      // Wait for the custom element to be fully registered before calling load().
+      await customElements.whenDefined('chefs-form-viewer');
+      readyFallbackTimer = setTimeout(() => {
+        state.value = 'ready';
+      }, 15000);
+
+      el.addEventListener(
+        'formio:ready',
+        () => {
+          if (readyFallbackTimer) {
+            clearTimeout(readyFallbackTimer);
+            readyFallbackTimer = null;
+          }
+          readyFallbackTimer = setTimeout(() => {
+            readyFallbackTimer = null;
+            state.value = 'ready';
+          }, 500);
+        },
+        { once: true }
+      );
+
       el.load();
 
       // Listen for form changes and auto-save with debounce
       if (props.autoSaveThrottle > 0 && !isSubmitted) {
         setupAutoSave(el);
       }
-      state.value = 'ready';
     } catch (err: any) {
       errorMessage.value =
         err?.response?.data?.message ?? err?.message ?? 'Unknown error.';
@@ -179,19 +206,18 @@
       submissionPayload?.updatedAt ?? submissionPayload?.modified ?? now;
 
     try {
-      const response = await chefsService.upsertSubmission({
-        id: currentDbId.value,
+      const payload: UpsertSubmissionDto = {
+        publicId: currentDbId.value,
         chefsSubmissionId: newChefsId,
         createdBy,
         applicantName,
-        status: status,
+        status,
         lastUpdatedAt,
         lastFiledAt: status === 'submitted' ? now : null,
-      });
-      currentDbId.value = response?.id;
-      if (response?.id) {
-        sessionStorage.setItem('resumeDbId', String(response.id));
-      }
+      };
+      const response = await chefsService.upsertSubmission(payload);
+      currentDbId.value = response?.publicId;
+      if (currentDbId.value) emit('saved', currentDbId.value);
     } catch (err) {
       console.error('[ChefsFormViewer] upsert failed:', err);
     }
@@ -211,6 +237,7 @@
   }
 
   // ── Auto-save (change-driven with debounce + lock) ─────────────────────
+  let readyFallbackTimer: ReturnType<typeof setTimeout> | null = null;
   let debounceTimer: ReturnType<typeof setTimeout> | null = null;
   let isSaving = false;
   let pendingSave = false;
@@ -283,25 +310,22 @@
         if (newId) {
           currentSubmissionId.value = newId;
 
-          // Update sessionStorage so a browser refresh loads the latest draft
-          sessionStorage.setItem('resumeSubmissionId', newId);
-          if (currentDbId.value) {
-            sessionStorage.setItem('resumeDbId', String(currentDbId.value));
-          }
-
           try {
             const createdBy = chefsToken.value?.preferred_username;
             const applicantName = currentData?.deceasedName || '';
-            const response = await chefsService.upsertSubmission({
-              id: currentDbId.value,
+            const autoSavePayload: UpsertSubmissionDto = {
+              publicId: currentDbId.value,
               chefsSubmissionId: newId,
               createdBy,
               applicantName,
               status: 'draft',
               lastUpdatedAt: result?.updatedAt ?? new Date().toISOString(),
               lastFiledAt: null,
-            });
-            currentDbId.value = response?.id;
+            };
+            const response =
+              await chefsService.upsertSubmission(autoSavePayload);
+            currentDbId.value = response?.publicId;
+            if (currentDbId.value) emit('saved', currentDbId.value);
           } catch (err) {
             console.error('[ChefsFormViewer] auto-save upsert failed:', err);
           }
@@ -322,6 +346,10 @@
   }
 
   function teardownAutoSave() {
+    if (readyFallbackTimer) {
+      clearTimeout(readyFallbackTimer);
+      readyFallbackTimer = null;
+    }
     if (debounceTimer) {
       clearTimeout(debounceTimer);
       debounceTimer = null;

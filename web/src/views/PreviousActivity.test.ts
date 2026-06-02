@@ -1,147 +1,119 @@
-import { describe, expect, it, beforeEach, afterEach } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 /**
- * Tests for PreviousActivity sessionStorage state management.
- * Verifies that resume/create actions correctly set and clear
- * the sessionStorage keys used by ChefsFormViewer.
+ * Tests for PreviousActivity navigation logic.
+ * Verifies that resume/create actions navigate to the correct routes
+ * using the DB row id as the route parameter.
  */
 
-describe('PreviousActivity – sessionStorage management', () => {
-  beforeEach(() => {
-    sessionStorage.clear();
+describe('PreviousActivity – resumeApplication', () => {
+  function makeRouter() {
+    return { push: vi.fn() };
+  }
+
+  function resumeApplication(
+    router: { push: (loc: any) => void },
+    app: { publicId: string }
+  ) {
+    router.push({ name: 'ResumeApplication', params: { id: app.publicId } });
+  }
+
+  const GUID_A = 'a7b23b0f-ac4d-4f78-a9ca-39be6bbf5ac4';
+  const GUID_B = '2897ffbb-a89c-4f42-9f80-f3cd4378c504';
+
+  it('navigates to ResumeApplication with the publicId (Guid)', () => {
+    const router = makeRouter();
+    resumeApplication(router, { publicId: GUID_A });
+
+    expect(router.push).toHaveBeenCalledWith({
+      name: 'ResumeApplication',
+      params: { id: GUID_A },
+    });
   });
 
-  afterEach(() => {
-    sessionStorage.clear();
+  it('uses the Guid publicId (not chefsSubmissionId) as the route param', () => {
+    const router = makeRouter();
+    resumeApplication(router, { publicId: GUID_A });
+
+    const location = router.push.mock.calls[0][0];
+    expect(location.params.id).toBe(GUID_A);
+    expect(location.params).not.toHaveProperty('chefsSubmissionId');
   });
 
-  describe('resumeApplication', () => {
-    function resumeApplication(app: {
-      chefsSubmissionId: string;
-      id: number;
-      status: string;
-    }) {
-      sessionStorage.setItem('resumeSubmissionId', app.chefsSubmissionId);
-      sessionStorage.setItem('resumeDbId', String(app.id));
-      sessionStorage.setItem('resumeStatus', app.status ?? '');
+  it('passes different publicIds for different records', () => {
+    const router = makeRouter();
+    resumeApplication(router, { publicId: GUID_A });
+    resumeApplication(router, { publicId: GUID_B });
+
+    expect(router.push.mock.calls[0][0].params.id).toBe(GUID_A);
+    expect(router.push.mock.calls[1][0].params.id).toBe(GUID_B);
+  });
+});
+
+describe('PreviousActivity – createCase', () => {
+  function makeRouter() {
+    return { push: vi.fn() };
+  }
+
+  function createCase(router: { push: (loc: any) => void }) {
+    router.push('/get-started');
+  }
+
+  it('navigates to /get-started', () => {
+    const router = makeRouter();
+    createCase(router);
+
+    expect(router.push).toHaveBeenCalledWith('/get-started');
+  });
+
+  it('does not navigate to resume route', () => {
+    const router = makeRouter();
+    createCase(router);
+
+    const location = router.push.mock.calls[0][0];
+    expect(location).not.toContain('resume');
+  });
+});
+
+describe('ApplicationForm – onSaved URL replace', () => {
+  const GUID = 'a7b23b0f-ac4d-4f78-a9ca-39be6bbf5ac4';
+
+  function makeRouter() {
+    return { replace: vi.fn(), push: vi.fn() };
+  }
+
+  function onSaved(
+    router: { replace: (loc: any) => void; push: (loc: any) => void },
+    routeName: string,
+    publicId: string
+  ) {
+    if (routeName === 'NewApplication') {
+      router.replace({ name: 'ResumeApplication', params: { id: publicId } });
     }
+  }
 
-    it('stores resumeSubmissionId', () => {
-      resumeApplication({
-        chefsSubmissionId: 'chefs-abc',
-        id: 5,
-        status: 'draft',
-      });
+  it('replaces URL to ResumeApplication after first save on NewApplication route', () => {
+    const router = makeRouter();
+    onSaved(router, 'NewApplication', GUID);
 
-      expect(sessionStorage.getItem('resumeSubmissionId')).toBe('chefs-abc');
-    });
-
-    it('stores resumeDbId as string', () => {
-      resumeApplication({
-        chefsSubmissionId: 'chefs-abc',
-        id: 42,
-        status: 'draft',
-      });
-
-      expect(sessionStorage.getItem('resumeDbId')).toBe('42');
-    });
-
-    it('stores resumeStatus', () => {
-      resumeApplication({
-        chefsSubmissionId: 'chefs-abc',
-        id: 5,
-        status: 'submitted',
-      });
-
-      expect(sessionStorage.getItem('resumeStatus')).toBe('submitted');
-    });
-
-    it('stores draft status correctly', () => {
-      resumeApplication({
-        chefsSubmissionId: 'chefs-xyz',
-        id: 10,
-        status: 'draft',
-      });
-
-      expect(sessionStorage.getItem('resumeStatus')).toBe('draft');
+    expect(router.replace).toHaveBeenCalledWith({
+      name: 'ResumeApplication',
+      params: { id: GUID },
     });
   });
 
-  describe('createCase', () => {
-    function createCase() {
-      sessionStorage.removeItem('resumeSubmissionId');
-      sessionStorage.removeItem('resumeDbId');
-      sessionStorage.removeItem('resumeStatus');
-    }
+  it('does not replace URL when already on ResumeApplication route', () => {
+    const router = makeRouter();
+    onSaved(router, 'ResumeApplication', GUID);
 
-    it('clears resumeSubmissionId', () => {
-      sessionStorage.setItem('resumeSubmissionId', 'old-id');
-      createCase();
-
-      expect(sessionStorage.getItem('resumeSubmissionId')).toBeNull();
-    });
-
-    it('clears resumeDbId', () => {
-      sessionStorage.setItem('resumeDbId', '99');
-      createCase();
-
-      expect(sessionStorage.getItem('resumeDbId')).toBeNull();
-    });
-
-    it('clears resumeStatus', () => {
-      sessionStorage.setItem('resumeStatus', 'submitted');
-      createCase();
-
-      expect(sessionStorage.getItem('resumeStatus')).toBeNull();
-    });
-
-    it('clears all three keys at once', () => {
-      sessionStorage.setItem('resumeSubmissionId', 'id-1');
-      sessionStorage.setItem('resumeDbId', '1');
-      sessionStorage.setItem('resumeStatus', 'draft');
-
-      createCase();
-
-      expect(sessionStorage.getItem('resumeSubmissionId')).toBeNull();
-      expect(sessionStorage.getItem('resumeDbId')).toBeNull();
-      expect(sessionStorage.getItem('resumeStatus')).toBeNull();
-    });
+    expect(router.replace).not.toHaveBeenCalled();
   });
 
-  describe('auto-save sessionStorage updates', () => {
-    it('updates resumeSubmissionId after auto-save', () => {
-      sessionStorage.setItem('resumeSubmissionId', 'old-chefs-id');
+  it('uses replace (not push) so no extra history entry is created', () => {
+    const router = makeRouter();
+    onSaved(router, 'NewApplication', GUID);
 
-      // Simulate what performAutoSave does
-      const newId = 'new-chefs-id-from-save';
-      sessionStorage.setItem('resumeSubmissionId', newId);
-
-      expect(sessionStorage.getItem('resumeSubmissionId')).toBe(
-        'new-chefs-id-from-save'
-      );
-    });
-
-    it('persists resumeDbId after first upsert response', () => {
-      // First save — no DB ID yet
-      expect(sessionStorage.getItem('resumeDbId')).toBeNull();
-
-      // After upsert returns the ID
-      const responseId = 55;
-      sessionStorage.setItem('resumeDbId', String(responseId));
-
-      expect(sessionStorage.getItem('resumeDbId')).toBe('55');
-    });
-
-    it('preserves resumeDbId on subsequent saves', () => {
-      sessionStorage.setItem('resumeDbId', '55');
-
-      // Subsequent auto-save — only updates if currentDbId is set
-      const currentDbId = 55;
-      if (currentDbId) {
-        sessionStorage.setItem('resumeDbId', String(currentDbId));
-      }
-
-      expect(sessionStorage.getItem('resumeDbId')).toBe('55');
-    });
+    expect(router.replace).toHaveBeenCalledOnce();
+    expect(router.push).not.toHaveBeenCalled();
   });
 });

@@ -22,6 +22,10 @@ namespace Probate.Api.Services
             CreateSubmissionDto dto,
             CancellationToken cancellationToken = default
         );
+        Task<SubmissionResponseDto?> GetSubmissionByIdAsync(
+            Guid id,
+            CancellationToken cancellationToken = default
+        );
         Task<IReadOnlyList<SubmissionResponseDto>> GetSubmissionsByUserAsync(
             string username,
             CancellationToken cancellationToken = default
@@ -30,7 +34,7 @@ namespace Probate.Api.Services
             CreateSubmissionDto dto,
             CancellationToken cancellationToken = default
         );
-        Task DeleteSubmissionAsync(int id, CancellationToken cancellationToken = default);
+        Task DeleteSubmissionAsync(Guid id, CancellationToken cancellationToken = default);
     }
 
     public class SubmissionService : ISubmissionService
@@ -59,11 +63,27 @@ namespace Probate.Api.Services
         )
         {
             var submission = dto.Adapt<Submission>();
+            // Ensure a real PublicId is assigned; Mapster may leave it as Guid.Empty
+            // if dto.PublicId is null (first save).
+            if (submission.PublicId == Guid.Empty)
+                submission.PublicId = Guid.NewGuid();
 
             _db.Submissions.Add(submission);
             await _db.SaveChangesAsync(cancellationToken);
 
             return submission.Adapt<SubmissionResponseDto>();
+        }
+
+        public async Task<SubmissionResponseDto?> GetSubmissionByIdAsync(
+            Guid id,
+            CancellationToken cancellationToken = default
+        )
+        {
+            var submission = await _db.Submissions.FirstOrDefaultAsync(
+                s => s.PublicId == id && s.DeletedAt == null,
+                cancellationToken
+            );
+            return submission?.Adapt<SubmissionResponseDto>();
         }
 
         public async Task<IReadOnlyList<SubmissionResponseDto>> GetSubmissionsByUserAsync(
@@ -85,11 +105,11 @@ namespace Probate.Api.Services
         {
             Submission? existing = null;
 
-            // Primary lookup by DB record ID
-            if (dto.Id.HasValue)
+            // Primary lookup by PublicId
+            if (dto.PublicId.HasValue)
             {
                 existing = await _db.Submissions.FirstOrDefaultAsync(
-                    s => s.Id == dto.Id.Value && s.DeletedAt == null,
+                    s => s.PublicId == dto.PublicId.Value && s.DeletedAt == null,
                     cancellationToken
                 );
             }
@@ -105,6 +125,9 @@ namespace Probate.Api.Services
             else
             {
                 existing = dto.Adapt<Submission>();
+                // Ensure a real PublicId is assigned for new records.
+                if (existing.PublicId == Guid.Empty)
+                    existing.PublicId = Guid.NewGuid();
                 _db.Submissions.Add(existing);
             }
 
@@ -113,12 +136,12 @@ namespace Probate.Api.Services
         }
 
         public async Task DeleteSubmissionAsync(
-            int id,
+            Guid id,
             CancellationToken cancellationToken = default
         )
         {
             var submission =
-                await _db.Submissions.FirstOrDefaultAsync(s => s.Id == id, cancellationToken)
+                await _db.Submissions.FirstOrDefaultAsync(s => s.PublicId == id, cancellationToken)
                 ?? throw new KeyNotFoundException($"Submission {id} not found.");
 
             // Soft delete locally first

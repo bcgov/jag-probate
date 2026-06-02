@@ -1,4 +1,8 @@
-import type { ChefsAuthToken, SubmissionResponseDto } from '@/types';
+import type {
+  ChefsAuthToken,
+  SubmissionResponseDto,
+  UpsertSubmissionDto,
+} from '@/types';
 import HttpService from './HttpService';
 
 /**
@@ -41,11 +45,22 @@ class ChefsService {
     return await this.httpService.get('/api/submissions');
   }
 
-  async upsertSubmission(data: any): Promise<any> {
-    return await this.httpService.post<any>('api/Submissions/upsert', data);
+  async getSubmission(id: string): Promise<SubmissionResponseDto> {
+    return await this.httpService.get<SubmissionResponseDto>(
+      `api/Submissions/${id}`
+    );
   }
 
-  async deleteSubmission(id: number): Promise<void> {
+  async upsertSubmission(
+    data: UpsertSubmissionDto
+  ): Promise<SubmissionResponseDto> {
+    return await this.httpService.post<SubmissionResponseDto>(
+      'api/Submissions/upsert',
+      data
+    );
+  }
+
+  async deleteSubmission(id: string): Promise<void> {
     await this.httpService.delete<void>(`api/Submissions/${id}`);
   }
 }

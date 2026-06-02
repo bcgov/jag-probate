@@ -6,7 +6,10 @@ describe('ChefsService – upsertSubmission', () => {
   let mockPost: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
-    mockPost = vi.fn().mockResolvedValue({ id: 99, chefsSubmissionId: 'abc' });
+    mockPost = vi.fn().mockResolvedValue({
+      publicId: 'a7b23b0f-ac4d-4f78-a9ca-39be6bbf5ac4',
+      chefsSubmissionId: 'abc',
+    });
 
     const mockHttpService = {
       get: vi.fn(),
@@ -20,7 +23,7 @@ describe('ChefsService – upsertSubmission', () => {
 
   it('calls POST api/Submissions/upsert with correct payload', async () => {
     const payload = {
-      id: 42,
+      publicId: 'a7b23b0f-ac4d-4f78-a9ca-39be6bbf5ac4',
       chefsSubmissionId: 'chefs-id-123',
       createdBy: 'testuser@idir',
       applicantName: 'John Doe',
@@ -34,9 +37,10 @@ describe('ChefsService – upsertSubmission', () => {
     expect(mockPost).toHaveBeenCalledWith('api/Submissions/upsert', payload);
   });
 
-  it('passes id field when provided (update existing)', async () => {
+  it('passes publicId when provided (update existing)', async () => {
+    const guid = 'b1c23d4e-0000-0000-0000-000000000007';
     const payload = {
-      id: 7,
+      publicId: guid,
       chefsSubmissionId: 'new-chefs-id',
       createdBy: 'user@idir',
       applicantName: 'Jane',
@@ -48,12 +52,12 @@ describe('ChefsService – upsertSubmission', () => {
     await chefsService.upsertSubmission(payload);
 
     const callArgs = mockPost.mock.calls[0][1];
-    expect(callArgs.id).toBe(7);
+    expect(callArgs.publicId).toBe(guid);
   });
 
-  it('passes id as undefined for new submissions (create)', async () => {
+  it('passes publicId as undefined for new submissions (create)', async () => {
     const payload = {
-      id: undefined,
+      publicId: undefined,
       chefsSubmissionId: 'first-chefs-id',
       createdBy: 'user@idir',
       applicantName: '',
@@ -65,10 +69,10 @@ describe('ChefsService – upsertSubmission', () => {
     await chefsService.upsertSubmission(payload);
 
     const callArgs = mockPost.mock.calls[0][1];
-    expect(callArgs.id).toBeUndefined();
+    expect(callArgs.publicId).toBeUndefined();
   });
 
-  it('returns response with DB record id', async () => {
+  it('returns response with publicId (Guid)', async () => {
     const result = await chefsService.upsertSubmission({
       chefsSubmissionId: 'xyz',
       createdBy: 'u',
@@ -78,13 +82,13 @@ describe('ChefsService – upsertSubmission', () => {
       lastFiledAt: null,
     });
 
-    expect(result.id).toBe(99);
+    expect(result.publicId).toBe('a7b23b0f-ac4d-4f78-a9ca-39be6bbf5ac4');
   });
 
   it('sends lastFiledAt as non-null for submitted forms', async () => {
     const now = '2026-05-28T12:00:00Z';
     const payload = {
-      id: 10,
+      publicId: 'c0ffee00-0000-0000-0000-000000000010',
       chefsSubmissionId: 'submit-id',
       createdBy: 'user@idir',
       applicantName: 'Filed Person',

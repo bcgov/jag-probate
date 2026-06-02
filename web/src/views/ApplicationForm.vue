@@ -1,23 +1,23 @@
 <template>
   <div id="new-application" class="card bg-white border-white">
     <div class="card home-content border-white">
-      <!-- Navigation -->
-      <div class="button-row">
-        <button
-          type="button"
-          class="btn btn-outline-secondary"
-          @click="router.back()"
-        >
-          <font-awesome-icon :icon="['fas', 'arrow-left']" class="me-2" /> Back
-        </button>
+      <!-- Loading state for resume -->
+      <div
+        v-if="loadingResume"
+        class="form-area d-flex align-items-center justify-content-center"
+      >
+        <span class="text-muted">Loading application…</span>
       </div>
 
       <!-- CHEFS Form -->
-      <div class="form-area">
+      <div v-else class="form-area">
         <ChefsFormViewer
           form-key="legal"
-          :submission-id="submissionId"
+          :submission-id="chefsSubmissionId"
+          :db-id="dbId"
+          :read-only="isReadOnly"
           @submitted="onSubmitted"
+          @saved="onSaved"
           @form-error="onFormError"
         />
       </div>
@@ -26,25 +26,56 @@
 </template>
 
 <script setup lang="ts">
-  import { useRouter } from 'vue-router';
-  import { computed } from 'vue';
+  import { useRouter, useRoute } from 'vue-router';
+  import { inject, onMounted, ref } from 'vue';
   import ChefsFormViewer from '@/components/ChefsFormViewer.vue';
+  import ChefsService from '@/services/ChefsService';
 
   const router = useRouter();
-  const submissionId = computed(
-    () => sessionStorage.getItem('resumeSubmissionId') || undefined
-  );
+  const route = useRoute();
+  const chefsService = inject<ChefsService>('chefsService')!;
+
+  const chefsSubmissionId = ref<string | undefined>(undefined);
+  const dbId = ref<string | undefined>(undefined);
+  const isReadOnly = ref(false);
+  const loadingResume = ref(false);
+
+  onMounted(async () => {
+    const rawId = route.params.id;
+    if (!rawId) return; // new application — no pre-load needed
+
+    const id = Array.isArray(rawId) ? rawId[0] : rawId;
+    loadingResume.value = true;
+    try {
+      const submission = await chefsService.getSubmission(id);
+      chefsSubmissionId.value = submission.chefsSubmissionId;
+      dbId.value = submission.publicId;
+      isReadOnly.value = submission.status === 'submitted';
+    } catch (err) {
+      console.error('[ApplicationForm] failed to load submission:', err);
+    } finally {
+      loadingResume.value = false;
+    }
+  });
 
   function onSubmitted(submissionId: string) {
-    // Navigate back to previous activity after successful submission
     router.push({
       name: 'PreviousActivity',
       query: submissionId ? { submitted: submissionId } : undefined,
     });
   }
 
+  function onSaved(publicId: string) {
+    // After the first save on a new application, replace the URL with the
+    // resume route so a page refresh reloads the saved submission instead
+    // of starting a new one.
+    if (route.name === 'NewApplication') {
+      router.replace({ name: 'ResumeApplication', params: { id: publicId } });
+    }
+  }
+
   function onFormError(error: unknown) {
-    console.error('[NewApplication] CHEFS form error:', error);
+    console.error('[ApplicationForm] CHEFS form error:', error);
   }
 </script>
 
@@ -61,6 +92,7 @@
 
   .home-content {
     padding: 2rem 1.5rem;
+    width: 100%;
     max-width: 100%;
   }
 

@@ -5,6 +5,11 @@ namespace Probate.Db.Models
 {
     public class Submission : EntityBase
     {
+        /// <summary>
+        /// Public-facing opaque identifier used in URLs and API responses.
+        /// </summary>
+        public Guid PublicId { get; set; } = Guid.NewGuid();
+
         [Required]
         [MaxLength(100)]
         public string ChefsSubmissionId { get; set; }

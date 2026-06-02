@@ -34,4 +34,20 @@ describe('Router', () => {
     expect(representRoute?.path).toBe('/represent-someone-who-died');
     expect(representRoute?.meta.navHeader).toBe('Probate Application');
   });
+
+  it('should have ResumeApplication route with Guid :id param', () => {
+    const resumeRoute = router
+      .getRoutes()
+      .find((route) => route.name === 'ResumeApplication');
+    expect(resumeRoute).toBeDefined();
+    expect(resumeRoute?.path).toBe('/resume/:id');
+  });
+
+  it('should have NewApplication route at /get-started', () => {
+    const newAppRoute = router
+      .getRoutes()
+      .find((route) => route.name === 'NewApplication');
+    expect(newAppRoute).toBeDefined();
+    expect(newAppRoute?.path).toBe('/get-started');
+  });
 });

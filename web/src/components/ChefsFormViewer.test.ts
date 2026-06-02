@@ -1,62 +1,27 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 
 /**
- * Tests for ChefsFormViewer auto-save and session state logic.
- *
- * Since ChefsFormViewer is tightly coupled to a web component (<chefs-form-viewer>)
- * and external CHEFS API, we test the extracted logic patterns rather than
- * mounting the full component. These tests verify:
- *   1. sessionStorage-based state initialization
- *   2. Debounce scheduling behavior
- *   3. Upsert payload construction
- *   4. Read-only / auto-save skip for submitted forms
+ * Tests for ChefsFormViewer component logic that is not directly tied to the Vue template.
+ * Focuses on state initialization from props, auto-save debounce behavior, and payload construction for upsert.
  */
 
-describe('ChefsFormViewer – sessionStorage state management', () => {
-  beforeEach(() => {
-    sessionStorage.clear();
+describe('ChefsFormViewer – props-based state initialization', () => {
+  it('initializes currentDbId from dbId prop', () => {
+    const props = { dbId: 'a7b23b0f-ac4d-4f78-a9ca-39be6bbf5ac4' };
+    const currentDbId = props.dbId;
+    expect(currentDbId).toBe('a7b23b0f-ac4d-4f78-a9ca-39be6bbf5ac4');
   });
 
-  afterEach(() => {
-    sessionStorage.clear();
-  });
-
-  it('initializes currentDbId from sessionStorage when resumeDbId is set', () => {
-    sessionStorage.setItem('resumeDbId', '42');
-
-    const resumeDbId = sessionStorage.getItem('resumeDbId');
-    const currentDbId = resumeDbId ? Number(resumeDbId) : undefined;
-
-    expect(currentDbId).toBe(42);
-  });
-
-  it('initializes currentDbId as undefined when resumeDbId is not set', () => {
-    const resumeDbId = sessionStorage.getItem('resumeDbId');
-    const currentDbId = resumeDbId ? Number(resumeDbId) : undefined;
-
+  it('initializes currentDbId as undefined when dbId prop is absent', () => {
+    const props: { dbId?: string } = {};
+    const currentDbId = props.dbId;
     expect(currentDbId).toBeUndefined();
   });
 
-  it('detects submitted status from sessionStorage', () => {
-    sessionStorage.setItem('resumeStatus', 'submitted');
-
-    const isSubmitted = sessionStorage.getItem('resumeStatus') === 'submitted';
-
+  it('reads isSubmitted as true when readOnly prop is true', () => {
+    const props = { readOnly: true };
+    const isSubmitted = props.readOnly ?? false;
     expect(isSubmitted).toBe(true);
-  });
-
-  it('detects non-submitted (draft) status', () => {
-    sessionStorage.setItem('resumeStatus', 'draft');
-
-    const isSubmitted = sessionStorage.getItem('resumeStatus') === 'submitted';
-
-    expect(isSubmitted).toBe(false);
-  });
-
-  it('detects non-submitted when resumeStatus is absent', () => {
-    const isSubmitted = sessionStorage.getItem('resumeStatus') === 'submitted';
-
-    expect(isSubmitted).toBe(false);
   });
 });
 
@@ -165,56 +130,45 @@ describe('ChefsFormViewer – auto-save debounce logic', () => {
 });
 
 describe('ChefsFormViewer – upsert payload construction', () => {
-  it('builds correct payload for auto-save (draft)', () => {
-    const currentDbId = 42;
-    const newChefsId = 'chefs-id-abc123';
-    const createdBy = 'testuser@idir';
-    const applicantName = 'John Doe';
-    const updatedAt = '2026-05-28T10:00:00Z';
+  const GUID = 'a7b23b0f-ac4d-4f78-a9ca-39be6bbf5ac4';
 
+  it('builds correct payload for auto-save (draft)', () => {
     const payload = {
-      id: currentDbId,
-      chefsSubmissionId: newChefsId,
-      createdBy,
-      applicantName,
+      publicId: GUID,
+      chefsSubmissionId: 'chefs-id-abc123',
+      createdBy: 'testuser@idir',
+      applicantName: 'John Doe',
       status: 'draft',
-      lastUpdatedAt: updatedAt,
+      lastUpdatedAt: '2026-05-28T10:00:00Z',
       lastFiledAt: null,
     };
 
-    expect(payload.id).toBe(42);
+    expect(payload.publicId).toBe(GUID);
     expect(payload.status).toBe('draft');
     expect(payload.lastFiledAt).toBeNull();
     expect(payload.chefsSubmissionId).toBe('chefs-id-abc123');
   });
 
   it('builds correct payload for explicit submit', () => {
-    const currentDbId = 42;
-    const newChefsId = 'chefs-id-def456';
-    const createdBy = 'testuser@idir';
-    const applicantName = 'Jane Doe';
     const now = '2026-05-28T12:00:00Z';
-
     const payload = {
-      id: currentDbId,
-      chefsSubmissionId: newChefsId,
-      createdBy,
-      applicantName,
+      publicId: GUID,
+      chefsSubmissionId: 'chefs-id-def456',
+      createdBy: 'testuser@idir',
+      applicantName: 'Jane Doe',
       status: 'submitted',
       lastUpdatedAt: now,
       lastFiledAt: now,
     };
 
-    expect(payload.id).toBe(42);
+    expect(payload.publicId).toBe(GUID);
     expect(payload.status).toBe('submitted');
     expect(payload.lastFiledAt).toBe(now);
   });
 
-  it('sends id as undefined for first-time save (new session)', () => {
-    const currentDbId = undefined;
-
+  it('sends publicId as undefined for first-time save (new session)', () => {
     const payload = {
-      id: currentDbId,
+      publicId: undefined,
       chefsSubmissionId: 'new-chefs-id',
       createdBy: 'user@idir',
       applicantName: '',
@@ -223,22 +177,45 @@ describe('ChefsFormViewer – upsert payload construction', () => {
       lastFiledAt: null,
     };
 
-    expect(payload.id).toBeUndefined();
+    expect(payload.publicId).toBeUndefined();
+  });
+});
+
+describe('ChefsFormViewer – saved emit after upsert', () => {
+  it('emits saved with the publicId returned by the API', () => {
+    const emitted: string[] = [];
+    const emit = (event: string, publicId: string) => {
+      if (event === 'saved') emitted.push(publicId);
+    };
+    const GUID = 'b2c34d5e-0000-0000-0000-000000000001';
+
+    // Simulate what syncSave / performAutoSave does after upsert:
+    const responsePublicId = GUID;
+    let currentDbId: string | undefined = undefined;
+    currentDbId = responsePublicId;
+    if (currentDbId) emit('saved', currentDbId);
+
+    expect(emitted).toHaveLength(1);
+    expect(emitted[0]).toBe(GUID);
+  });
+
+  it('does not emit saved when upsert returns no publicId', () => {
+    const emitted: string[] = [];
+    const emit = (event: string, publicId: string) => {
+      if (event === 'saved') emitted.push(publicId);
+    };
+
+    let currentDbId: string | undefined = undefined;
+    currentDbId = undefined; // API returned nothing
+    if (currentDbId) emit('saved', currentDbId);
+
+    expect(emitted).toHaveLength(0);
   });
 });
 
 describe('ChefsFormViewer – read-only and auto-save disable for submitted', () => {
-  beforeEach(() => {
-    sessionStorage.clear();
-  });
-
-  afterEach(() => {
-    sessionStorage.clear();
-  });
-
-  it('should not setup auto-save when status is submitted', () => {
-    sessionStorage.setItem('resumeStatus', 'submitted');
-    const isSubmitted = sessionStorage.getItem('resumeStatus') === 'submitted';
+  it('should not setup auto-save when readOnly prop is true', () => {
+    const isSubmitted = true;
     const autoSaveThrottle = 5000;
 
     const shouldSetupAutoSave = autoSaveThrottle > 0 && !isSubmitted;
@@ -246,31 +223,12 @@ describe('ChefsFormViewer – read-only and auto-save disable for submitted', ()
     expect(shouldSetupAutoSave).toBe(false);
   });
 
-  it('should setup auto-save when status is draft', () => {
-    sessionStorage.setItem('resumeStatus', 'draft');
-    const isSubmitted = sessionStorage.getItem('resumeStatus') === 'submitted';
+  it('should setup auto-save when readOnly prop is false', () => {
+    const isSubmitted = false;
     const autoSaveThrottle = 5000;
 
     const shouldSetupAutoSave = autoSaveThrottle > 0 && !isSubmitted;
 
     expect(shouldSetupAutoSave).toBe(true);
-  });
-
-  it('should set read-only attribute to true when submitted', () => {
-    sessionStorage.setItem('resumeStatus', 'submitted');
-    const isSubmitted = sessionStorage.getItem('resumeStatus') === 'submitted';
-
-    const readOnlyValue = isSubmitted ? 'true' : 'false';
-
-    expect(readOnlyValue).toBe('true');
-  });
-
-  it('should set read-only attribute to false when draft', () => {
-    sessionStorage.setItem('resumeStatus', 'draft');
-    const isSubmitted = sessionStorage.getItem('resumeStatus') === 'submitted';
-
-    const readOnlyValue = isSubmitted ? 'true' : 'false';
-
-    expect(readOnlyValue).toBe('false');
   });
 });

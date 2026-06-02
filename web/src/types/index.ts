@@ -14,13 +14,8 @@ export interface ChefsAuthToken {
   baseUrl: string;
 }
 
-export interface SubmissionResponseDto {
-  id: number;
-  chefsSubmissionId: string;
-  applicantName: string;
-  createdBy: string;
-  status: string;
-  lastUpdatedAt: string;
-  lastFiledAt: string;
-  createdAt: string;
-}
+export type {
+  SubmissionResponseDto,
+  UpsertSubmissionDto,
+  PreviousApplication,
+} from './submission';

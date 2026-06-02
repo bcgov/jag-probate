@@ -115,7 +115,7 @@ const routes: RouteRecordRaw[] = [
     meta: { requiresAuth: false },
   },
   {
-    path: '/resume',
+    path: '/resume/:id',
     name: 'ResumeApplication',
     component: () => import('@/views/ApplicationForm.vue'),
     meta: { requiresAuth: true },

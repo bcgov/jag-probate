@@ -86,7 +86,11 @@
                 </tr>
               </thead>
               <tbody role="rowgroup">
-                <tr v-for="app in sortedApplications" :key="app.id" role="row">
+                <tr
+                  v-for="app in sortedApplications"
+                  :key="app.publicId"
+                  role="row"
+                >
                   <td class="border-top">
                     {{ formatFullName(app.deceased_name) }}
                   </td>
@@ -153,7 +157,7 @@
                       title="Navigate To Submitted Application"
                       type="button"
                       class="btn my-0 py-0 border-0 btn-transparent btn-sm"
-                      @click="navigateToEFilingHub(app.id)"
+                      @click="navigateToEFilingHub(app.publicId)"
                     >
                       <span class="fa fa-paper-plane text-info" />
                     </button>
@@ -257,6 +261,7 @@
 <script setup lang="ts">
   //import { useApplicationStore } from '@/stores/PreviousApplicationStore';
   import ChefsService from '@/services/ChefsService';
+  import type { PreviousApplication, SubmissionResponseDto } from '@/types';
   import moment from 'moment-timezone';
   import { inject, onMounted, onUnmounted, computed, ref } from 'vue';
   import { useRouter } from 'vue-router';
@@ -272,7 +277,7 @@
   //const applicationStore = useApplicationStore();
 
   // ── State ─────────────────────────────────────────────────────────────────────
-  const previousApplications = ref<any[]>([]);
+  const previousApplications = ref<PreviousApplication[]>([]);
   const dataLoaded = ref(false);
   const error = ref('');
 
@@ -289,14 +294,15 @@
     if (!sortKey.value) return previousApplications.value;
 
     return [...previousApplications.value].sort((a, b) => {
-      const valA = a[sortKey.value];
-      const valB = b[sortKey.value];
+      const valA = (a as Record<string, unknown>)[sortKey.value];
+      const valB = (b as Record<string, unknown>)[sortKey.value];
 
       let result = 0;
       if (valA == null) result = -1;
       else if (valB == null) result = 1;
-      else if (typeof valA === 'string') result = valA.localeCompare(valB);
-      else result = valA - valB;
+      else if (typeof valA === 'string' && typeof valB === 'string')
+        result = valA.localeCompare(valB);
+      else result = (valA as number) - (valB as number);
 
       return sortDesc.value ? -result : result;
     });
@@ -331,46 +337,46 @@
   //     router.push({ name: 'pre-qualification' });
   // }
 
-  function navigateToEFilingHub(id: number) {
+  function navigateToEFilingHub(id: string) {
     console.log('going to hub', id);
     // TODO: replace with actual eFiling hub URL
   }
   const createCase = () => {
-    sessionStorage.removeItem('resumeSubmissionId');
-    sessionStorage.removeItem('resumeDbId');
-    sessionStorage.removeItem('resumeStatus');
     router.push('/get-started');
-    //router.push({ name: 'NewApplication' });
   };
 
   async function loadApplications() {
     dataLoaded.value = false;
     try {
       const applications = await chefsService.getSubmissions();
-      previousApplications.value = (applications ?? []).map((appJson: any) => ({
-        deceased_name: appJson.applicantName || '(the person who died)',
-        app_type: 'Probate Grant',
-        status: appJson.status ?? '',
-        packageNum: appJson.chefsSubmissionId ?? '',
-        id: appJson.id,
-        chefsSubmissionId: appJson.chefsSubmissionId,
-        lastUpdated: appJson.lastUpdatedAt
-          ? moment(appJson.lastUpdatedAt)
-              .tz('America/Vancouver')
-              .diff('2000-01-01', 'minutes')
-          : 0,
-        lastUpdatedDate: appJson.lastUpdatedAt
-          ? moment(appJson.lastUpdatedAt).tz('America/Vancouver').format()
-          : '',
-        lastFiled: appJson.lastFiledAt
-          ? moment(appJson.lastFiledAt)
-              .tz('America/Vancouver')
-              .diff('2000-01-01', 'minutes')
-          : 0,
-        lastFiledDate: appJson.lastFiledAt
-          ? moment(appJson.lastFiledAt).tz('America/Vancouver').format()
-          : '',
-      }));
+      previousApplications.value = (applications ?? []).map(
+        (appJson: SubmissionResponseDto) => ({
+          deceased_name: appJson.applicantName || '(the person who died)',
+          app_type: 'Probate Grant',
+          status: appJson.status ?? '',
+          packageNum: appJson.chefsSubmissionId ?? '',
+          id: appJson.publicId,
+          publicId: appJson.publicId,
+          chefsSubmissionId: appJson.chefsSubmissionId,
+          lastUpdated: appJson.lastUpdatedAt
+            ? moment(appJson.lastUpdatedAt)
+                .tz('America/Vancouver')
+                .diff('2000-01-01', 'minutes')
+            : 0,
+          lastUpdatedDate: appJson.lastUpdatedAt
+            ? moment(appJson.lastUpdatedAt).tz('America/Vancouver').format()
+            : '',
+          lastFiled: appJson.lastFiledAt
+            ? moment(appJson.lastFiledAt)
+                .tz('America/Vancouver')
+                .diff('2000-01-01', 'minutes')
+            : 0,
+          lastFiledDate: appJson.lastFiledAt
+            ? moment(appJson.lastFiledAt).tz('America/Vancouver').format()
+            : '',
+          createdAt: appJson.createdAt,
+        })
+      );
     } catch (err: any) {
       if (err.response?.status === 404) {
         previousApplications.value = [];
@@ -384,10 +390,7 @@
 
   // ── Resume Application ────────────────────────────────────────────────────────
   function resumeApplication(app: any) {
-    sessionStorage.setItem('resumeSubmissionId', app.chefsSubmissionId);
-    sessionStorage.setItem('resumeDbId', String(app.id));
-    sessionStorage.setItem('resumeStatus', app.status ?? '');
-    router.push({ name: 'ResumeApplication' });
+    router.push({ name: 'ResumeApplication', params: { id: app.publicId } });
   }
 
   // ── Delete Application ────────────────────────────────────────────────────────
@@ -401,9 +404,9 @@
 
   async function confirmRemoveApplication() {
     try {
-      await chefsService.deleteSubmission(applicationToDelete.value.id);
+      await chefsService.deleteSubmission(applicationToDelete.value.publicId);
       previousApplications.value = previousApplications.value.filter(
-        (app) => app.id !== applicationToDelete.value.id
+        (app) => app.publicId !== applicationToDelete.value.publicId
       );
       confirmDelete.value = false;
     } catch (err: any) {
