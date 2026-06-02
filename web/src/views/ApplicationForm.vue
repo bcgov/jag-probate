@@ -1,18 +1,7 @@
 <template>
   <div id="new-application" class="card bg-white border-white">
     <div class="card home-content border-white">
-      <!-- Navigation -->
-      <div class="button-row">
-        <button
-          type="button"
-          class="btn btn-outline-secondary"
-          @click="router.back()"
-        >
-          <font-awesome-icon :icon="['fas', 'arrow-left']" class="me-2" /> Back
-        </button>
-      </div>
-
-      <!-- CHEFS Form -->
+    <!-- CHEFS Form -->
       <div class="form-area">
         <ChefsFormViewer
           form-key="legal"

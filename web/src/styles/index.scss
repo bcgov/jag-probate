@@ -21,6 +21,7 @@ $bcgov-white: #ffffff;
   display: flex;
   flex-direction: column;
   min-height: 0;
+  overflow: visible !important;
 }
 
 // Header
