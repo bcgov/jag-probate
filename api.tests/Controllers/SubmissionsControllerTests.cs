@@ -210,7 +210,7 @@ public class SubmissionsControllerTests
     public async Task GetSubmission_PassesCancellationTokenToService()
     {
         // Arrange
-        var cts = new CancellationTokenSource();
+        using var cts = new CancellationTokenSource();
         var submissionId = Guid.NewGuid();
         _mockService
             .Setup(x => x.GetSubmissionByIdAsync(submissionId, cts.Token))
@@ -438,7 +438,7 @@ public class SubmissionsControllerTests
     public async Task DeleteSubmission_PassesCancellationTokenToService()
     {
         // Arrange
-        var cts = new CancellationTokenSource();
+        using var cts = new CancellationTokenSource();
         var deleteId = Guid.NewGuid();
         _mockService
             .Setup(x => x.DeleteSubmissionAsync(deleteId, cts.Token))

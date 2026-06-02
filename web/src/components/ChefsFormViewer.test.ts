@@ -190,9 +190,8 @@ describe('ChefsFormViewer – saved emit after upsert', () => {
     const GUID = 'b2c34d5e-0000-0000-0000-000000000001';
 
     // Simulate what syncSave / performAutoSave does after upsert:
-    const responsePublicId = GUID;
-    let currentDbId: string | undefined = undefined;
-    currentDbId = responsePublicId;
+    const responsePublicId: string | undefined = GUID;
+    const currentDbId = responsePublicId;
     if (currentDbId) emit('saved', currentDbId);
 
     expect(emitted).toHaveLength(1);
@@ -205,8 +204,8 @@ describe('ChefsFormViewer – saved emit after upsert', () => {
       if (event === 'saved') emitted.push(publicId);
     };
 
-    let currentDbId: string | undefined = undefined;
-    currentDbId = undefined; // API returned nothing
+    const apiResponse: string | undefined = undefined; // API returned nothing
+    const currentDbId = apiResponse;
     if (currentDbId) emit('saved', currentDbId);
 
     expect(emitted).toHaveLength(0);

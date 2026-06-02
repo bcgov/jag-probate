@@ -91,7 +91,7 @@
   }
 
   .home-content {
-    padding: 2rem 1.5rem;
+    padding: 2rem 1.5rem 0;
     width: 100%;
     max-width: 100%;
   }
@@ -105,5 +105,11 @@
 
   .form-area {
     min-height: 600px;
+  }
+  .app-main.home-content {
+    padding-bottom: 0;
+  }
+  .app-main.container-fluid {
+    padding-bottom: 0;
   }
 </style>
