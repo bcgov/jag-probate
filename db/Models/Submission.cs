@@ -24,5 +24,6 @@ namespace Probate.Db.Models
 
         public DateTime? LastFiledAt { get; set; }
         public DateTime? DeletedAt { get; set; }
+        public string SubmissionData { get; set; }
     }
 }
