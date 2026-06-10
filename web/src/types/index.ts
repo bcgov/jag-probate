@@ -25,6 +25,29 @@ export interface SubmissionResponseDto {
   createdAt: string;
 }
 
+export interface CourtAddress {
+  addressLine1?: string;
+  addressLine2?: string;
+  addressLine3?: string;
+  postalCode?: string;
+  cityName?: string;
+  provinceName?: string;
+  countryName?: string;
+}
+
+export interface CourtLocationModel {
+  id?: number;
+  identifierCode?: string;
+  name?: string;
+  code?: string;
+  isSupremeCourt: boolean;
+  address?: CourtAddress;
+}
+
+export interface CourtLocationResult {
+  courts: CourtLocationModel[];
+}
+
 export interface GenerateReportRequest {
   /** Logical template key, e.g. "P1". */
   templateKey: string;

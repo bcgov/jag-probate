@@ -26,6 +26,7 @@
 
 <script setup lang="ts">
   import ChefsService from '@/services/ChefsService';
+  import CourtLocationService from '@/services/CourtLocationService';
   import ReportService from '@/services/ReportService';
   import { useAuthStore } from '@/stores';
   import { extractTokenPayload } from '@/utils/claims';
@@ -64,6 +65,12 @@
   const chefsContainer = ref<HTMLElement | null>(null);
 
   const chefsService = inject<ChefsService>('chefsService')!;
+  const courtLocationService = inject<CourtLocationService>(
+    'courtLocationService'
+  )!;
+
+  // Expose court location service to CHEFS form
+  window.courtLocationService = courtLocationService;
   const reportService = inject<ReportService>('reportService')!;
 
   // ── Script loader ─────────────────────────────────────────────────────────
