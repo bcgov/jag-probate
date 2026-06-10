@@ -69,7 +69,7 @@
   )!;
 
   // Expose court location service to CHEFS form
-  (window as any).courtLocationService = courtLocationService;
+  window.courtLocationService = courtLocationService;
 
   // ── Script loader ─────────────────────────────────────────────────────────
   function loadWebComponentScript(baseUrl: string): Promise<void> {

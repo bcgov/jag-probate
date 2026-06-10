@@ -1,4 +1,5 @@
 using System.Text;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Probate.Api.Infrastructure.EFiling;
@@ -11,11 +12,15 @@ namespace Probate.Api.Tests.Infrastructure;
 public class EFilingAuthHandlerTests
 {
     private readonly Mock<ILogger<EFilingAuthHandler>> _mockLogger;
+    private readonly Mock<IHttpClientFactory> _mockHttpClientFactory;
+    private readonly IMemoryCache _memoryCache;
     private readonly EFilingOptions _eFilingOptions;
 
     public EFilingAuthHandlerTests()
     {
         _mockLogger = new Mock<ILogger<EFilingAuthHandler>>();
+        _mockHttpClientFactory = new Mock<IHttpClientFactory>();
+        _memoryCache = new MemoryCache(new MemoryCacheOptions());
         _eFilingOptions = new EFilingOptions
         {
             BaseUrl = "https://efiling-api-test.example.com",
@@ -33,7 +38,12 @@ public class EFilingAuthHandlerTests
     {
         // Arrange & Act
         var options = Microsoft.Extensions.Options.Options.Create(_eFilingOptions);
-        var handler = new EFilingAuthHandler(options, _mockLogger.Object);
+        var handler = new EFilingAuthHandler(
+            options,
+            _memoryCache,
+            _mockHttpClientFactory.Object,
+            _mockLogger.Object
+        );
 
         // Assert
         Assert.NotNull(handler);

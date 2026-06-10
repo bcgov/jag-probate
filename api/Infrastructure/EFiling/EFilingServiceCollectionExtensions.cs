@@ -1,8 +1,8 @@
 using System;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Serialization;
 using Probate.Api.Helpers.Exceptions;
 using Probate.Api.Infrastructure.Options;
 using Refit;
@@ -20,7 +20,6 @@ public static class EFilingServiceCollectionExtensions
     )
     {
         var section = configuration.GetSection(EFilingOptions.SectionName);
-        services.Configure<EFilingOptions>(section);
 
         var baseUrl = section["BaseUrl"];
         var keycloakBaseUrl = section["KeycloakBaseUrl"];
@@ -43,10 +42,11 @@ public static class EFilingServiceCollectionExtensions
 
         var refitSettings = new RefitSettings
         {
-            ContentSerializer = new NewtonsoftJsonContentSerializer(
-                new JsonSerializerSettings
+            ContentSerializer = new SystemTextJsonContentSerializer(
+                new JsonSerializerOptions
                 {
-                    ContractResolver = new CamelCasePropertyNamesContractResolver(),
+                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+                    DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
                 }
             ),
         };

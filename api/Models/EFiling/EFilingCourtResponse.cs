@@ -1,5 +1,5 @@
 using System.Collections.Generic;
-using Newtonsoft.Json;
+using System.Text.Json.Serialization;
 
 namespace Probate.Api.Models.EFiling;
 
@@ -8,7 +8,7 @@ namespace Probate.Api.Models.EFiling;
 /// </summary>
 public class EFilingCourtsResponse
 {
-    [JsonProperty("courts")]
+    [JsonPropertyName("courts")]
     public List<EFilingCourt>? Courts { get; set; }
 }
 
@@ -17,22 +17,22 @@ public class EFilingCourtsResponse
 /// </summary>
 public class EFilingCourt
 {
-    [JsonProperty("id")]
+    [JsonPropertyName("id")]
     public double? Id { get; set; }
 
-    [JsonProperty("identifierCode")]
+    [JsonPropertyName("identifierCode")]
     public string? IdentifierCode { get; set; }
 
-    [JsonProperty("name")]
+    [JsonPropertyName("name")]
     public string? Name { get; set; }
 
-    [JsonProperty("code")]
+    [JsonPropertyName("code")]
     public string? Code { get; set; }
 
-    [JsonProperty("isSupremeCourt")]
+    [JsonPropertyName("isSupremeCourt")]
     public bool IsSupremeCourt { get; set; }
 
-    [JsonProperty("address")]
+    [JsonPropertyName("address")]
     public EFilingAddress? Address { get; set; }
 }
 
@@ -41,24 +41,24 @@ public class EFilingCourt
 /// </summary>
 public class EFilingAddress
 {
-    [JsonProperty("addressLine1")]
+    [JsonPropertyName("addressLine1")]
     public string? AddressLine1 { get; set; }
 
-    [JsonProperty("addressLine2")]
+    [JsonPropertyName("addressLine2")]
     public string? AddressLine2 { get; set; }
 
-    [JsonProperty("addressLine3")]
+    [JsonPropertyName("addressLine3")]
     public string? AddressLine3 { get; set; }
 
-    [JsonProperty("postalCode")]
+    [JsonPropertyName("postalCode")]
     public string? PostalCode { get; set; }
 
-    [JsonProperty("cityName")]
+    [JsonPropertyName("cityName")]
     public string? CityName { get; set; }
 
-    [JsonProperty("provinceName")]
+    [JsonPropertyName("provinceName")]
     public string? ProvinceName { get; set; }
 
-    [JsonProperty("countryName")]
+    [JsonPropertyName("countryName")]
     public string? CountryName { get; set; }
 }

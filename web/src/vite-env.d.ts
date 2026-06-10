@@ -1,11 +1,16 @@
 /// <reference types="vite/client" />
 
+import type CourtLocationService from './services/CourtLocationService';
+
 interface ImportMeta {
   readonly env: ImportMetaEnv & { readonly BASE_URL: string };
 }
 
-interface Window {
-  staticBaseUrl: string;
+declare global {
+  interface Window {
+    staticBaseUrl: string;
+    courtLocationService?: CourtLocationService;
+  }
 }
 
 declare module '*.vue' {

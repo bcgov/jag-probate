@@ -5,6 +5,7 @@ using System.Net.Http.Headers;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Probate.Api.Infrastructure.Options;
@@ -17,14 +18,22 @@ namespace Probate.Api.Infrastructure.EFiling;
 /// </summary>
 public class EFilingAuthHandler : DelegatingHandler
 {
+    private const string CacheKey = "EFilingAccessToken";
     private readonly EFilingOptions _options;
+    private readonly IMemoryCache _cache;
+    private readonly IHttpClientFactory _httpClientFactory;
     private readonly ILogger<EFilingAuthHandler> _logger;
-    private string? _cachedToken;
-    private DateTime _tokenExpiry = DateTime.MinValue;
 
-    public EFilingAuthHandler(IOptions<EFilingOptions> options, ILogger<EFilingAuthHandler> logger)
+    public EFilingAuthHandler(
+        IOptions<EFilingOptions> options,
+        IMemoryCache cache,
+        IHttpClientFactory httpClientFactory,
+        ILogger<EFilingAuthHandler> logger
+    )
     {
         _options = options.Value;
+        _cache = cache;
+        _httpClientFactory = httpClientFactory;
         _logger = logger;
     }
 
@@ -33,17 +42,29 @@ public class EFilingAuthHandler : DelegatingHandler
         CancellationToken ct
     )
     {
-        // Refresh token if expired or not cached
-        if (string.IsNullOrEmpty(_cachedToken) || DateTime.UtcNow >= _tokenExpiry)
-            await RefreshTokenAsync(ct);
+        // Get token from cache or refresh if expired/missing
+        var token = await GetOrRefreshTokenAsync(ct);
 
-        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _cachedToken);
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
         return await base.SendAsync(request, ct);
     }
 
-    private async Task RefreshTokenAsync(CancellationToken ct)
+    private async Task<string> GetOrRefreshTokenAsync(CancellationToken ct)
     {
-        using var client = new HttpClient();
+        // Try to get from cache first
+        if (_cache.TryGetValue(CacheKey, out string? cachedToken) && cachedToken != null)
+        {
+            _logger.LogDebug("Using cached eFiling access token");
+            return cachedToken;
+        }
+
+        // Cache miss or expired - fetch new token
+        return await RefreshTokenAsync(ct);
+    }
+
+    private async Task<string> RefreshTokenAsync(CancellationToken ct)
+    {
+        using var client = _httpClientFactory.CreateClient();
 
         _logger.LogDebug("Requesting eFiling token");
 
@@ -76,13 +97,20 @@ public class EFilingAuthHandler : DelegatingHandler
         var json = await response.Content.ReadAsStringAsync(ct);
         using var doc = JsonDocument.Parse(json);
 
-        _cachedToken = doc.RootElement.GetProperty("access_token").GetString();
+        var token =
+            doc.RootElement.GetProperty("access_token").GetString()
+            ?? throw new InvalidOperationException("Token response missing access_token");
         var expiresIn = doc.RootElement.GetProperty("expires_in").GetInt32();
-        _tokenExpiry = DateTime.UtcNow.AddSeconds(expiresIn - 30); // 30s buffer to avoid edge cases
+
+        // Cache token with 30s buffer to avoid edge cases
+        var cacheExpiry = TimeSpan.FromSeconds(expiresIn - 30);
+        _cache.Set(CacheKey, token, cacheExpiry);
 
         _logger.LogInformation(
-            "Successfully obtained eFiling access token, expires in {ExpiresIn}s",
-            expiresIn
+            "Successfully obtained eFiling access token, cached for {ExpiresIn}s",
+            expiresIn - 30
         );
+
+        return token;
     }
 }

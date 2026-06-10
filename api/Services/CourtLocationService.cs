@@ -55,61 +55,51 @@ public class CourtLocationService : ICourtLocationService
         // Cache miss - fetch from eFiling Hub API
         _logger.LogInformation("Cache miss for court locations. Fetching from eFiling Hub API...");
 
-        try
+        var response = await _eFilingApi.GetCourtsAsync(_options.CourtLevel.ToString());
+
+        if (response?.Courts == null || !response.Courts.Any())
         {
-            var response = await _eFilingApi.GetCourtsAsync(_options.CourtLevel.ToString());
-
-            if (response?.Courts == null || !response.Courts.Any())
-            {
-                _logger.LogWarning("eFiling Hub API returned no court locations");
-                return new CourtLocationResult();
-            }
-
-            // Transform eFiling response to our model
-            var locations = response
-                .Courts.Select(court => new CourtLocationModel
-                {
-                    Id = court.Id,
-                    IdentifierCode = court.IdentifierCode,
-                    Name = court.Name,
-                    Code = court.Code,
-                    IsSupremeCourt = court.IsSupremeCourt,
-                    Address =
-                        court.Address == null
-                            ? null
-                            : new CourtAddress
-                            {
-                                AddressLine1 = court.Address.AddressLine1,
-                                AddressLine2 = court.Address.AddressLine2,
-                                AddressLine3 = court.Address.AddressLine3,
-                                PostalCode = court.Address.PostalCode,
-                                CityName = court.Address.CityName,
-                                ProvinceName = court.Address.ProvinceName,
-                                CountryName = court.Address.CountryName,
-                            },
-                })
-                .ToList();
-
-            var result = new CourtLocationResult { Courts = locations };
-
-            // Cache for 24 hours
-            var cacheOptions = new MemoryCacheEntryOptions
-            {
-                AbsoluteExpirationRelativeToNow = TimeSpan.FromHours(24),
-            };
-
-            _cache.Set(CacheKey, result, cacheOptions);
-
-            _logger.LogInformation(
-                "Successfully fetched and cached court locations from eFiling Hub"
-            );
-
-            return result;
+            _logger.LogWarning("eFiling Hub API returned no court locations");
+            return new CourtLocationResult();
         }
-        catch (Exception ex)
+
+        // Transform eFiling response to our model
+        var locations = response
+            .Courts.Select(court => new CourtLocationModel
+            {
+                Id = court.Id,
+                IdentifierCode = court.IdentifierCode,
+                Name = court.Name,
+                Code = court.Code,
+                IsSupremeCourt = court.IsSupremeCourt,
+                Address =
+                    court.Address == null
+                        ? null
+                        : new CourtAddress
+                        {
+                            AddressLine1 = court.Address.AddressLine1,
+                            AddressLine2 = court.Address.AddressLine2,
+                            AddressLine3 = court.Address.AddressLine3,
+                            PostalCode = court.Address.PostalCode,
+                            CityName = court.Address.CityName,
+                            ProvinceName = court.Address.ProvinceName,
+                            CountryName = court.Address.CountryName,
+                        },
+            })
+            .ToList();
+
+        var result = new CourtLocationResult { Courts = locations };
+
+        // Cache for 24 hours
+        var cacheOptions = new MemoryCacheEntryOptions
         {
-            _logger.LogError(ex, "Error fetching court locations from eFiling Hub API");
-            throw;
-        }
+            AbsoluteExpirationRelativeToNow = TimeSpan.FromHours(24),
+        };
+
+        _cache.Set(CacheKey, result, cacheOptions);
+
+        _logger.LogInformation("Successfully fetched and cached court locations from eFiling Hub");
+
+        return result;
     }
 }
