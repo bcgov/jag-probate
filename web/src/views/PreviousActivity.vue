@@ -1,6 +1,6 @@
 <template>
   <div id="status" class="card bg-white border-white previous-activity">
-    <div class="card home-content border-white p-0">
+    <div class="card previous-activity-content border-white p-0">
       <!-- Error Banner -->
       <div class="alert alert-danger mt-4" v-if="error">{{ error }}</div>
 
