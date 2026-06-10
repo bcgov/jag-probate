@@ -8,6 +8,14 @@ interface Window {
   staticBaseUrl: string;
   probate?: {
     generatePdf: (templateKey: string, submissionData: unknown) => Promise<string>;
+    previewPdf: (
+      instance: unknown,
+      data: unknown,
+      currentStep: string,
+      targetStep: string,
+      templateKey: string,
+      iframeTitle: string
+    ) => Promise<void>;
   };
 }
 

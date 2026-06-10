@@ -164,6 +164,28 @@
         const { url } = await reportService.generateReport({ templateKey, submissionData });
         return url;
       },
+      previewPdf: async (
+        instance: any,
+        data: unknown,
+        currentStep: string,
+        targetStep: string,
+        templateKey: string,
+        iframeTitle: string
+      ): Promise<void> => {
+        if (currentStep !== targetStep) return;
+
+        const root = instance.root;
+        const rootEl = root?.element ?? document;
+        const frame: HTMLIFrameElement | null = rootEl.querySelector(
+          `iframe[title='${iframeTitle}']`
+        );
+
+        if (!frame || frame.getAttribute('data-pdf-loaded') === 'true') return;
+
+        const { url } = await reportService.generateReport({ templateKey, submissionData: data });
+        frame.setAttribute('src', url);
+        frame.setAttribute('data-pdf-loaded', 'true');
+      },
     };
     initForm();
   });
