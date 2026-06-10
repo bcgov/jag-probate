@@ -44,8 +44,12 @@ public class TemplateService : ITemplateService
         var basePath = Path.GetFullPath(_templatesPath);
         var filePath = Path.GetFullPath(Path.Combine(basePath, fileName));
 
-        if (!filePath.StartsWith(basePath + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase)
-            && !filePath.Equals(basePath, StringComparison.OrdinalIgnoreCase))
+        if (
+            !filePath.StartsWith(
+                basePath + Path.DirectorySeparatorChar,
+                StringComparison.OrdinalIgnoreCase
+            ) && !filePath.Equals(basePath, StringComparison.OrdinalIgnoreCase)
+        )
             throw new InvalidOperationException(
                 $"Template filename '{fileName}' for key '{templateKey}' resolves outside the templates directory."
             );
