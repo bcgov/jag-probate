@@ -51,13 +51,13 @@ public class EFilingAuthHandler : DelegatingHandler
         var credentials = Convert.ToBase64String(
             System.Text.Encoding.UTF8.GetBytes($"{_options.ClientId}:{_options.ClientSecret}")
         );
-        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic", credentials);
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
+            "Basic",
+            credentials
+        );
 
         using var body = new FormUrlEncodedContent(
-            new Dictionary<string, string>
-            {
-                ["grant_type"] = "client_credentials"
-            }
+            new Dictionary<string, string> { ["grant_type"] = "client_credentials" }
         );
 
         var response = await client.PostAsync(_options.TokenUrl, body, ct);
@@ -80,6 +80,9 @@ public class EFilingAuthHandler : DelegatingHandler
         var expiresIn = doc.RootElement.GetProperty("expires_in").GetInt32();
         _tokenExpiry = DateTime.UtcNow.AddSeconds(expiresIn - 30); // 30s buffer to avoid edge cases
 
-        _logger.LogInformation("Successfully obtained eFiling access token, expires in {ExpiresIn}s", expiresIn);
+        _logger.LogInformation(
+            "Successfully obtained eFiling access token, expires in {ExpiresIn}s",
+            expiresIn
+        );
     }
 }

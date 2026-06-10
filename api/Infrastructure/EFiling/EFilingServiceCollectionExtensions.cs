@@ -27,25 +27,15 @@ public static class EFilingServiceCollectionExtensions
         var clientSecret = section["ClientSecret"];
 
         if (string.IsNullOrWhiteSpace(baseUrl))
-            throw new ConfigurationException(
-                "eFiling API requires EFiling:BaseUrl"
-            );
+            throw new ConfigurationException("eFiling API requires EFiling:BaseUrl");
         if (string.IsNullOrWhiteSpace(keycloakBaseUrl))
-            throw new ConfigurationException(
-                "eFiling API requires EFiling:KeycloakBaseUrl"
-            );
+            throw new ConfigurationException("eFiling API requires EFiling:KeycloakBaseUrl");
         if (string.IsNullOrWhiteSpace(keycloakRealm))
-            throw new ConfigurationException(
-                "eFiling API requires EFiling:KeycloakRealm"
-            );
+            throw new ConfigurationException("eFiling API requires EFiling:KeycloakRealm");
         if (string.IsNullOrWhiteSpace(clientId))
-            throw new ConfigurationException(
-                "eFiling API requires EFiling:ClientId"
-            );
+            throw new ConfigurationException("eFiling API requires EFiling:ClientId");
         if (string.IsNullOrWhiteSpace(clientSecret))
-            throw new ConfigurationException(
-                "eFiling API requires EFiling:ClientSecret"
-            );
+            throw new ConfigurationException("eFiling API requires EFiling:ClientSecret");
 
         services.AddTransient<EFilingAuthHandler>();
         services

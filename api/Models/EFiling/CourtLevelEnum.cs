@@ -13,5 +13,5 @@ public enum CourtLevelEnum
     /// <summary>
     /// Supreme Court (default for representation-grant)
     /// </summary>
-    S
+    S,
 }

@@ -43,8 +43,10 @@ public class CourtLocationService : ICourtLocationService
     public async Task<CourtLocationResult> GetCourtLocationsAsync()
     {
         // Try to get from cache first
-        if (_cache.TryGetValue(CacheKey, out CourtLocationResult? cachedLocations)
-            && cachedLocations != null)
+        if (
+            _cache.TryGetValue(CacheKey, out CourtLocationResult? cachedLocations)
+            && cachedLocations != null
+        )
         {
             _logger.LogDebug("Returning court locations from cache");
             return cachedLocations;
@@ -64,31 +66,36 @@ public class CourtLocationService : ICourtLocationService
             }
 
             // Transform eFiling response to our model
-            var locations = response.Courts.Select(court => new CourtLocationModel
-            {
-                Id = court.Id,
-                IdentifierCode = court.IdentifierCode,
-                Name = court.Name,
-                Code = court.Code,
-                IsSupremeCourt = court.IsSupremeCourt,
-                Address = court.Address == null ? null : new CourtAddress
+            var locations = response
+                .Courts.Select(court => new CourtLocationModel
                 {
-                    AddressLine1 = court.Address.AddressLine1,
-                    AddressLine2 = court.Address.AddressLine2,
-                    AddressLine3 = court.Address.AddressLine3,
-                    PostalCode = court.Address.PostalCode,
-                    CityName = court.Address.CityName,
-                    ProvinceName = court.Address.ProvinceName,
-                    CountryName = court.Address.CountryName
-                }
-            }).ToList();
+                    Id = court.Id,
+                    IdentifierCode = court.IdentifierCode,
+                    Name = court.Name,
+                    Code = court.Code,
+                    IsSupremeCourt = court.IsSupremeCourt,
+                    Address =
+                        court.Address == null
+                            ? null
+                            : new CourtAddress
+                            {
+                                AddressLine1 = court.Address.AddressLine1,
+                                AddressLine2 = court.Address.AddressLine2,
+                                AddressLine3 = court.Address.AddressLine3,
+                                PostalCode = court.Address.PostalCode,
+                                CityName = court.Address.CityName,
+                                ProvinceName = court.Address.ProvinceName,
+                                CountryName = court.Address.CountryName,
+                            },
+                })
+                .ToList();
 
             var result = new CourtLocationResult { Courts = locations };
 
             // Cache for 24 hours
             var cacheOptions = new MemoryCacheEntryOptions
             {
-                AbsoluteExpirationRelativeToNow = TimeSpan.FromHours(24)
+                AbsoluteExpirationRelativeToNow = TimeSpan.FromHours(24),
             };
 
             _cache.Set(CacheKey, result, cacheOptions);
