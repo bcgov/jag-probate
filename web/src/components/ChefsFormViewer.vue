@@ -26,9 +26,10 @@
 
 <script setup lang="ts">
   import ChefsService from '@/services/ChefsService';
+  import ReportService from '@/services/ReportService';
   import { useAuthStore } from '@/stores';
   import { extractTokenPayload } from '@/utils/claims';
-  import { computed, inject, onMounted, ref } from 'vue';
+  import { computed, inject, onMounted, onUnmounted, ref } from 'vue';
 
   const authStore = useAuthStore();
   const chefsToken = computed(() => {
@@ -63,6 +64,7 @@
   const chefsContainer = ref<HTMLElement | null>(null);
 
   const chefsService = inject<ChefsService>('chefsService')!;
+  const reportService = inject<ReportService>('reportService')!;
 
   // ── Script loader ─────────────────────────────────────────────────────────
   function loadWebComponentScript(baseUrl: string): Promise<void> {
@@ -157,7 +159,17 @@
 
   // ── Lifecycle ─────────────────────────────────────────────────────────────
   onMounted(() => {
+    window.probate = {
+      generatePdf: async (templateKey: string, submissionData: unknown): Promise<string> => {
+        const { url } = await reportService.generateReport({ templateKey, submissionData });
+        return url;
+      },
+    };
     initForm();
+  });
+
+  onUnmounted(() => {
+    delete window.probate;
   });
 </script>
 
