@@ -44,9 +44,9 @@ public class EFilingAuthHandler : DelegatingHandler
     private async Task RefreshTokenAsync(CancellationToken ct)
     {
         using var client = new HttpClient();
-        
+
         _logger.LogDebug("Requesting eFiling token");
-        
+
         // Use Basic Authentication with client_id and client_secret (same as representation-grant)
         var credentials = Convert.ToBase64String(
             System.Text.Encoding.UTF8.GetBytes($"{_options.ClientId}:{_options.ClientSecret}")
@@ -61,7 +61,7 @@ public class EFilingAuthHandler : DelegatingHandler
         );
 
         var response = await client.PostAsync(_options.TokenUrl, body, ct);
-        
+
         if (!response.IsSuccessStatusCode)
         {
             var errorContent = await response.Content.ReadAsStringAsync(ct);
@@ -79,7 +79,7 @@ public class EFilingAuthHandler : DelegatingHandler
         _cachedToken = doc.RootElement.GetProperty("access_token").GetString();
         var expiresIn = doc.RootElement.GetProperty("expires_in").GetInt32();
         _tokenExpiry = DateTime.UtcNow.AddSeconds(expiresIn - 30); // 30s buffer to avoid edge cases
-        
+
         _logger.LogInformation("Successfully obtained eFiling access token, expires in {ExpiresIn}s", expiresIn);
     }
 }

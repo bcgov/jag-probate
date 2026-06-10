@@ -43,7 +43,7 @@ public class CourtLocationService : ICourtLocationService
     public async Task<CourtLocationResult> GetCourtLocationsAsync()
     {
         // Try to get from cache first
-        if (_cache.TryGetValue(CacheKey, out CourtLocationResult? cachedLocations) 
+        if (_cache.TryGetValue(CacheKey, out CourtLocationResult? cachedLocations)
             && cachedLocations != null)
         {
             _logger.LogDebug("Returning court locations from cache");

@@ -9,7 +9,7 @@ public enum CourtLevelEnum
     /// Provincial Court
     /// </summary>
     P,
-    
+
     /// <summary>
     /// Supreme Court (default for representation-grant)
     /// </summary>

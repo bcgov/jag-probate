@@ -19,7 +19,9 @@ class CourtLocationService {
    * @returns Court locations result with list of courts
    */
   async getCourtLocations(): Promise<CourtLocationResult> {
-    return await this.httpService.get<CourtLocationResult>('api/courtlocations');
+    return await this.httpService.get<CourtLocationResult>(
+      'api/courtlocations'
+    );
   }
 }
 

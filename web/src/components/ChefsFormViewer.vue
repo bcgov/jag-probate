@@ -64,10 +64,12 @@
   const chefsContainer = ref<HTMLElement | null>(null);
 
   const chefsService = inject<ChefsService>('chefsService')!;
-  const courtLocationService = inject<CourtLocationService>('courtLocationService')!;
+  const courtLocationService = inject<CourtLocationService>(
+    'courtLocationService'
+  )!;
 
   // Expose court location service to CHEFS form
-  (window as any).courtLocationService = courtLocationService;;
+  (window as any).courtLocationService = courtLocationService;
 
   // ── Script loader ─────────────────────────────────────────────────────────
   function loadWebComponentScript(baseUrl: string): Promise<void> {
