@@ -23,4 +23,10 @@ export function registerServices(app: App) {
   app.provide('reportService', reportService);
 }
 
-export { AuthService, ChefsService, CourtLocationService, HttpService, ReportService };
+export {
+  AuthService,
+  ChefsService,
+  CourtLocationService,
+  HttpService,
+  ReportService,
+};
