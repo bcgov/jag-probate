@@ -25,7 +25,7 @@ public class TemplateService : ITemplateService
     public TemplateService(IWebHostEnvironment env, ILogger<TemplateService> logger)
     {
         _logger = logger;
-        _templatesPath = Path.Combine(env.ContentRootPath, "Templates");
+        _templatesPath = Path.Join(env.ContentRootPath, "Templates");
     }
 
     public string GetTemplateBase64(string templateKey)
@@ -36,7 +36,19 @@ public class TemplateService : ITemplateService
                     + $"Valid keys: {string.Join(", ", TemplateFileMap.Keys)}"
             );
 
-        var filePath = Path.Combine(_templatesPath, fileName);
+        if (Path.IsPathRooted(fileName) || fileName != Path.GetFileName(fileName))
+            throw new InvalidOperationException(
+                $"Template filename '{fileName}' for key '{templateKey}' is invalid."
+            );
+
+        var basePath = Path.GetFullPath(_templatesPath);
+        var filePath = Path.GetFullPath(Path.Combine(basePath, fileName));
+
+        if (!filePath.StartsWith(basePath + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase)
+            && !filePath.Equals(basePath, StringComparison.OrdinalIgnoreCase))
+            throw new InvalidOperationException(
+                $"Template filename '{fileName}' for key '{templateKey}' resolves outside the templates directory."
+            );
 
         if (!File.Exists(filePath))
         {
