@@ -160,8 +160,14 @@
   // ── Lifecycle ─────────────────────────────────────────────────────────────
   onMounted(() => {
     window.probate = {
-      generatePdf: async (templateKey: string, submissionData: unknown): Promise<string> => {
-        const { url } = await reportService.generateReport({ templateKey, submissionData });
+      generatePdf: async (
+        templateKey: string,
+        submissionData: unknown
+      ): Promise<string> => {
+        const { url } = await reportService.generateReport({
+          templateKey,
+          submissionData,
+        });
         return url;
       },
       downloadPdf: async (
@@ -180,7 +186,10 @@
         // Reuse blob URL already on the iframe, otherwise generate fresh
         let url = frame?.getAttribute('src') ?? '';
         if (!url || url === 'about:blank' || !url.startsWith('blob:')) {
-          const result = await reportService.generateReport({ templateKey, submissionData: data });
+          const result = await reportService.generateReport({
+            templateKey,
+            submissionData: data,
+          });
           url = result.url;
         }
 
@@ -207,7 +216,10 @@
 
         if (!frame) return;
 
-        const { url } = await reportService.generateReport({ templateKey, submissionData: data });
+        const { url } = await reportService.generateReport({
+          templateKey,
+          submissionData: data,
+        });
         frame.setAttribute('src', url);
         frame.setAttribute('data-pdf-loaded', 'true');
       },

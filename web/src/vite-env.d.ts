@@ -7,7 +7,10 @@ interface ImportMeta {
 interface Window {
   staticBaseUrl: string;
   probate?: {
-    generatePdf: (templateKey: string, submissionData: unknown) => Promise<string>;
+    generatePdf: (
+      templateKey: string,
+      submissionData: unknown
+    ) => Promise<string>;
     downloadPdf: (
       instance: unknown,
       data: unknown,

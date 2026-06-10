@@ -33,7 +33,9 @@ class HttpService {
   }
 
   async postBlob(url: string, data?: any): Promise<Blob> {
-    const response = await this.axiosInstance.post(url, data, { responseType: 'blob' });
+    const response = await this.axiosInstance.post(url, data, {
+      responseType: 'blob',
+    });
     return response.data;
   }
 

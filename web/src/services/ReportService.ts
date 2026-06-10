@@ -13,7 +13,9 @@ class ReportService {
    * Streams the PDF from the server and returns a local blob URL usable as an iframe src or download link.
    * Caller is responsible for revoking the URL when done: URL.revokeObjectURL(url)
    */
-  async generateReport(request: GenerateReportRequest): Promise<GenerateReportResponse> {
+  async generateReport(
+    request: GenerateReportRequest
+  ): Promise<GenerateReportResponse> {
     const blob = await this.httpService.postBlob(
       'api/Report/generate-from-submission',
       request

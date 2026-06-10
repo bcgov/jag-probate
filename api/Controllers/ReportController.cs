@@ -22,10 +22,7 @@ public class ReportController : ControllerBase
     private readonly ICDogsDelegate _cdogsDelegate;
     private readonly ITemplateService _templateService;
 
-    public ReportController(
-        ICDogsDelegate cdogsDelegate,
-        ITemplateService templateService
-    )
+    public ReportController(ICDogsDelegate cdogsDelegate, ITemplateService templateService)
     {
         _cdogsDelegate = cdogsDelegate;
         _templateService = templateService;
