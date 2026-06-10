@@ -42,7 +42,7 @@ public class TemplateService : ITemplateService
             );
 
         var basePath = Path.GetFullPath(_templatesPath);
-        var filePath = Path.GetFullPath(Path.Combine(basePath, fileName));
+        var filePath = Path.GetFullPath(Path.Join(basePath, fileName));
 
         if (
             !filePath.StartsWith(
