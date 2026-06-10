@@ -39,8 +39,8 @@ public class CourtLocationsControllerTests
                         CityName = "Vancouver",
                         ProvinceName = "British Columbia",
                         PostalCode = "V6Z 2E1",
-                        CountryName = "Canada"
-                    }
+                        CountryName = "Canada",
+                    },
                 },
                 new CourtLocationModel
                 {
@@ -55,10 +55,10 @@ public class CourtLocationsControllerTests
                         CityName = "Victoria",
                         ProvinceName = "British Columbia",
                         PostalCode = "V8W 1B4",
-                        CountryName = "Canada"
-                    }
-                }
-            }
+                        CountryName = "Canada",
+                    },
+                },
+            },
         };
 
         _mockCourtLocationService
@@ -137,10 +137,10 @@ public class CourtLocationsControllerTests
                         CityName = "Vancouver",
                         ProvinceName = "British Columbia",
                         PostalCode = "V6Z 2E1",
-                        CountryName = "Canada"
-                    }
-                }
-            }
+                        CountryName = "Canada",
+                    },
+                },
+            },
         };
 
         _mockCourtLocationService
@@ -176,15 +176,15 @@ public class CourtLocationsControllerTests
                 {
                     Id = 1,
                     Name = "Vancouver Supreme Court",
-                    IsSupremeCourt = true
+                    IsSupremeCourt = true,
                 },
                 new CourtLocationModel
                 {
                     Id = 2,
                     Name = "Vancouver Provincial Court",
-                    IsSupremeCourt = false
-                }
-            }
+                    IsSupremeCourt = false,
+                },
+            },
         };
 
         _mockCourtLocationService

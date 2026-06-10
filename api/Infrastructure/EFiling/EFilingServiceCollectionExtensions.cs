@@ -1,6 +1,8 @@
 using System;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Serialization;
 using Probate.Api.Helpers.Exceptions;
 using Probate.Api.Infrastructure.Options;
 using Refit;
@@ -38,8 +40,19 @@ public static class EFilingServiceCollectionExtensions
             throw new ConfigurationException("eFiling API requires EFiling:ClientSecret");
 
         services.AddTransient<EFilingAuthHandler>();
+
+        var refitSettings = new RefitSettings
+        {
+            ContentSerializer = new NewtonsoftJsonContentSerializer(
+                new JsonSerializerSettings
+                {
+                    ContractResolver = new CamelCasePropertyNamesContractResolver(),
+                }
+            ),
+        };
+
         services
-            .AddRefitClient<IEFilingApi>()
+            .AddRefitClient<IEFilingApi>(refitSettings)
             .ConfigureHttpClient(c =>
             {
                 c.BaseAddress = new Uri(baseUrl!.TrimEnd('/'));

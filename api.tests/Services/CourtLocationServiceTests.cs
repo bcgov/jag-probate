@@ -32,7 +32,7 @@ public class CourtLocationServiceTests
             KeycloakRealm = "test-realm",
             ClientId = "test-client",
             ClientSecret = "test-secret",
-            Enabled = true
+            Enabled = true,
         };
 
         var options = Microsoft.Extensions.Options.Options.Create(_eFilingOptions);
@@ -65,13 +65,15 @@ public class CourtLocationServiceTests
                         CityName = "Vancouver",
                         ProvinceName = "British Columbia",
                         PostalCode = "V6Z 2E1",
-                        CountryName = "Canada"
-                    }
-                }
-            }
+                        CountryName = "Canada",
+                    },
+                },
+            },
         };
 
-        _mockEFilingApi.Setup(x => x.GetCourtsAsync(CourtLevelEnum.S.ToString())).ReturnsAsync(eFilingResponse);
+        _mockEFilingApi
+            .Setup(x => x.GetCourtsAsync(CourtLevelEnum.S.ToString()))
+            .ReturnsAsync(eFilingResponse);
 
         // Act
         var result = await _service.GetCourtLocationsAsync();
@@ -106,13 +108,15 @@ public class CourtLocationServiceTests
                         CityName = "Vancouver",
                         ProvinceName = "British Columbia",
                         PostalCode = "V6Z 2E1",
-                        CountryName = "Canada"
-                    }
-                }
-            }
+                        CountryName = "Canada",
+                    },
+                },
+            },
         };
 
-        _mockEFilingApi.Setup(x => x.GetCourtsAsync(It.IsAny<string>())).ReturnsAsync(eFilingResponse);
+        _mockEFilingApi
+            .Setup(x => x.GetCourtsAsync(It.IsAny<string>()))
+            .ReturnsAsync(eFilingResponse);
 
         // Act - First call should fetch from API
         var firstResult = await _service.GetCourtLocationsAsync();
@@ -153,13 +157,15 @@ public class CourtLocationServiceTests
                         CityName = "Test City",
                         ProvinceName = "Test Province",
                         PostalCode = "T1S 2T3",
-                        CountryName = "Test Country"
-                    }
-                }
-            }
+                        CountryName = "Test Country",
+                    },
+                },
+            },
         };
 
-        _mockEFilingApi.Setup(x => x.GetCourtsAsync(It.IsAny<string>())).ReturnsAsync(eFilingResponse);
+        _mockEFilingApi
+            .Setup(x => x.GetCourtsAsync(It.IsAny<string>()))
+            .ReturnsAsync(eFilingResponse);
 
         // Act
         var result = await _service.GetCourtLocationsAsync();
@@ -204,8 +210,8 @@ public class CourtLocationServiceTests
                         CityName = "Vancouver",
                         ProvinceName = "British Columbia",
                         PostalCode = "V6Z 2E1",
-                        CountryName = "Canada"
-                    }
+                        CountryName = "Canada",
+                    },
                 },
                 new EFilingCourt
                 {
@@ -220,8 +226,8 @@ public class CourtLocationServiceTests
                         CityName = "Victoria",
                         ProvinceName = "British Columbia",
                         PostalCode = "V8W 1B4",
-                        CountryName = "Canada"
-                    }
+                        CountryName = "Canada",
+                    },
                 },
                 new EFilingCourt
                 {
@@ -236,13 +242,15 @@ public class CourtLocationServiceTests
                         CityName = "New Westminster",
                         ProvinceName = "British Columbia",
                         PostalCode = "V3M 1E2",
-                        CountryName = "Canada"
-                    }
-                }
-            }
+                        CountryName = "Canada",
+                    },
+                },
+            },
         };
 
-        _mockEFilingApi.Setup(x => x.GetCourtsAsync(It.IsAny<string>())).ReturnsAsync(eFilingResponse);
+        _mockEFilingApi
+            .Setup(x => x.GetCourtsAsync(It.IsAny<string>()))
+            .ReturnsAsync(eFilingResponse);
 
         // Act
         var result = await _service.GetCourtLocationsAsync();
@@ -261,7 +269,9 @@ public class CourtLocationServiceTests
         // Arrange
         var eFilingResponse = new EFilingCourtsResponse { Courts = new List<EFilingCourt>() };
 
-        _mockEFilingApi.Setup(x => x.GetCourtsAsync(It.IsAny<string>())).ReturnsAsync(eFilingResponse);
+        _mockEFilingApi
+            .Setup(x => x.GetCourtsAsync(It.IsAny<string>()))
+            .ReturnsAsync(eFilingResponse);
 
         // Act
         var result = await _service.GetCourtLocationsAsync();
@@ -277,7 +287,9 @@ public class CourtLocationServiceTests
         // Arrange
         var eFilingResponse = new EFilingCourtsResponse { Courts = new List<EFilingCourt>() };
 
-        _mockEFilingApi.Setup(x => x.GetCourtsAsync(It.IsAny<string>())).ReturnsAsync(eFilingResponse);
+        _mockEFilingApi
+            .Setup(x => x.GetCourtsAsync(It.IsAny<string>()))
+            .ReturnsAsync(eFilingResponse);
 
         // Act
         await _service.GetCourtLocationsAsync();
@@ -305,12 +317,14 @@ public class CourtLocationServiceTests
                     Name = "Test Court",
                     Code = "TST",
                     IsSupremeCourt = true,
-                    Address = null
-                }
-            }
+                    Address = null,
+                },
+            },
         };
 
-        _mockEFilingApi.Setup(x => x.GetCourtsAsync(It.IsAny<string>())).ReturnsAsync(eFilingResponse);
+        _mockEFilingApi
+            .Setup(x => x.GetCourtsAsync(It.IsAny<string>()))
+            .ReturnsAsync(eFilingResponse);
 
         // Act
         var result = await _service.GetCourtLocationsAsync();
@@ -336,7 +350,11 @@ public class CourtLocationServiceTests
                     Name = "Supreme Court",
                     Code = "SUP",
                     IsSupremeCourt = true,
-                    Address = new EFilingAddress { AddressLine1 = "123 Main St", CityName = "City" }
+                    Address = new EFilingAddress
+                    {
+                        AddressLine1 = "123 Main St",
+                        CityName = "City",
+                    },
                 },
                 new EFilingCourt
                 {
@@ -345,12 +363,14 @@ public class CourtLocationServiceTests
                     Name = "Provincial Court",
                     Code = "PRV",
                     IsSupremeCourt = false,
-                    Address = new EFilingAddress { AddressLine1 = "456 Oak St", CityName = "Town" }
-                }
-            }
+                    Address = new EFilingAddress { AddressLine1 = "456 Oak St", CityName = "Town" },
+                },
+            },
         };
 
-        _mockEFilingApi.Setup(x => x.GetCourtsAsync(It.IsAny<string>())).ReturnsAsync(eFilingResponse);
+        _mockEFilingApi
+            .Setup(x => x.GetCourtsAsync(It.IsAny<string>()))
+            .ReturnsAsync(eFilingResponse);
 
         // Act
         var result = await _service.GetCourtLocationsAsync();

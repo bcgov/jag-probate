@@ -12,6 +12,7 @@ namespace Probate.Api.Controllers;
 /// </summary>
 [Route("api/[controller]")]
 [ApiController]
+[Authorize]
 public class CourtLocationsController : ControllerBase
 {
     private readonly ICourtLocationService _courtLocationService;

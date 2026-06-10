@@ -74,7 +74,7 @@ public class EFilingAuthHandler : DelegatingHandler
         }
 
         var json = await response.Content.ReadAsStringAsync(ct);
-        var doc = JsonDocument.Parse(json);
+        using var doc = JsonDocument.Parse(json);
 
         _cachedToken = doc.RootElement.GetProperty("access_token").GetString();
         var expiresIn = doc.RootElement.GetProperty("expires_in").GetInt32();

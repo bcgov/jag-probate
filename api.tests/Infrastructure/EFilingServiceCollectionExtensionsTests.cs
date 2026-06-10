@@ -53,11 +53,9 @@ public class EFilingServiceCollectionExtensionsTests
             { "EFiling:KeycloakBaseUrl", "https://keycloak.test" },
             { "EFiling:KeycloakRealm", "test-realm" },
             { "EFiling:ClientId", "test-client" },
-            { "EFiling:ClientSecret", "test-secret" }
+            { "EFiling:ClientSecret", "test-secret" },
         };
-        var configuration = new ConfigurationBuilder()
-            .AddInMemoryCollection(configData!)
-            .Build();
+        var configuration = new ConfigurationBuilder().AddInMemoryCollection(configData!).Build();
 
         // Act & Assert
         var exception = Assert.Throws<ConfigurationException>(() =>
@@ -77,11 +75,9 @@ public class EFilingServiceCollectionExtensionsTests
             { "EFiling:KeycloakBaseUrl", "" }, // Missing
             { "EFiling:KeycloakRealm", "test-realm" },
             { "EFiling:ClientId", "test-client" },
-            { "EFiling:ClientSecret", "test-secret" }
+            { "EFiling:ClientSecret", "test-secret" },
         };
-        var configuration = new ConfigurationBuilder()
-            .AddInMemoryCollection(configData!)
-            .Build();
+        var configuration = new ConfigurationBuilder().AddInMemoryCollection(configData!).Build();
 
         // Act & Assert
         var exception = Assert.Throws<ConfigurationException>(() =>
@@ -101,11 +97,9 @@ public class EFilingServiceCollectionExtensionsTests
             { "EFiling:KeycloakBaseUrl", "https://keycloak.test" },
             { "EFiling:KeycloakRealm", "" }, // Missing
             { "EFiling:ClientId", "test-client" },
-            { "EFiling:ClientSecret", "test-secret" }
+            { "EFiling:ClientSecret", "test-secret" },
         };
-        var configuration = new ConfigurationBuilder()
-            .AddInMemoryCollection(configData!)
-            .Build();
+        var configuration = new ConfigurationBuilder().AddInMemoryCollection(configData!).Build();
 
         // Act & Assert
         var exception = Assert.Throws<ConfigurationException>(() =>
@@ -125,11 +119,9 @@ public class EFilingServiceCollectionExtensionsTests
             { "EFiling:KeycloakBaseUrl", "https://keycloak.test" },
             { "EFiling:KeycloakRealm", "test-realm" },
             { "EFiling:ClientId", "" }, // Missing
-            { "EFiling:ClientSecret", "test-secret" }
+            { "EFiling:ClientSecret", "test-secret" },
         };
-        var configuration = new ConfigurationBuilder()
-            .AddInMemoryCollection(configData!)
-            .Build();
+        var configuration = new ConfigurationBuilder().AddInMemoryCollection(configData!).Build();
 
         // Act & Assert
         var exception = Assert.Throws<ConfigurationException>(() =>
@@ -149,11 +141,9 @@ public class EFilingServiceCollectionExtensionsTests
             { "EFiling:KeycloakBaseUrl", "https://keycloak.test" },
             { "EFiling:KeycloakRealm", "test-realm" },
             { "EFiling:ClientId", "test-client" },
-            { "EFiling:ClientSecret", "" } // Missing
+            { "EFiling:ClientSecret", "" }, // Missing
         };
-        var configuration = new ConfigurationBuilder()
-            .AddInMemoryCollection(configData!)
-            .Build();
+        var configuration = new ConfigurationBuilder().AddInMemoryCollection(configData!).Build();
 
         // Act & Assert
         var exception = Assert.Throws<ConfigurationException>(() =>
@@ -189,12 +179,10 @@ public class EFilingServiceCollectionExtensionsTests
             { "EFiling:KeycloakBaseUrl", "https://keycloak.test" },
             { "EFiling:KeycloakRealm", "test-realm" },
             { "EFiling:ClientId", "test-client" },
-            { "EFiling:ClientSecret", "test-secret" }
+            { "EFiling:ClientSecret", "test-secret" },
             // Note: CourtLevel not specified
         };
-        var configuration = new ConfigurationBuilder()
-            .AddInMemoryCollection(configData!)
-            .Build();
+        var configuration = new ConfigurationBuilder().AddInMemoryCollection(configData!).Build();
 
         // Act
         services.Configure<EFilingOptions>(configuration.GetSection("EFiling"));
@@ -202,7 +190,8 @@ public class EFilingServiceCollectionExtensionsTests
         var serviceProvider = services.BuildServiceProvider();
 
         // Assert
-        var options = serviceProvider.GetService<Microsoft.Extensions.Options.IOptions<EFilingOptions>>();
+        var options =
+            serviceProvider.GetService<Microsoft.Extensions.Options.IOptions<EFilingOptions>>();
         Assert.NotNull(options);
         Assert.Equal(CourtLevelEnum.S, options!.Value.CourtLevel);
     }
@@ -217,11 +206,9 @@ public class EFilingServiceCollectionExtensionsTests
             { "EFiling:KeycloakRealm", "test-realm" },
             { "EFiling:ClientId", "test-client-id" },
             { "EFiling:ClientSecret", "test-client-secret" },
-            { "EFiling:Enabled", "true" }
+            { "EFiling:Enabled", "true" },
         };
 
-        return new ConfigurationBuilder()
-            .AddInMemoryCollection(configData!)
-            .Build();
+        return new ConfigurationBuilder().AddInMemoryCollection(configData!).Build();
     }
 }

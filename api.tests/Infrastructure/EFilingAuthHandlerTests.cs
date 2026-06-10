@@ -24,7 +24,7 @@ public class EFilingAuthHandlerTests
             KeycloakRealm = "test-realm",
             ClientId = "test-client-id",
             ClientSecret = "test-client-secret",
-            Enabled = true
+            Enabled = true,
         };
     }
 
@@ -43,7 +43,8 @@ public class EFilingAuthHandlerTests
     public void EFilingOptions_TokenUrl_ComputedCorrectly()
     {
         // Arrange & Act
-        var expectedTokenUrl = $"{_eFilingOptions.KeycloakBaseUrl}/auth/realms/{_eFilingOptions.KeycloakRealm}/protocol/openid-connect/token";
+        var expectedTokenUrl =
+            $"{_eFilingOptions.KeycloakBaseUrl}/auth/realms/{_eFilingOptions.KeycloakRealm}/protocol/openid-connect/token";
 
         // Assert
         Assert.Equal(expectedTokenUrl, _eFilingOptions.TokenUrl);
@@ -57,11 +58,11 @@ public class EFilingAuthHandlerTests
         {
             BaseUrl = "https://efiling.test",
             CourtLevel = CourtLevelEnum.S,
-            KeycloakBaseUrl = "https://keycloak.test/",  // With trailing slash
+            KeycloakBaseUrl = "https://keycloak.test/", // With trailing slash
             KeycloakRealm = "test-realm",
             ClientId = "test-client",
             ClientSecret = "test-secret",
-            Enabled = true
+            Enabled = true,
         };
 
         // Act
@@ -96,7 +97,7 @@ public class EFilingAuthHandlerTests
             KeycloakBaseUrl = "https://keycloak",
             KeycloakRealm = "realm",
             ClientId = "client",
-            ClientSecret = "secret"
+            ClientSecret = "secret",
         };
 
         // Assert
@@ -113,7 +114,7 @@ public class EFilingAuthHandlerTests
             KeycloakBaseUrl = "https://keycloak",
             KeycloakRealm = "realm",
             ClientId = "client",
-            ClientSecret = "secret"
+            ClientSecret = "secret",
         };
 
         // Assert
