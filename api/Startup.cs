@@ -14,6 +14,7 @@ using Probate.Api.Helpers;
 using Probate.Api.Infrastructure.Authentication;
 using Probate.Api.Infrastructure.CDogs;
 using Probate.Api.Infrastructure.Chefs;
+using Probate.Api.Infrastructure.EFiling;
 using Probate.Api.Infrastructure.Options;
 using Probate.Api.Services;
 using Probate.Db.Models;
@@ -56,11 +57,14 @@ namespace Probate.Api
             services.AddScoped<MigrationService>();
             services.AddScoped<IChefsApplicationService, ChefsApplicationService>();
             services.AddScoped<ISubmissionService, SubmissionService>();
+            services.AddScoped<ICourtLocationService, CourtLocationService>();
 
             services.AddHttpClient();
+            services.AddMemoryCache();
 
             services.AddChefsApi(Configuration);
             services.AddCDogsApi(Configuration);
+            services.AddEFilingApi(Configuration);
 
             services.AddDbContext<ProbateDbContext>(options =>
             {

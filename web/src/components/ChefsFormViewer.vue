@@ -26,6 +26,7 @@
 
 <script setup lang="ts">
   import ChefsService from '@/services/ChefsService';
+  import CourtLocationService from '@/services/CourtLocationService';
   import { useAuthStore } from '@/stores';
   import { extractTokenPayload } from '@/utils/claims';
   import { computed, inject, onMounted, ref } from 'vue';
@@ -63,6 +64,10 @@
   const chefsContainer = ref<HTMLElement | null>(null);
 
   const chefsService = inject<ChefsService>('chefsService')!;
+  const courtLocationService = inject<CourtLocationService>('courtLocationService')!;
+
+  // Expose court location service to CHEFS form
+  (window as any).courtLocationService = courtLocationService;;
 
   // ── Script loader ─────────────────────────────────────────────────────────
   function loadWebComponentScript(baseUrl: string): Promise<void> {

@@ -43,6 +43,13 @@ namespace Probate.Api.Infrastructure.Options
                 .ValidateDataAnnotations()
                 .ValidateOnStart();
 
+            // Register eFiling configuration
+            services
+                .AddOptions<EFilingOptions>()
+                .Bind(configuration.GetSection(EFilingOptions.SectionName))
+                .ValidateDataAnnotations()
+                .ValidateOnStart();
+
             return services;
         }
     }
