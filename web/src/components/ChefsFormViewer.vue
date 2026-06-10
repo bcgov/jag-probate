@@ -164,6 +164,31 @@
         const { url } = await reportService.generateReport({ templateKey, submissionData });
         return url;
       },
+      downloadPdf: async (
+        instance: any,
+        data: unknown,
+        templateKey: string,
+        iframeTitle: string,
+        fileName: string
+      ): Promise<void> => {
+        const root = instance.root;
+        const rootEl = root?.element ?? document;
+        const frame: HTMLIFrameElement | null = rootEl.querySelector(
+          `iframe[title='${iframeTitle}']`
+        );
+
+        // Reuse blob URL already on the iframe, otherwise generate fresh
+        let url = frame?.getAttribute('src') ?? '';
+        if (!url || url === 'about:blank' || !url.startsWith('blob:')) {
+          const result = await reportService.generateReport({ templateKey, submissionData: data });
+          url = result.url;
+        }
+
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = fileName;
+        a.click();
+      },
       previewPdf: async (
         instance: any,
         data: unknown,
@@ -180,7 +205,7 @@
           `iframe[title='${iframeTitle}']`
         );
 
-        if (!frame || frame.getAttribute('data-pdf-loaded') === 'true') return;
+        if (!frame) return;
 
         const { url } = await reportService.generateReport({ templateKey, submissionData: data });
         frame.setAttribute('src', url);
