@@ -33,7 +33,6 @@ public class ReportController : ControllerBase
     /// Streams the PDF bytes directly to the caller as application/pdf.
     /// </summary>
     [HttpPost("generate-from-submission")]
-    [AllowAnonymous]
     [ProducesResponseType(typeof(FileResult), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> GenerateFromSubmission(

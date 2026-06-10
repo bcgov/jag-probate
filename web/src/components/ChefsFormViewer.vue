@@ -157,6 +157,10 @@
     emit('submitted', chefsSubmissionId);
   }
 
+  // ── Blob URL tracking ─────────────────────────────────────────────────────
+  // Tracks every blob URL we create so they can be revoked on unmount.
+  const activeBlobUrls = new Set<string>();
+
   // ── Lifecycle ─────────────────────────────────────────────────────────────
   onMounted(() => {
     window.probate = {
@@ -168,6 +172,7 @@
           templateKey,
           submissionData,
         });
+        activeBlobUrls.add(url);
         return url;
       },
       downloadPdf: async (
@@ -183,20 +188,28 @@
           `iframe[title='${iframeTitle}']`
         );
 
-        // Reuse blob URL already on the iframe, otherwise generate fresh
+        // Reuse blob URL already on the iframe, otherwise generate a fresh one
         let url = frame?.getAttribute('src') ?? '';
+        let freshUrl = false;
         if (!url || url === 'about:blank' || !url.startsWith('blob:')) {
           const result = await reportService.generateReport({
             templateKey,
             submissionData: data,
           });
           url = result.url;
+          freshUrl = true;
         }
 
         const a = document.createElement('a');
         a.href = url;
         a.download = fileName;
         a.click();
+
+        // Revoke download-only URLs immediately — the browser queues the
+        // download synchronously on click so the URL is no longer needed.
+        if (freshUrl) {
+          URL.revokeObjectURL(url);
+        }
       },
       previewPdf: async (
         instance: any,
@@ -216,10 +229,18 @@
 
         if (!frame) return;
 
+        // Revoke the previous blob URL on this iframe before replacing it
+        const oldSrc = frame.getAttribute('src') ?? '';
+        if (oldSrc.startsWith('blob:')) {
+          URL.revokeObjectURL(oldSrc);
+          activeBlobUrls.delete(oldSrc);
+        }
+
         const { url } = await reportService.generateReport({
           templateKey,
           submissionData: data,
         });
+        activeBlobUrls.add(url);
         frame.setAttribute('src', url);
         frame.setAttribute('data-pdf-loaded', 'true');
       },
@@ -228,6 +249,8 @@
   });
 
   onUnmounted(() => {
+    activeBlobUrls.forEach((url) => URL.revokeObjectURL(url));
+    activeBlobUrls.clear();
     delete window.probate;
   });
 </script>

@@ -65,9 +65,11 @@ namespace Probate.Api
 
             services.AddDbContext<ProbateDbContext>(options =>
             {
-                var databaseOptions = Configuration
-                    .GetSection(DatabaseOptions.SectionName)
-                    .Get<DatabaseOptions>();
+                var databaseOptions =
+                    Configuration.GetSection(DatabaseOptions.SectionName).Get<DatabaseOptions>()
+                    ?? throw new InvalidOperationException(
+                        $"Missing required configuration section '{DatabaseOptions.SectionName}'."
+                    );
 
                 options
                     .UseNpgsql(
@@ -84,7 +86,11 @@ namespace Probate.Api
                     options.EnableSensitiveDataLogging();
             });
 
-            var corsOptions = Configuration.GetSection(CorsOptions.SectionName).Get<CorsOptions>();
+            var corsOptions =
+                Configuration.GetSection(CorsOptions.SectionName).Get<CorsOptions>()
+                ?? throw new InvalidOperationException(
+                    $"Missing required configuration section '{CorsOptions.SectionName}'."
+                );
 
             services.AddCors(options =>
             {
