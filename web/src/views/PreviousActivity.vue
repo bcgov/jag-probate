@@ -269,8 +269,6 @@
   // ── Router & Store ────────────────────────────────────────────────────────────
   const router = useRouter();
 
-  //const applicationStore = useApplicationStore();
-
   // ── State ─────────────────────────────────────────────────────────────────────
   const previousApplications = ref<any[]>([]);
   const dataLoaded = ref(false);
@@ -327,17 +325,13 @@
   }
 
   // ── Navigation ────────────────────────────────────────────────────────────────
-  // function preQualify() {
-  //     router.push({ name: 'pre-qualification' });
-  // }
-
   function navigateToEFilingHub(id: number) {
     console.log('going to hub', id);
     // TODO: replace with actual eFiling hub URL
   }
+
   const createCase = () => {
     router.push('/get-started');
-    //router.push({ name: 'NewApplication' });
   };
 
   async function loadApplications() {

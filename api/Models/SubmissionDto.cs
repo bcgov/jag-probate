@@ -23,5 +23,6 @@ namespace Probate.Api.Models
         public DateTime? LastUpdatedAt { get; set; }
         public DateTime? LastFiledAt { get; set; }
         public DateTime CreatedAt { get; set; }
+        public string? SubmissionData { get; set; }
     }
 }
