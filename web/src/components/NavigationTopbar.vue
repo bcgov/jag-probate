@@ -34,7 +34,10 @@
           }}</span>
         </div>
 
-        <div v-if="authStore.isAuthenticated" class="navbar-nav ms-auto">
+        <div v-if="authStore.isAuthenticated" class="navbar-nav ms-auto d-flex flex-row align-items-center gap-3">
+          <RouterLink class="nav-link text-white" :to="{ name: 'FormSchemaList' }">
+            Form Schemas
+          </RouterLink>
           <a class="nav-link text-white" href="#" @click.prevent="handleLogout">
             Log out
           </a>

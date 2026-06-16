@@ -3,6 +3,9 @@
     <div class="d-flex align-items-center gap-3 mb-4">
       <h1 class="mb-0">Form Schemas</h1>
       <button class="btn btn-primary btn-sm" @click="openCreate">+ New Schema</button>
+      <RouterLink :to="{ name: 'PreviousActivity' }" class="btn btn-outline-secondary btn-sm">
+        ← Back
+      </RouterLink>
     </div>
 
     <div v-if="loading" class="text-muted">Loading…</div>
