@@ -14,6 +14,9 @@ export default defineConfig({
   },
   resolve: {
     alias: {
+      'string-hash': fileURLToPath(
+        new URL('./node_modules/string-hash/index.js', import.meta.url)
+      ),
       '@': fileURLToPath(new URL('./src', import.meta.url)),
       '@assets': fileURLToPath(new URL('./src/assets', import.meta.url)),
       '@components': fileURLToPath(
@@ -64,5 +67,8 @@ export default defineConfig({
         },
       },
     },
+  },
+  optimizeDeps: {
+    include: ['@formio/js'],
   },
 });

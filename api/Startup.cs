@@ -59,6 +59,7 @@ namespace Probate.Api
             services.AddScoped<ISubmissionService, SubmissionService>();
             services.AddScoped<ICourtLocationService, CourtLocationService>();
             services.AddScoped<ITemplateService, TemplateService>();
+            services.AddSingleton<IFormSchemaService, FormSchemaService>();
 
             services.AddHttpClient();
             services.AddMemoryCache();

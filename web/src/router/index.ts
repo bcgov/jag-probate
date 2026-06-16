@@ -121,6 +121,25 @@ const routes: RouteRecordRaw[] = [
     meta: { requiresAuth: true },
   },
   {
+    path: '/form-schemas',
+    name: 'FormSchemaList',
+    component: () => import('@/views/FormSchemaList.vue'),
+    meta: { requiresAuth: false },
+  },
+  {
+    path: '/form-designer/:id?',
+    name: 'FormDesigner',
+    component: () => import('@/views/FormDesigner.vue'),
+    props: true,
+    meta: { requiresAuth: false },
+  },
+  {
+    path: '/form-preview',
+    name: 'FormPreview',
+    component: () => import('@/views/FormPreview.vue'),
+    meta: { requiresAuth: false },
+  },
+  {
     path: '/error',
     name: 'Error',
     component: () => import('@/views/ErrorView.vue'),

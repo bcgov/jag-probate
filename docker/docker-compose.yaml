@@ -52,6 +52,7 @@ services:
       - EFiling__KeycloakRealm=${EFiling__KeycloakRealm}
       - EFiling__ClientId=${EFiling__ClientId}
       - EFiling__ClientSecret=${EFiling__ClientSecret}
+      - FormSchemas__StorePath=/opt/app-root/form-schemas
     ports:
       - 5000:5000
     volumes:
@@ -59,6 +60,7 @@ services:
       - ${LOCAL_WORKSPACE_FOLDER-..}/db/:/opt/app-root/src/db
       - api-dev-bin:/opt/app-root/src/api/bin
       - api-dev-obj:/opt/app-root/src/api/obj
+      - form-schemas:/opt/app-root/form-schemas
     depends_on:
       - db
     command: >
@@ -82,3 +84,4 @@ volumes:
   api-dev-bin:
   api-dev-obj:
   postgres-data:
+  form-schemas:
