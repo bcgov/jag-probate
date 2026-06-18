@@ -44,9 +44,9 @@ public class ChefsApiKeyHandler : DelegatingHandler
                 formId = segments[4];
             }
         }
-        // Auth token endpoint: /gateway/v1/auth/token/forms/{formId}
+        // Auth token endpoint: app/gateway/v1/auth/token/forms/{formId}
         else if (
-            path.StartsWith("/gateway/v1/auth/token/forms/", StringComparison.OrdinalIgnoreCase)
+            path.StartsWith("app/gateway/v1/auth/token/forms/", StringComparison.OrdinalIgnoreCase)
         )
         {
             var segments = path.Split('/', StringSplitOptions.RemoveEmptyEntries);
