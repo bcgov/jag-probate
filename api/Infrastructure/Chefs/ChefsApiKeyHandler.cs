@@ -51,7 +51,7 @@ public class ChefsApiKeyHandler : DelegatingHandler
         {
             var segments = path.Split('/', StringSplitOptions.RemoveEmptyEntries);
             if (
-                segments.Length >= 6
+                segments.Length >= 7
                 && segments[5].Equals("forms", StringComparison.OrdinalIgnoreCase)
             )
             {
