@@ -7,7 +7,7 @@
   padding: 0;
 }
 
-.home-content {
+.previous-activity-content {
   padding-bottom: 20px;
   padding-top: 0;
   color: black;
@@ -18,14 +18,14 @@
    2. Header
    ============================================================================= */
 
-.home-content h1 {
+.previous-activity-content h1 {
   font-size: 1.75rem;
   font-weight: 600;
   margin-bottom: 0.75rem;
   color: #333;
 }
 
-.home-content p.ml-0 {
+.previous-activity-content p.ml-0 {
   font-size: 0.95rem;
   color: #555;
   line-height: 1.5;

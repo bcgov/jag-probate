@@ -20,384 +20,478 @@
     </div>
 
     <!-- Mount point: hidden while loading so the form renders in the background but stays invisible -->
-    <div
-      v-show="state === 'ready'"
-      ref="chefsContainer"
-      class="chefs-form-viewer"
-    ></div>
+    <div v-show="state === 'ready'" ref="chefsContainer" class="chefs-form-viewer"></div>
   </div>
 </template>
 
 <script setup lang="ts">
-  import ChefsService from '@/services/ChefsService';
-  import type { UpsertSubmissionDto } from '@/types';
-  import { useAuthStore } from '@/stores';
-  import { extractTokenPayload } from '@/utils/claims';
-  import { computed, inject, onMounted, onUnmounted, ref } from 'vue';
+import ChefsService from '@/services/ChefsService';
+import CourtLocationService from '@/services/CourtLocationService';
+import ReportService from '@/services/ReportService';
+import { useAuthStore } from '@/stores';
+import type { UpsertSubmissionDto } from '@/types';
+import { extractTokenPayload } from '@/utils/claims';
+import { computed, inject, onMounted, onUnmounted, ref } from 'vue';
 
-  const authStore = useAuthStore();
-  const chefsToken = computed(() => {
-    if (!authStore.userInfo) return {};
-    return extractTokenPayload(authStore.userInfo);
+const authStore = useAuthStore();
+const chefsToken = computed(() => {
+  if (!authStore.userInfo) return {};
+  return extractTokenPayload(authStore.userInfo);
+});
+
+// ── Props ─────────────────────────────────────────────────────────────────
+interface Props {
+  /** Logical form key resolved server-side to a CHEFS form GUID. */
+  formKey: string;
+  /** Base URL for the CHEFS service. */
+  chefsBaseUrl?: string;
+  submissionId?: string;
+  /** Our internal DB row ID (Guid) for this submission (used by upsert to avoid duplicates). */
+  dbId?: string;
+  /** When true, render the form in read-only mode (no auto-save, no submit). */
+  readOnly?: boolean;
+  /** Auto-save interval in milliseconds. 0 disables auto-save. Default: 3000. */
+  autoSaveThrottle?: number;
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  chefsBaseUrl: 'https://submit.digital.gov.bc.ca/app',
+  autoSaveThrottle: 3000,
+});
+
+// ── Emits ─────────────────────────────────────────────────────────────────
+const emit = defineEmits<{
+  (e: 'submitted', submissionId: string): void;
+  (e: 'form-error', error: unknown): void;
+  /** Fired after every successful DB upsert with the current publicId. */
+  (e: 'saved', publicId: string): void;
+}>();
+
+// ── State ─────────────────────────────────────────────────────────────────
+type ViewState = 'loading' | 'ready' | 'error';
+
+const state = ref<ViewState>('loading');
+const errorMessage = ref('');
+const chefsContainer = ref<HTMLElement | null>(null);
+
+/**
+ * The CHEFS submission ID currently loaded in the form.
+ * CHEFS creates a new submission ID on every save (POST-only),
+ * so this value changes after each save.
+ */
+const currentSubmissionId = ref<string | undefined>(props.submissionId);
+
+/**
+ * Updated after each upsert so subsequent saves can find the same DB row.
+ */
+const currentDbId = ref<string | undefined>(props.dbId);
+
+/** When true, the form is read-only (already submitted). */
+const isSubmitted = props.readOnly ?? false;
+
+const chefsService = inject<ChefsService>('chefsService')!;
+const courtLocationService = inject<CourtLocationService>(
+  'courtLocationService'
+)!;
+
+// Expose court location service to CHEFS form
+window.courtLocationService = courtLocationService;
+const reportService = inject<ReportService>('reportService')!;
+
+// ── Script loader ─────────────────────────────────────────────────────────
+function loadWebComponentScript(baseUrl: string): Promise<void> {
+  const scriptSrc = `${baseUrl}/embed/chefs-form-viewer.min.js`;
+  if (
+    document.querySelector<HTMLScriptElement>(`script[src="${scriptSrc}"]`)
+  ) {
+    return Promise.resolve();
+  }
+  return new Promise((resolve, reject) => {
+    const script = document.createElement('script');
+    script.src = scriptSrc;
+    script.onload = () => resolve();
+    script.onerror = () =>
+      reject(new Error(`Failed to load CHEFS script from ${scriptSrc}`));
+    document.head.appendChild(script);
   });
+}
 
-  // ── Props ─────────────────────────────────────────────────────────────────
-  interface Props {
-    /** Logical form key resolved server-side to a CHEFS form GUID. */
-    formKey: string;
-    /** Base URL for the CHEFS service. */
-    chefsBaseUrl?: string;
-    submissionId?: string;
-    /** Our internal DB row ID (Guid) for this submission (used by upsert to avoid duplicates). */
-    dbId?: string;
-    /** When true, render the form in read-only mode (no auto-save, no submit). */
-    readOnly?: boolean;
-    /** Auto-save interval in milliseconds. 0 disables auto-save. Default: 3000. */
-    autoSaveThrottle?: number;
-  }
+// ── Core init ─────────────────────────────────────────────────────────────
+async function initForm() {
+  state.value = 'loading';
+  errorMessage.value = '';
 
-  const props = withDefaults(defineProps<Props>(), {
-    chefsBaseUrl: 'https://submit.digital.gov.bc.ca/app',
-    autoSaveThrottle: 3000,
-  });
-
-  // ── Emits ─────────────────────────────────────────────────────────────────
-  const emit = defineEmits<{
-    (e: 'submitted', submissionId: string): void;
-    (e: 'form-error', error: unknown): void;
-    /** Fired after every successful DB upsert with the current publicId. */
-    (e: 'saved', publicId: string): void;
-  }>();
-
-  // ── State ─────────────────────────────────────────────────────────────────
-  type ViewState = 'loading' | 'ready' | 'error';
-
-  const state = ref<ViewState>('loading');
-  const errorMessage = ref('');
-  const chefsContainer = ref<HTMLElement | null>(null);
-
-  /**
-   * The CHEFS submission ID currently loaded in the form.
-   * CHEFS creates a new submission ID on every save (POST-only),
-   * so this value changes after each save.
-   */
-  const currentSubmissionId = ref<string | undefined>(props.submissionId);
-
-  /**
-   * Updated after each upsert so subsequent saves can find the same DB row.
-   */
-  const currentDbId = ref<string | undefined>(props.dbId);
-
-  /** When true, the form is read-only (already submitted). */
-  const isSubmitted = props.readOnly ?? false;
-
-  const chefsService = inject<ChefsService>('chefsService')!;
-
-  // ── Script loader ─────────────────────────────────────────────────────────
-  function loadWebComponentScript(baseUrl: string): Promise<void> {
-    const scriptSrc = `${baseUrl}/embed/chefs-form-viewer.min.js`;
-    if (
-      document.querySelector<HTMLScriptElement>(`script[src="${scriptSrc}"]`)
-    ) {
-      return Promise.resolve();
-    }
-    return new Promise((resolve, reject) => {
-      const script = document.createElement('script');
-      script.src = scriptSrc;
-      script.onload = () => resolve();
-      script.onerror = () =>
-        reject(new Error(`Failed to load CHEFS script from ${scriptSrc}`));
-      document.head.appendChild(script);
-    });
-  }
-
-  // ── Core init ─────────────────────────────────────────────────────────────
-  async function initForm() {
-    state.value = 'loading';
-    errorMessage.value = '';
-
-    try {
-      const { token, formId, baseUrl } = await chefsService.getAuthToken(
-        props.formKey
-      );
-      const resolvedBaseUrl = baseUrl || props.chefsBaseUrl;
-
-      await loadWebComponentScript(resolvedBaseUrl);
-
-      const container = chefsContainer.value;
-      if (!container) throw new Error('Mount point not found');
-
-      container.innerHTML = '';
-
-      window.staticBaseUrl = `${window.location.origin}${import.meta.env.BASE_URL}`;
-
-      const el = document.createElement('chefs-form-viewer') as any;
-      el.setAttribute('form-id', formId);
-      el.setAttribute('auth-token', token);
-      el.setAttribute('base-url', resolvedBaseUrl);
-      el.setAttribute('isolate-styles', 'false');
-      if (chefsToken.value && Object.keys(chefsToken.value).length > 0) {
-        el.setAttribute('token', JSON.stringify(chefsToken.value));
-      }
-      if (currentSubmissionId.value) {
-        el.setAttribute('submission-id', currentSubmissionId.value);
-        el.setAttribute('read-only', isSubmitted ? 'true' : 'false');
-      }
-
-      container.appendChild(el);
-
-      el.addEventListener('formio:submitDone', handleSubmitDone);
-      el.addEventListener('formio:error', (e: CustomEvent) => {
-        emit('form-error', e.detail);
-      });
-
-      // Wait for the custom element to be fully registered before calling load().
-      await customElements.whenDefined('chefs-form-viewer');
-      readyFallbackTimer = setTimeout(() => {
-        state.value = 'ready';
-      }, 15000);
-
-      el.addEventListener(
-        'formio:ready',
-        () => {
-          if (readyFallbackTimer) {
-            clearTimeout(readyFallbackTimer);
-            readyFallbackTimer = null;
-          }
-          readyFallbackTimer = setTimeout(() => {
-            readyFallbackTimer = null;
-            state.value = 'ready';
-          }, 500);
-        },
-        { once: true }
-      );
-
-      el.load();
-
-      // Listen for form changes and auto-save with debounce
-      if (props.autoSaveThrottle > 0 && !isSubmitted) {
-        setupAutoSave(el);
-      }
-    } catch (err: any) {
-      errorMessage.value =
-        err?.response?.data?.message ?? err?.message ?? 'Unknown error.';
-      state.value = 'error';
-    }
-  }
-
-  // ── Shared save handler ───────────────────────────────────────────────────
-
-  /**
-   * Syncs a CHEFS submit event to our DB and navigates away.
-   * Called when the user clicks the form's Submit button.
-   */
-  async function syncSave(newChefsId: string, submissionPayload: any) {
-    // Always advance our tracked CHEFS ID to the latest one.
-    currentSubmissionId.value = newChefsId;
-
-    const createdBy = chefsToken.value?.preferred_username;
-    const applicantName =
-      submissionPayload?.submission?.data?.deceasedName ||
-      submissionPayload?.data?.deceasedName ||
-      '';
-    const status = submissionPayload?.submission?.state;
-    const now = new Date().toISOString();
-    const lastUpdatedAt =
-      submissionPayload?.updatedAt ?? submissionPayload?.modified ?? now;
-
-    try {
-      const payload: UpsertSubmissionDto = {
-        publicId: currentDbId.value,
-        chefsSubmissionId: newChefsId,
-        createdBy,
-        applicantName,
-        status,
-        lastUpdatedAt,
-        lastFiledAt: status === 'submitted' ? now : null,
-      };
-      const response = await chefsService.upsertSubmission(payload);
-      currentDbId.value = response?.publicId;
-      if (currentDbId.value) emit('saved', currentDbId.value);
-    } catch (err) {
-      console.error('[ChefsFormViewer] upsert failed:', err);
-    }
-
-    // Navigate back so the user can resume from Previous Activity.
-    emit('submitted', newChefsId);
-  }
-
-  // ── Event handlers ────────────────────────────────────────────────────────
-
-  async function handleSubmitDone(e: CustomEvent) {
-    const submission = e.detail?.submission;
-    const newId: string | undefined = submission?.id ?? submission?._id;
-    if (!newId) return;
-
-    await syncSave(newId, submission);
-  }
-
-  // ── Auto-save (change-driven with debounce + lock) ─────────────────────
-  let readyFallbackTimer: ReturnType<typeof setTimeout> | null = null;
-  let debounceTimer: ReturnType<typeof setTimeout> | null = null;
-  let isSaving = false;
-  let pendingSave = false;
-  let formReady = false;
-
-  function setupAutoSave(el: any) {
-    teardownAutoSave();
-    // Skip initial load events — wait for form to settle, then start listening
-    setTimeout(() => {
-      formReady = true;
-    }, 2000);
-    el.addEventListener('formio:change', () => {
-      if (formReady) scheduleAutoSave(el);
-    });
-  }
-
-  function scheduleAutoSave(el: any) {
-    // If currently saving, mark that another save is needed after lock expires
-    if (isSaving) {
-      pendingSave = true;
-      return;
-    }
-    // Debounce: reset timer on every change, fire after 5s of quiet
-    if (debounceTimer) clearTimeout(debounceTimer);
-    debounceTimer = setTimeout(
-      () => performAutoSave(el),
-      props.autoSaveThrottle
+  try {
+    const { token, formId, baseUrl } = await chefsService.getAuthToken(
+      props.formKey
     );
-  }
+    const resolvedBaseUrl = baseUrl || props.chefsBaseUrl;
 
-  async function performAutoSave(el: any) {
-    if (isSaving) {
-      pendingSave = true;
-      return;
+    await loadWebComponentScript(resolvedBaseUrl);
+
+    const container = chefsContainer.value;
+    if (!container) throw new Error('Mount point not found');
+
+    container.innerHTML = '';
+
+    window.staticBaseUrl = `${window.location.origin}${import.meta.env.BASE_URL}`;
+
+    const el = document.createElement('chefs-form-viewer') as any;
+    el.setAttribute('form-id', formId);
+    el.setAttribute('auth-token', token);
+    el.setAttribute('base-url', resolvedBaseUrl);
+    el.setAttribute('isolate-styles', 'false');
+    if (chefsToken.value && Object.keys(chefsToken.value).length > 0) {
+      el.setAttribute('token', JSON.stringify(chefsToken.value));
     }
-    isSaving = true;
-    pendingSave = false;
+    if (currentSubmissionId.value) {
+      el.setAttribute('submission-id', currentSubmissionId.value);
+      el.setAttribute('read-only', isSubmitted ? 'true' : 'false');
+    }
 
-    try {
-      if (!el.formioInstance) return;
+    container.appendChild(el);
 
-      const currentData =
-        el.formioInstance?.submission?.data ||
-        (typeof el.formioInstance.getValue === 'function'
-          ? el.formioInstance.getValue()
-          : el.formioInstance?.data) ||
-        {};
+    el.addEventListener('formio:submitDone', handleSubmitDone);
+    el.addEventListener('formio:error', (e: CustomEvent) => {
+      emit('form-error', e.detail);
+    });
 
-      const submitUrl = el._resolveUrl?.('submit');
-      if (!submitUrl) return;
+    // Wait for the custom element to be fully registered before calling load().
+    await customElements.whenDefined('chefs-form-viewer');
+    readyFallbackTimer = setTimeout(() => {
+      state.value = 'ready';
+    }, 15000);
 
-      const authHeaders = el._buildAuthHeader?.(submitUrl) || {};
-      const headers: Record<string, string> = {
-        'Content-Type': 'application/json',
-        ...authHeaders,
-      };
-
-      const res = await fetch(submitUrl, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({
-          submission: { data: currentData },
-          draft: true,
-        }),
-      });
-
-      if (res.ok) {
-        const result = await res.json();
-        const newId = result?.id;
-        if (newId) {
-          currentSubmissionId.value = newId;
-
-          try {
-            const createdBy = chefsToken.value?.preferred_username;
-            const applicantName = currentData?.deceasedName || '';
-            const autoSavePayload: UpsertSubmissionDto = {
-              publicId: currentDbId.value,
-              chefsSubmissionId: newId,
-              createdBy,
-              applicantName,
-              status: 'draft',
-              lastUpdatedAt: result?.updatedAt ?? new Date().toISOString(),
-              lastFiledAt: null,
-            };
-            const response =
-              await chefsService.upsertSubmission(autoSavePayload);
-            currentDbId.value = response?.publicId;
-            if (currentDbId.value) emit('saved', currentDbId.value);
-          } catch (err) {
-            console.error('[ChefsFormViewer] auto-save upsert failed:', err);
-          }
+    el.addEventListener(
+      'formio:ready',
+      () => {
+        if (readyFallbackTimer) {
+          clearTimeout(readyFallbackTimer);
+          readyFallbackTimer = null;
         }
-      } else {
-        console.warn('[ChefsFormViewer] auto-save draft response:', res.status);
-      }
-    } catch (err) {
-      console.warn('[ChefsFormViewer] auto-save draft failed:', err);
-    } finally {
-      isSaving = false;
-      // If changes occurred during save, schedule another save
-      if (pendingSave) {
-        pendingSave = false;
-        scheduleAutoSave(el);
-      }
+        readyFallbackTimer = setTimeout(() => {
+          readyFallbackTimer = null;
+          state.value = 'ready';
+        }, 500);
+      },
+      { once: true }
+    );
+
+    el.load();
+
+    // Listen for form changes and auto-save with debounce
+    if (props.autoSaveThrottle > 0 && !isSubmitted) {
+      setupAutoSave(el);
     }
+  } catch (err: any) {
+    errorMessage.value =
+      err?.response?.data?.message ?? err?.message ?? 'Unknown error.';
+    state.value = 'error';
+  }
+}
+
+// ── Shared save handler ───────────────────────────────────────────────────
+
+/**
+ * Syncs a CHEFS submit event to our DB and navigates away.
+ * Called when the user clicks the form's Submit button.
+ */
+async function syncSave(newChefsId: string, submissionPayload: any) {
+  // Always advance our tracked CHEFS ID to the latest one.
+  currentSubmissionId.value = newChefsId;
+
+  const createdBy = chefsToken.value?.preferred_username;
+  const applicantName =
+    submissionPayload?.submission?.data?.deceasedName ||
+    submissionPayload?.data?.deceasedName ||
+    '';
+  const status = submissionPayload?.submission?.state;
+  const now = new Date().toISOString();
+  const lastUpdatedAt =
+    submissionPayload?.updatedAt ?? submissionPayload?.modified ?? now;
+
+  try {
+    const payload: UpsertSubmissionDto = {
+      publicId: currentDbId.value,
+      chefsSubmissionId: newChefsId,
+      createdBy,
+      applicantName,
+      status,
+      lastUpdatedAt,
+      lastFiledAt: status === 'submitted' ? now : null,
+      submissionData: submission ? JSON.stringify(submission) : null,
+    };
+    const response = await chefsService.upsertSubmission(payload);
+    currentDbId.value = response?.publicId;
+    if (currentDbId.value) emit('saved', currentDbId.value);
+  } catch (err) {
+    console.error('[ChefsFormViewer] upsert failed:', err);
   }
 
-  function teardownAutoSave() {
-    if (readyFallbackTimer) {
-      clearTimeout(readyFallbackTimer);
-      readyFallbackTimer = null;
+  // Navigate back so the user can resume from Previous Activity.
+  emit('submitted', newChefsId);
+}
+
+// ── Event handlers ────────────────────────────────────────────────────────
+
+async function handleSubmitDone(e: CustomEvent) {
+  const submission = e.detail?.submission;
+  const newId: string | undefined = submission?.id ?? submission?._id;
+  if (!newId) return;
+
+  await syncSave(newId, submission);
+}
+
+// ── Auto-save (change-driven with debounce + lock) ─────────────────────
+let readyFallbackTimer: ReturnType<typeof setTimeout> | null = null;
+let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+let isSaving = false;
+let pendingSave = false;
+let formReady = false;
+
+function setupAutoSave(el: any) {
+  teardownAutoSave();
+  // Skip initial load events — wait for form to settle, then start listening
+  setTimeout(() => {
+    formReady = true;
+  }, 2000);
+  el.addEventListener('formio:change', () => {
+    if (formReady) scheduleAutoSave(el);
+  });
+}
+
+function scheduleAutoSave(el: any) {
+  // If currently saving, mark that another save is needed after lock expires
+  if (isSaving) {
+    pendingSave = true;
+    return;
+  }
+  // Debounce: reset timer on every change, fire after 5s of quiet
+  if (debounceTimer) clearTimeout(debounceTimer);
+  debounceTimer = setTimeout(
+    () => performAutoSave(el),
+    props.autoSaveThrottle
+  );
+}
+
+async function performAutoSave(el: any) {
+  if (isSaving) {
+    pendingSave = true;
+    return;
+  }
+  isSaving = true;
+  pendingSave = false;
+
+  try {
+    if (!el.formioInstance) return;
+
+    const currentData =
+      el.formioInstance?.submission?.data ||
+      (typeof el.formioInstance.getValue === 'function'
+        ? el.formioInstance.getValue()
+        : el.formioInstance?.data) ||
+      {};
+
+    const submitUrl = el._resolveUrl?.('submit');
+    if (!submitUrl) return;
+
+    const authHeaders = el._buildAuthHeader?.(submitUrl) || {};
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      ...authHeaders,
+    };
+
+    const res = await fetch(submitUrl, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        submission: { data: currentData },
+        draft: true,
+      }),
+    });
+
+    if (res.ok) {
+      const result = await res.json();
+      const newId = result?.id;
+      if (newId) {
+        currentSubmissionId.value = newId;
+
+        try {
+          const createdBy = chefsToken.value?.preferred_username;
+          const applicantName = currentData?.deceasedName || '';
+          const autoSavePayload: UpsertSubmissionDto = {
+            publicId: currentDbId.value,
+            chefsSubmissionId: newId,
+            createdBy,
+            applicantName,
+            status: 'draft',
+            lastUpdatedAt: result?.updatedAt ?? new Date().toISOString(),
+            lastFiledAt: null,
+          };
+          const response =
+            await chefsService.upsertSubmission(autoSavePayload);
+          currentDbId.value = response?.publicId;
+          if (currentDbId.value) emit('saved', currentDbId.value);
+        } catch (err) {
+          console.error('[ChefsFormViewer] auto-save upsert failed:', err);
+        }
+      }
+    } else {
+      console.warn('[ChefsFormViewer] auto-save draft response:', res.status);
     }
-    if (debounceTimer) {
-      clearTimeout(debounceTimer);
-      debounceTimer = null;
+  } catch (err) {
+    console.warn('[ChefsFormViewer] auto-save draft failed:', err);
+  } finally {
+    isSaving = false;
+    // If changes occurred during save, schedule another save
+    if (pendingSave) {
+      pendingSave = false;
+      scheduleAutoSave(el);
     }
   }
+}
 
-  // ── Lifecycle ─────────────────────────────────────────────────────────────
-  onMounted(() => {
-    initForm();
-  });
+function teardownAutoSave() {
+  if (readyFallbackTimer) {
+    clearTimeout(readyFallbackTimer);
+    readyFallbackTimer = null;
+  }
+  if (debounceTimer) {
+    clearTimeout(debounceTimer);
+    debounceTimer = null;
+  }
+}
 
-  onUnmounted(() => {
-    teardownAutoSave();
-  });
+// ── Blob URL tracking ─────────────────────────────────────────────────────
+// Tracks every blob URL we create so they can be revoked on unmount.
+const activeBlobUrls = new Set<string>();
+
+// ── Lifecycle ─────────────────────────────────────────────────────────────
+onMounted(() => {
+  window.probate = {
+    generatePdf: async (
+      templateKey: string,
+      submissionData: unknown
+    ): Promise<string> => {
+      const { url } = await reportService.generateReport({
+        templateKey,
+        submissionData,
+      });
+      activeBlobUrls.add(url);
+      return url;
+    },
+    downloadPdf: async (
+      instance: any,
+      data: unknown,
+      templateKey: string,
+      iframeTitle: string,
+      fileName: string
+    ): Promise<void> => {
+      const root = instance.root;
+      const rootEl = root?.element ?? document;
+      const frame: HTMLIFrameElement | null = rootEl.querySelector(
+        `iframe[title='${iframeTitle}']`
+      );
+
+      // Reuse blob URL already on the iframe, otherwise generate a fresh one
+      let url = frame?.getAttribute('src') ?? '';
+      let freshUrl = false;
+      if (!url || url === 'about:blank' || !url.startsWith('blob:')) {
+        const result = await reportService.generateReport({
+          templateKey,
+          submissionData: data,
+        });
+        url = result.url;
+        freshUrl = true;
+      }
+
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = fileName;
+      a.click();
+
+      // Revoke download-only URLs immediately — the browser queues the
+      // download synchronously on click so the URL is no longer needed.
+      if (freshUrl) {
+        URL.revokeObjectURL(url);
+      }
+    },
+    previewPdf: async (
+      instance: any,
+      data: unknown,
+      currentStep: string,
+      targetStep: string,
+      templateKey: string,
+      iframeTitle: string
+    ): Promise<void> => {
+      if (currentStep !== targetStep) return;
+
+      const root = instance.root;
+      const rootEl = root?.element ?? document;
+      const frame: HTMLIFrameElement | null = rootEl.querySelector(
+        `iframe[title='${iframeTitle}']`
+      );
+
+      if (!frame) return;
+
+      // Revoke the previous blob URL on this iframe before replacing it
+      const oldSrc = frame.getAttribute('src') ?? '';
+      if (oldSrc.startsWith('blob:')) {
+        URL.revokeObjectURL(oldSrc);
+        activeBlobUrls.delete(oldSrc);
+      }
+
+      const { url } = await reportService.generateReport({
+        templateKey,
+        submissionData: data,
+      });
+      activeBlobUrls.add(url);
+      frame.setAttribute('src', url);
+      frame.setAttribute('data-pdf-loaded', 'true');
+    },
+  };
+  initForm();
+});
+onUnmounted(() => {
+  activeBlobUrls.forEach((url) => URL.revokeObjectURL(url));
+  activeBlobUrls.clear();
+  teardownAutoSave();
+  delete window.probate;
+});
 </script>
 
 <style scoped>
-  .chefs-form-wrapper {
-    width: 100%;
-  }
+.chefs-form-wrapper {
+  width: 100%;
+}
 
-  .chefs-form-loading {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: 3rem;
-  }
+.chefs-form-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem;
+}
 
-  .chefs-form-viewer {
-    display: block;
-    width: 100%;
-  }
+.chefs-form-viewer {
+  display: block;
+  width: 100%;
+}
 
-  .sr-only {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    padding: 0;
-    margin: -1px;
-    overflow: hidden;
-    clip: rect(0, 0, 0, 0);
-    white-space: nowrap;
-    border: 0;
-  }
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
 
-  .v-container {
-    padding: 0;
-    margin: 0 !important;
-  }
+.v-container {
+  padding: 0;
+  margin: 0 !important;
+}
 </style>

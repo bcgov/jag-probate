@@ -32,6 +32,13 @@ class HttpService {
     return response.data;
   }
 
+  async postBlob(url: string, data?: any): Promise<Blob> {
+    const response = await this.axiosInstance.post(url, data, {
+      responseType: 'blob',
+    });
+    return response.data;
+  }
+
   async put<T>(url: string, data?: any): Promise<T> {
     const response: AxiosResponse<T> = await this.axiosInstance.put(url, data);
     return response.data;

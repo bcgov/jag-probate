@@ -14,6 +14,7 @@ using Probate.Api.Helpers;
 using Probate.Api.Infrastructure.Authentication;
 using Probate.Api.Infrastructure.CDogs;
 using Probate.Api.Infrastructure.Chefs;
+using Probate.Api.Infrastructure.EFiling;
 using Probate.Api.Infrastructure.Options;
 using Probate.Api.Services;
 using Probate.Db.Models;
@@ -56,17 +57,23 @@ namespace Probate.Api
             services.AddScoped<MigrationService>();
             services.AddScoped<IChefsApplicationService, ChefsApplicationService>();
             services.AddScoped<ISubmissionService, SubmissionService>();
+            services.AddScoped<ICourtLocationService, CourtLocationService>();
+            services.AddScoped<ITemplateService, TemplateService>();
 
             services.AddHttpClient();
+            services.AddMemoryCache();
 
             services.AddChefsApi(Configuration);
             services.AddCDogsApi(Configuration);
+            services.AddEFilingApi(Configuration);
 
             services.AddDbContext<ProbateDbContext>(options =>
             {
-                var databaseOptions = Configuration
-                    .GetSection(DatabaseOptions.SectionName)
-                    .Get<DatabaseOptions>();
+                var databaseOptions =
+                    Configuration.GetSection(DatabaseOptions.SectionName).Get<DatabaseOptions>()
+                    ?? throw new InvalidOperationException(
+                        $"Missing required configuration section '{DatabaseOptions.SectionName}'."
+                    );
 
                 options
                     .UseNpgsql(
@@ -83,7 +90,11 @@ namespace Probate.Api
                     options.EnableSensitiveDataLogging();
             });
 
-            var corsOptions = Configuration.GetSection(CorsOptions.SectionName).Get<CorsOptions>();
+            var corsOptions =
+                Configuration.GetSection(CorsOptions.SectionName).Get<CorsOptions>()
+                ?? throw new InvalidOperationException(
+                    $"Missing required configuration section '{CorsOptions.SectionName}'."
+                );
 
             services.AddCors(options =>
             {

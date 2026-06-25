@@ -47,6 +47,11 @@ services:
       - CDogs__TokenUrl=${CDOGS_TOKEN_URL}
       - CDogs__ClientId=${CDOGS_CLIENT_ID}
       - CDogs__ClientSecret=${CDOGS_CLIENT_SECRET}
+      - EFiling__BaseUrl=${EFiling__BaseUrl}
+      - EFiling__KeycloakBaseUrl=${EFiling__KeycloakBaseUrl}
+      - EFiling__KeycloakRealm=${EFiling__KeycloakRealm}
+      - EFiling__ClientId=${EFiling__ClientId}
+      - EFiling__ClientSecret=${EFiling__ClientSecret}
     ports:
       - 5000:5000
     volumes:
