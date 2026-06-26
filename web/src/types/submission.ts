@@ -19,6 +19,7 @@ export interface UpsertSubmissionDto {
   status: string | undefined;
   lastUpdatedAt: string;
   lastFiledAt: string | null;
+  submissionData: string | null;
 }
 
 /** UI-mapped shape used in the Previous Activity table. */

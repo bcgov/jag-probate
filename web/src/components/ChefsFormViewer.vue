@@ -210,6 +210,7 @@ async function syncSave(newChefsId: string, submissionPayload: any) {
   const lastUpdatedAt =
     submissionPayload?.updatedAt ?? submissionPayload?.modified ?? now;
 
+  console.log("upsert", submissionPayload);
   try {
     const payload: UpsertSubmissionDto = {
       publicId: currentDbId.value,
@@ -219,7 +220,7 @@ async function syncSave(newChefsId: string, submissionPayload: any) {
       status,
       lastUpdatedAt,
       lastFiledAt: status === 'submitted' ? now : null,
-      submissionData: submission ? JSON.stringify(submission) : null,
+      submissionData: submissionPayload ? JSON.stringify(submissionPayload) : null,
     };
     const response = await chefsService.upsertSubmission(payload);
     currentDbId.value = response?.publicId;
@@ -327,6 +328,7 @@ async function performAutoSave(el: any) {
             status: 'draft',
             lastUpdatedAt: result?.updatedAt ?? new Date().toISOString(),
             lastFiledAt: null,
+            submissionData: JSON.stringify(currentData),
           };
           const response =
             await chefsService.upsertSubmission(autoSavePayload);
