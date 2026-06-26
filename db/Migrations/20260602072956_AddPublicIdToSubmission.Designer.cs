@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using Probate.Db.Models;
@@ -11,9 +12,11 @@ using Probate.Db.Models;
 namespace Probate.Db.Migrations
 {
     [DbContext(typeof(ProbateDbContext))]
-    partial class ProbateDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260602072956_AddPublicIdToSubmission")]
+    partial class AddPublicIdToSubmission
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -193,10 +196,6 @@ namespace Probate.Db.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)")
                         .HasColumnName("status");
-
-                    b.Property<string>("SubmissionData")
-                        .HasColumnType("text")
-                        .HasColumnName("submission_data");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone")

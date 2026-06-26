@@ -14,16 +14,11 @@ export interface ChefsAuthToken {
   baseUrl: string;
 }
 
-export interface SubmissionResponseDto {
-  id: number;
-  chefsSubmissionId: string;
-  applicantName: string;
-  createdBy: string;
-  status: string;
-  lastUpdatedAt: string;
-  lastFiledAt: string;
-  createdAt: string;
-}
+export type {
+  PreviousApplication,
+  SubmissionResponseDto,
+  UpsertSubmissionDto,
+} from './submission';
 
 export interface CourtAddress {
   addressLine1?: string;
