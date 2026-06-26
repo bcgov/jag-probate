@@ -131,6 +131,7 @@ namespace Probate.Api.Services
                 existing.Status = dto.Status;
                 existing.LastUpdatedAt = dto.LastUpdatedAt;
                 existing.LastFiledAt = dto.LastFiledAt;
+                existing.SubmissionData = dto.SubmissionData;
             }
             else
             {
