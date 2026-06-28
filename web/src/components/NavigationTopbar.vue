@@ -44,7 +44,10 @@
             <template #button-content>
               <font-awesome-icon icon="fas-solid fa-user" class="me-1" />
               {{ authStore.displayName || 'User' }}
-              <font-awesome-icon icon="fas-solid fa-chevron-down" class="ms-2" />
+              <font-awesome-icon
+                icon="fas-solid fa-chevron-down"
+                class="ms-2"
+              />
             </template>
             <BDropdownItem @click="handlePreviousApplications">
               <font-awesome-icon icon="fas-solid fa-list" class="me-2" />

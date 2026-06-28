@@ -18,12 +18,12 @@ export const useAuthStore = defineStore('AuthStore', () => {
 
   const displayName = computed(() => {
     if (!userInfo.value) return null;
-    
+
     // Extract display_name claim from Keycloak token
     const displayNameClaim = userInfo.value.claims?.find(
       (c) => c.type === 'display_name'
     );
-    
+
     return displayNameClaim?.value ?? null;
   });
 
