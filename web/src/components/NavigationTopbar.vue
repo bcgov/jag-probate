@@ -35,9 +35,29 @@
         </div>
 
         <div v-if="authStore.isAuthenticated" class="navbar-nav ms-auto">
-          <a class="nav-link text-white" href="#" @click.prevent="handleLogout">
-            Log out
-          </a>
+          <BDropdown
+            variant="link"
+            no-caret
+            menu-class="dropdown-menu-end"
+            toggle-class="text-white text-decoration-none"
+          >
+            <template #button-content>
+              <font-awesome-icon icon="fas-solid fa-user" class="me-1" />
+              {{ authStore.displayName || 'User' }}
+              <font-awesome-icon icon="fas-solid fa-chevron-down" class="ms-2" />
+            </template>
+            <BDropdownItem @click="handlePreviousApplications">
+              <font-awesome-icon icon="fas-solid fa-list" class="me-2" />
+              Previous Applications
+            </BDropdownItem>
+            <BDropdownItem @click="handleLogout">
+              <font-awesome-icon
+                icon="fas-solid fa-right-from-bracket"
+                class="me-2"
+              />
+              Log out
+            </BDropdownItem>
+          </BDropdown>
         </div>
       </div>
     </nav>
@@ -45,16 +65,19 @@
 </template>
 
 <script setup lang="ts">
+  import { BDropdown, BDropdownItem } from 'bootstrap-vue-next';
   import {
     useAuthStore,
     useLayoutStore,
     useRuntimeConfigStore,
   } from '@/stores';
   import { computed } from 'vue';
+  import { useRouter } from 'vue-router';
 
   const layoutStore = useLayoutStore();
   const authStore = useAuthStore();
   const runtimeConfigStore = useRuntimeConfigStore();
+  const router = useRouter();
 
   /**
    * Logs the user out by clearing the auth store and redirecting
@@ -63,6 +86,13 @@
   const handleLogout = () => {
     authStore.clearUserInfo();
     globalThis.location.href = `${import.meta.env.BASE_URL}api/auth/logout`;
+  };
+
+  /**
+   * Navigate to previous applications page
+   */
+  const handlePreviousApplications = () => {
+    router.push('/previous-activity');
   };
 
   const environment = computed(() => runtimeConfigStore.environmentLabel);
@@ -109,5 +139,20 @@
 
   .navbar .dropdown-menu {
     width: 250px !important;
+  }
+
+  .dropdown-toggle::after {
+    display: none;
+  }
+
+  /* White border for dropdown button */
+  .navbar-nav :deep(.btn-link) {
+    border: 1px solid white;
+    border-radius: 4px;
+    padding: 0.375rem 0.75rem;
+  }
+
+  .navbar-nav :deep(.btn-link:hover) {
+    background-color: rgba(255, 255, 255, 0.1);
   }
 </style>
