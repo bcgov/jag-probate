@@ -16,6 +16,17 @@ export const useAuthStore = defineStore('AuthStore', () => {
 
   const userName = computed(() => userInfo.value?.name ?? null);
 
+  const displayName = computed(() => {
+    if (!userInfo.value) return null;
+
+    // Extract display_name claim from Keycloak token
+    const displayNameClaim = userInfo.value.claims?.find(
+      (c) => c.type === 'display_name'
+    );
+
+    return displayNameClaim?.value ?? null;
+  });
+
   function setUserInfo(info: UserInfo | null) {
     userInfo.value = info;
   }
@@ -33,6 +44,7 @@ export const useAuthStore = defineStore('AuthStore', () => {
     isLoading,
     isAuthenticated,
     userName,
+    displayName,
     setUserInfo,
     setLoading,
     clearUserInfo,
