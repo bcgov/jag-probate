@@ -285,7 +285,11 @@ public static class SubmissionEnricher
 
         if (notifyData != null)
         {
-            foreach (var item in notifyData.OfType<JObject>().Where(item => item.Value<string>("p1Delivered") == "yes"))
+            foreach (
+                var item in notifyData
+                    .OfType<JObject>()
+                    .Where(item => item.Value<string>("p1Delivered") == "yes")
+            )
             {
                 var name = item.Value<string>("recipientName") ?? "";
                 var role = item.Value<string>("recipientRole") ?? "";
