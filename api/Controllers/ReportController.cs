@@ -5,6 +5,8 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
+using Probate.Api.Helpers;
 using Probate.Api.Infrastructure.CDogs;
 using Probate.Api.Models;
 using Probate.Api.Models.CDogs;
@@ -21,11 +23,17 @@ public class ReportController : ControllerBase
 
     private readonly ICDogsDelegate _cdogsDelegate;
     private readonly ITemplateService _templateService;
+    private readonly ILogger<ReportController> _logger;
 
-    public ReportController(ICDogsDelegate cdogsDelegate, ITemplateService templateService)
+    public ReportController(
+        ICDogsDelegate cdogsDelegate,
+        ITemplateService templateService,
+        ILogger<ReportController> logger
+    )
     {
         _cdogsDelegate = cdogsDelegate;
         _templateService = templateService;
+        _logger = logger;
     }
 
     /// <summary>
@@ -48,9 +56,16 @@ public class ReportController : ControllerBase
 
         var templateBase64 = _templateService.GetTemplateBase64(request.TemplateKey);
 
+        var data = request.TemplateKey.ToUpperInvariant() switch
+        {
+            "PGT" => SubmissionEnricher.EnrichPGT(request.SubmissionData),
+            "P9" => SubmissionEnricher.EnrichP9(request.SubmissionData),
+            _ => request.SubmissionData,
+        };
+
         var cdogsRequest = new CDogsRequestModel
         {
-            Data = request.SubmissionData,
+            Data = data,
             Options = new CDogsOptionsModel
             {
                 ReportName = request.TemplateKey,
