@@ -15,7 +15,7 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: "Release tag, e.g. v1.2.3"
+        description: 'Release tag, e.g. v1.2.3'
         required: true
         type: string
 
@@ -75,7 +75,7 @@ jobs:
           - name: API
             image: api
             dockerfile: ./docker/api/Dockerfile.release
-            build_args: ""
+            build_args: ''
           - name: Web
             image: web
             dockerfile: ./docker/web/Dockerfile.release
@@ -169,6 +169,7 @@ jobs:
   deploy-prod:
     name: Deploy to Prod
     needs: [setup, build-images, deploy-test]
+    if: github.event.release.prerelease != true
     runs-on: ubuntu-latest
     environment: prod
     permissions:
