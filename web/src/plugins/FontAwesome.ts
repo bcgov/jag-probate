@@ -5,26 +5,52 @@ import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
 
 // Import specific icons to be used in the application's library
 import {
+  faAnglesLeft,
+  faAnglesRight,
   faArrowLeft,
+  faCircleArrowLeft,
+  faCircleArrowRight,
+  faBook,
   faChevronDown,
+  faCircle,
   faCircleCheck,
+  faCircleHalfStroke,
   faCircleQuestion,
   faCircleXmark,
+  faCoins,
+  faEnvelopeOpenText,
+  faFileLines,
   faList,
   faRightFromBracket,
+  faSkull,
   faUser,
+  faUserTie,
+  faUsers,
 } from '@fortawesome/free-solid-svg-icons';
 
 export default function registerFontAwesome(app: App) {
   library.add(
+    faAnglesLeft,
+    faAnglesRight,
     faArrowLeft,
+    faCircleArrowLeft,
+    faCircleArrowRight,
+    faBook,
     faChevronDown,
+    faCircle,
     faCircleCheck,
+    faCircleHalfStroke,
     faCircleXmark,
     faCircleQuestion,
+    faCoins,
+    faEnvelopeOpenText,
+    faFileLines,
     faList,
     faRightFromBracket,
-    faUser
+    faSkull,
+    faUser,
+    faUserTie,
+    faUsers,
   );
   app.component('font-awesome-icon', FontAwesomeIcon);
 }
