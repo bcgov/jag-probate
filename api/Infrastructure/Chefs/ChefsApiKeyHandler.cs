@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
@@ -11,9 +12,9 @@ using Probate.Api.Options;
 namespace Probate.Api.Infrastructure.Chefs;
 
 /// <summary>
-/// Adds the CHEFS api-key header to every request. We use api-key only (auth-token is not used).
-/// form-id is sent per request by the Refit method (path + header).
-/// For auth token requests, uses Basic Authentication with formId:apiKey.
+/// Adds Basic Authentication to every CHEFS request using the per-form API key.
+/// The CHEFS form GUID is extracted from the request path and reverse-looked up
+/// against the configured form options to find the matching API key.
 /// </summary>
 public class ChefsApiKeyHandler : DelegatingHandler
 {
@@ -31,34 +32,37 @@ public class ChefsApiKeyHandler : DelegatingHandler
     {
         var path = request.RequestUri?.AbsolutePath ?? "";
 
-        // Review the IChefsApi interface to see which endpoints require formId in the path.
+        // Matches /api/v1/forms/{formId}/... or /gateway/v1/auth/token/forms/{formId}/...
         var formIdMatch = Regex.Match(
             path,
-            @"^(?:/api/v1/forms/|/gateway/v1/auth/token/forms/)([^/]+)",
+            @"(?:/api/v1/forms/|/gateway/v1/auth/token/forms/)([^/]+)",
             RegexOptions.IgnoreCase
         );
 
-        string? formId = formIdMatch.Success ? formIdMatch.Groups[1].Value : null;
-
-        // When the Form ID does not resolve to a API Key, we'll allow CHEFS to handle failures.
-        if (
-            !string.IsNullOrEmpty(formId) && _options.Forms.TryGetValue(formId, out var formOptions)
-        )
-        {
-            var apiKey = formOptions.ApiKey;
-            // Apply Basic Auth for dynamic formId
-            var authValue = Convert.ToBase64String(Encoding.UTF8.GetBytes($"{formId}:{apiKey}"));
-            request.Headers.Authorization = new AuthenticationHeaderValue("Basic", authValue);
-
-            // Optional debug logging
-            System.Diagnostics.Debug.WriteLine(
-                $"[CHEFS] Basic Auth applied for formId={formId}, URL={request.RequestUri}"
+        if (!formIdMatch.Success)
+            throw new InvalidOperationException(
+                $"[CHEFS] Could not extract a formId from request path: {path}"
             );
-        }
+
+        var formId = formIdMatch.Groups[1].Value;
+
+        // Reverse lookup: the path contains the CHEFS GUID; Forms is keyed by logical name.
+        var formOptions = _options.Forms.Values.FirstOrDefault(f =>
+            f.FormId.Equals(formId, StringComparison.OrdinalIgnoreCase)
+        );
+
+        if (formOptions is null)
+            throw new InvalidOperationException(
+                $"[CHEFS] No form configuration found for formId '{formId}'. Check Chefs:Forms in configuration."
+            );
+
+        var authValue = Convert.ToBase64String(
+            Encoding.UTF8.GetBytes($"{formId}:{formOptions.ApiKey}")
+        );
+        request.Headers.Authorization = new AuthenticationHeaderValue("Basic", authValue);
 
         var response = await base.SendAsync(request, cancellationToken).ConfigureAwait(false);
 
-        // Optional debug logging for non-success responses
         if (!response.IsSuccessStatusCode)
         {
             var content = await response.Content.ReadAsStringAsync(cancellationToken);

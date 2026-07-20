@@ -1,6 +1,6 @@
 services:
   web:
-    image: "${COMPOSE_PROJECT_NAME}-web"
+    image: '${COMPOSE_PROJECT_NAME}-web'
     environment:
       - API_URL=${API_URL:-http://api:5000}
       - WEB_BASE_HREF=${WEB_BASE_HREF:-/probate/}
@@ -12,9 +12,9 @@ services:
       - CHOKIDAR_USEPOLLING=true
       - VITE_CHEFS_BASE_URL=${CHEFS_BASE_URL}
     ports:
-      - "8080:8080"
+      - '8080:8080'
     volumes:
-      - "${LOCAL_WORKSPACE_FOLDER-..}/web/src:/opt/app-root/src/src"
+      - '${LOCAL_WORKSPACE_FOLDER-..}/web/src:/opt/app-root/src/src'
       - "${LOCAL_WORKSPACE_FOLDER-..}/web/package.json:/opt/app-root/src/packag\
         e.json"
       - "${LOCAL_WORKSPACE_FOLDER-..}/web/vite.config.js:/opt/app-root/src/vite\
@@ -27,7 +27,7 @@ services:
       - api
 
   api:
-    image: "${COMPOSE_PROJECT_NAME}-api"
+    image: '${COMPOSE_PROJECT_NAME}-api'
     environment:
       - ASPNETCORE_URLS=${ASPNETCORE_URLS}
       - ASPNETCORE_ENVIRONMENT=${ASPNETCORE_ENVIRONMENT:-Development}
@@ -39,9 +39,10 @@ services:
       - Keycloak__KcIdpHint=${OIDC_RP_KC_IDP_HINT}
       - Keycloak__RefreshThreshold=${OIDC_RP_REFRESH_THRESHOLD:-00:05:00}
       - TokenRefreshThreshold=${TOKEN_REFRESH_THRESHOLD}
-      - Chefs__Forms__legal=${CHEFS_FORM_ID_LEGAL}
-      - Chefs__Forms__nonlegal=${CHEFS_FORM_ID_NONLEGAL}
-      - Chefs__ApiKey=${CHEFS_API_KEY}
+      - Chefs__Forms__legal__FormId=${CHEFS_FORM_LEGAL_FORMID}
+      - Chefs__Forms__legal__ApiKey=${CHEFS_FORM_LEGAL_API_KEY}
+      - Chefs__Forms__nonlegal__FormId=${CHEFS_FORM_NONLEGAL_FORMID}
+      - Chefs__Forms__nonlegal__ApiKey=${CHEFS_FORM_NONLEGAL_API_KEY}
       - Chefs__BaseUrl=${CHEFS_BASE_URL}
       - CDogs__BaseUrl=${CDOGS_BASE_URL}
       - CDogs__TokenUrl=${CDOGS_TOKEN_URL}
