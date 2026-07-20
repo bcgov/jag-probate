@@ -177,13 +177,13 @@ namespace Probate.Api.Services
             await _db.SaveChangesAsync(cancellationToken);
 
             // Then delete from CHEFS — get formId from options
-            if (!_options.Forms.TryGetValue("legal", out var formGuid))
+            if (!_options.Forms.TryGetValue("legal", out var formOptions))
                 throw new InvalidOperationException("Form key 'legal' is not configured.");
 
             try
             {
                 await _chefsApi.DeleteSubmissionAsync(
-                    formGuid,
+                    formOptions.FormId,
                     submission.ChefsSubmissionId,
                     cancellationToken
                 );

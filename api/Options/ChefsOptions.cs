@@ -3,6 +3,12 @@ using System.Collections.Generic;
 
 namespace Probate.Api.Options;
 
+public class ChefsFormOptions
+{
+    public string FormId { get; set; } = string.Empty;
+    public string ApiKey { get; set; } = string.Empty;
+}
+
 /// <summary>
 /// Configuration for the CHEFS (Common Hosted Form Service) API.
 /// API key is per form; bind from environment (e.g. Chefs__ApiKey, Chefs__BaseUrl).
@@ -16,12 +22,8 @@ public class ChefsOptions
     /// The GUID is never exposed to the frontend; callers use the logical key only.
     /// Example env var: Chefs__Forms__probate=&lt;guid&gt;
     /// </summary>
-    public Dictionary<string, string> Forms { get; set; } = new(StringComparer.OrdinalIgnoreCase);
-
-    /// <summary>
-    /// API access key for the form. Required for CHEFS API calls (per-form).
-    /// </summary>
-    public string ApiKey { get; set; } = string.Empty;
+    public Dictionary<string, ChefsFormOptions> Forms { get; set; } =
+        new(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>
     /// CHEFS API base URL. Dev: https://chefs-dev.apps.silver.devops.gov.bc.ca/app/api/v1
