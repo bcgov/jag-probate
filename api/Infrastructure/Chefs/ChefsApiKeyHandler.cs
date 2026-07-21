@@ -48,12 +48,17 @@ public class ChefsApiKeyHandler : DelegatingHandler
 
         // Reverse lookup: the path contains the CHEFS GUID; Forms is keyed by logical name.
         var formOptions = _options.Forms.Values.FirstOrDefault(f =>
-            f.FormId.Equals(formId, StringComparison.OrdinalIgnoreCase)
+            string.Equals(f.FormId, formId, StringComparison.OrdinalIgnoreCase)
         );
 
         if (formOptions is null)
             throw new InvalidOperationException(
                 $"[CHEFS] No form configuration found for formId '{formId}'. Check Chefs:Forms in configuration."
+            );
+
+        if (string.IsNullOrWhiteSpace(formOptions.ApiKey))
+            throw new InvalidOperationException(
+                $"[CHEFS] API key is not configured for formId '{formId}'. Check Chefs:Forms configuration."
             );
 
         var authValue = Convert.ToBase64String(

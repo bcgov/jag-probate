@@ -1,6 +1,6 @@
 # CHEFS Integration
 
-The API integrates with [CHEFS (Common Hosted Form Service)](https://developer.gov.bc.ca/docs/default/component/chefs-techdocs/) to retrieve form submissions (applications) for the dashboard. Authentication uses **api-key** only (no auth-token).
+The API integrates with [CHEFS (Common Hosted Form Service)](https://developer.gov.bc.ca/docs/default/component/chefs-techdocs/) to retrieve form submissions (applications) for the dashboard. CHEFS credentials are configured per form; the API sends Basic Authentication using the form GUID and that form's API key.
 
 ## Endpoint
 
@@ -19,16 +19,17 @@ Copy `docker/.env.template` to `docker/.env` and set the following variables:
 | Variable | Description |
 |---|---|
 | `Chefs__BaseUrl` | CHEFS API base URL (e.g. `https://chefs-dev.apps.silver.devops.gov.bc.ca/app/api/v1`) |
-| `Chefs__ApiKey` | API key for the form (obtain from CHEFS form settings) |
-| `Chefs__Forms__<key>` | Maps a logical form key to its CHEFS form GUID. Add one entry per form. |
+| `Chefs__Forms__<key>__FormId` | Maps a logical form key to its CHEFS form GUID. Add one entry per form. |
+| `Chefs__Forms__<key>__ApiKey` | API key for that CHEFS form. Add one entry per form. |
 
 ### Example: two forms
 
 ```
 Chefs__BaseUrl=https://chefs-dev.apps.silver.devops.gov.bc.ca/app/api/v1
-Chefs__ApiKey=your-api-key
-Chefs__Forms__legal=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
-Chefs__Forms__non-legal=yyyyyyyy-yyyy-yyyy-yyyy-yyyyyyyyyyyy
+Chefs__Forms__legal__FormId=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+Chefs__Forms__legal__ApiKey=legal-api-key
+Chefs__Forms__nonlegal__FormId=yyyyyyyy-yyyy-yyyy-yyyy-yyyyyyyyyyyy
+Chefs__Forms__nonlegal__ApiKey=nonlegal-api-key
 ```
 
-The frontend calls `?formKey=legal` or `?formKey=non-legal`. Form GUIDs remain server-side only.
+The frontend calls `?formKey=legal` or `?formKey=nonlegal`. Form GUIDs and API keys remain server-side only.

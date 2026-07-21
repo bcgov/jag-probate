@@ -11,16 +11,16 @@ public class ChefsFormOptions
 
 /// <summary>
 /// Configuration for the CHEFS (Common Hosted Form Service) API.
-/// API key is per form; bind from environment (e.g. Chefs__ApiKey, Chefs__BaseUrl).
+/// API keys are configured per form.
 /// </summary>
 public class ChefsOptions
 {
     public const string SectionName = "Chefs";
 
     /// <summary>
-    /// Maps logical form keys (sent by the frontend) to actual CHEFS form GUIDs.
+    /// Maps logical form keys (sent by the frontend) to actual CHEFS form configuration.
     /// The GUID is never exposed to the frontend; callers use the logical key only.
-    /// Example env var: Chefs__Forms__probate=&lt;guid&gt;
+    /// Example env vars: Chefs__Forms__probate__FormId and Chefs__Forms__probate__ApiKey.
     /// </summary>
     public Dictionary<string, ChefsFormOptions> Forms { get; set; } =
         new(StringComparer.OrdinalIgnoreCase);

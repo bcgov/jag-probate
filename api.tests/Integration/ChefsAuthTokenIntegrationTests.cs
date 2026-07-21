@@ -66,8 +66,8 @@ public class ChefsAuthTokenIntegrationTests : IDisposable
     {
         // Arrange
         var formKey = "legal";
-        var legalFormOptions = _chefsOptions.Forms.ContainsKey(formKey)
-            ? _chefsOptions.Forms[formKey]
+        var legalFormOptions = _chefsOptions.Forms.TryGetValue(formKey, out var options)
+            ? options
             : null;
         // Skip test if form key is not configured
         if (legalFormOptions == null || string.IsNullOrWhiteSpace(legalFormOptions.FormId))
@@ -134,9 +134,9 @@ public class ChefsAuthTokenIntegrationTests : IDisposable
 
         // Skip test if form key is not configured
         if (
-            !_chefsOptions.Forms.ContainsKey(formKey)
-            || string.IsNullOrWhiteSpace(_chefsOptions.Forms[formKey].FormId)
-            || string.IsNullOrWhiteSpace(_chefsOptions.Forms[formKey].ApiKey)
+            !_chefsOptions.Forms.TryGetValue(formKey, out var formOptions)
+            || string.IsNullOrWhiteSpace(formOptions.FormId)
+            || string.IsNullOrWhiteSpace(formOptions.ApiKey)
         )
         {
             _output.WriteLine("Skipping test: Configuration not available.");
@@ -154,7 +154,7 @@ public class ChefsAuthTokenIntegrationTests : IDisposable
         Assert.NotEmpty(result1.Token);
         Assert.NotEmpty(result2.Token);
         Assert.Equal(result1.FormId, result2.FormId); // Same form ID
-        Assert.Equal(_chefsOptions.Forms[formKey].FormId, result1.FormId);
+        Assert.Equal(formOptions.FormId, result1.FormId);
 
         _output.WriteLine(
             $"Token 1 (first 30 chars): {result1.Token.Substring(0, Math.Min(30, result1.Token.Length))}..."
@@ -180,9 +180,9 @@ public class ChefsAuthTokenIntegrationTests : IDisposable
 
         // Skip test if form key is not configured
         if (
-            !_chefsOptions.Forms.ContainsKey(formKey)
-            || string.IsNullOrWhiteSpace(_chefsOptions.Forms[formKey].FormId)
-            || string.IsNullOrWhiteSpace(_chefsOptions.Forms[formKey].ApiKey)
+            !_chefsOptions.Forms.TryGetValue(formKey, out var formOptions)
+            || string.IsNullOrWhiteSpace(formOptions.FormId)
+            || string.IsNullOrWhiteSpace(formOptions.ApiKey)
         )
         {
             _output.WriteLine("Skipping test: Configuration not available.");
@@ -227,9 +227,9 @@ public class ChefsAuthTokenIntegrationTests : IDisposable
 
         // Skip test if form key is not configured
         if (
-            !_chefsOptions.Forms.ContainsKey(formKey)
-            || string.IsNullOrWhiteSpace(_chefsOptions.Forms[formKey].FormId)
-            || string.IsNullOrWhiteSpace(_chefsOptions.Forms[formKey].ApiKey)
+            !_chefsOptions.Forms.TryGetValue(formKey, out var formOptions)
+            || string.IsNullOrWhiteSpace(formOptions.FormId)
+            || string.IsNullOrWhiteSpace(formOptions.ApiKey)
         )
         {
             _output.WriteLine("Skipping test: Configuration not available.");

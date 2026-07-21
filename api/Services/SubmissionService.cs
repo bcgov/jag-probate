@@ -177,7 +177,11 @@ namespace Probate.Api.Services
             await _db.SaveChangesAsync(cancellationToken);
 
             // Then delete from CHEFS — get formId from options
-            if (!_options.Forms.TryGetValue("legal", out var formOptions))
+            // TODO step based forms will need to handle multiple form ids.
+            if (
+                !_options.Forms.TryGetValue("legal", out var formOptions)
+                || string.IsNullOrWhiteSpace(formOptions?.FormId)
+            )
                 throw new InvalidOperationException("Form key 'legal' is not configured.");
 
             try
