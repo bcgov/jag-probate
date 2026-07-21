@@ -22,16 +22,18 @@ public static class ChefsServiceCollectionExtensions
         var section = configuration.GetSection(ChefsOptions.SectionName);
         services.Configure<ChefsOptions>(section);
 
-        var baseUrl = section["BaseUrl"];
-        var apiKey = section["ApiKey"];
+        ChefsOptions? chefsOptions = section.Exists() ? section.Get<ChefsOptions>() : null;
+
+        var baseUrl = chefsOptions?.BaseUrl;
+        var forms = chefsOptions?.Forms;
 
         if (string.IsNullOrWhiteSpace(baseUrl))
             throw new ConfigurationException(
                 "CHEFS API requires Chefs:BaseUrl (e.g. Chefs__BaseUrl in .env)."
             );
-        if (string.IsNullOrWhiteSpace(apiKey))
+        if (forms == null || forms.Count == 0)
             throw new ConfigurationException(
-                "CHEFS API requires Chefs:ApiKey (e.g. Chefs__ApiKey in .env)."
+                "CHEFS API requires Chefs:Forms (e.g. Chefs__Forms in .env)."
             );
 
         services.AddTransient<ChefsApiKeyHandler>();

@@ -29,10 +29,24 @@ public class ChefsApplicationServiceTests
         _mockLogger = new Mock<ILogger<ChefsApplicationService>>();
         _chefsOptions = new ChefsOptions
         {
-            Forms = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            Forms = new Dictionary<string, ChefsFormOptions>(StringComparer.OrdinalIgnoreCase)
             {
-                { "legal", "12345678-1234-1234-1234-123456789012" },
-                { "probate", "87654321-4321-4321-4321-210987654321" },
+                {
+                    "legal",
+                    new ChefsFormOptions
+                    {
+                        FormId = "12345678-1234-1234-1234-123456789012",
+                        ApiKey = "legal-api-key",
+                    }
+                },
+                {
+                    "probate",
+                    new ChefsFormOptions
+                    {
+                        FormId = "87654321-4321-4321-4321-210987654321",
+                        ApiKey = "probate-api-key",
+                    }
+                },
             },
         };
 
