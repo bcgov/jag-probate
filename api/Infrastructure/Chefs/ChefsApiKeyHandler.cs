@@ -19,7 +19,7 @@ namespace Probate.Api.Infrastructure.Chefs;
 public class ChefsApiKeyHandler : DelegatingHandler
 {
     private static readonly Regex FormIdPathRegex = new(
-        @"(?:/api/v1/forms/|/gateway/v1/auth/token/forms/)([^/]+)",
+        @"(?:/app)?(?:/api/v1/forms/|/gateway/v1/auth/token/forms/)([^/]+)",
         RegexOptions.IgnoreCase | RegexOptions.Compiled
     );
 

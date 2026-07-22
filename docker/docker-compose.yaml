@@ -1,6 +1,6 @@
 services:
   web:
-    image: '${COMPOSE_PROJECT_NAME}-web'
+    image: "${COMPOSE_PROJECT_NAME}-web"
     environment:
       - API_URL=${API_URL:-http://api:5000}
       - WEB_BASE_HREF=${WEB_BASE_HREF:-/probate/}
@@ -12,9 +12,9 @@ services:
       - CHOKIDAR_USEPOLLING=true
       - VITE_CHEFS_BASE_URL=${CHEFS_BASE_URL}
     ports:
-      - '8080:8080'
+      - "8080:8080"
     volumes:
-      - '${LOCAL_WORKSPACE_FOLDER-..}/web/src:/opt/app-root/src/src'
+      - "${LOCAL_WORKSPACE_FOLDER-..}/web/src:/opt/app-root/src/src"
       - "${LOCAL_WORKSPACE_FOLDER-..}/web/package.json:/opt/app-root/src/packag\
         e.json"
       - "${LOCAL_WORKSPACE_FOLDER-..}/web/vite.config.js:/opt/app-root/src/vite\
@@ -27,7 +27,7 @@ services:
       - api
 
   api:
-    image: '${COMPOSE_PROJECT_NAME}-api'
+    image: "${COMPOSE_PROJECT_NAME}-api"
     environment:
       - ASPNETCORE_URLS=${ASPNETCORE_URLS}
       - ASPNETCORE_ENVIRONMENT=${ASPNETCORE_ENVIRONMENT:-Development}

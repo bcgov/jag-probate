@@ -15,7 +15,9 @@ public class ChefsApiKeyHandlerTests
 
     [Theory]
     [InlineData("/api/v1/forms/11111111-1111-1111-1111-111111111111/submissions")]
+    [InlineData("/app/api/v1/forms/11111111-1111-1111-1111-111111111111/submissions")]
     [InlineData("/gateway/v1/auth/token/forms/11111111-1111-1111-1111-111111111111")]
+    [InlineData("/app/gateway/v1/auth/token/forms/11111111-1111-1111-1111-111111111111")]
     public async Task SendAsync_WithConfiguredForm_AddsBasicAuthorization(string path)
     {
         var captureHandler = new CaptureHandler();
