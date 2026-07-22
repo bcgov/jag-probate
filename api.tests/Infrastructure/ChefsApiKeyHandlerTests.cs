@@ -135,7 +135,10 @@ public class ChefsApiKeyHandlerTests
         )
         {
             Request = request;
+#pragma warning disable CA2000
+            // Dummy response is handled by the invoker, so we don't need to dispose it here.
             return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK));
+#pragma warning restore CA2000
         }
     }
 }
