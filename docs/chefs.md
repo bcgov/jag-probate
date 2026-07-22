@@ -12,24 +12,33 @@ Returns current and previous applications (submissions) for the given form. Requ
 
 **Error handling:** CHEFS API errors (4xx/5xx or unreachable) are returned as Problem Details (e.g. `502 Bad Gateway` with a descriptive message).
 
-## Configuration
+## Configuration (DEV Environments)
 
-Copy `docker/.env.template` to `docker/.env` and set the following variables:
+Copy `docker/.env.template` to `docker/.env` and set the following variables. `docker-compose.yaml` maps these flat `.env` values onto the ASP.NET Core `Chefs__*` configuration keys for the `api` service.
 
-| Variable | Description |
-|---|---|
-| `Chefs__BaseUrl` | CHEFS app base URL (e.g. `https://chefs-dev.apps.silver.devops.gov.bc.ca/app`) |
-| `Chefs__Forms__<key>__FormId` | Maps a logical form key to its CHEFS form GUID. Add one entry per form. |
-| `Chefs__Forms__<key>__ApiKey` | API key for that CHEFS form. Add one entry per form. |
+| `.env` variable               | Maps to config key               | Description                                                                    |
+| ----------------------------- | -------------------------------- | ------------------------------------------------------------------------------ |
+| `CHEFS_BASE_URL`              | `Chefs__BaseUrl`                 | CHEFS app base URL (e.g. `https://chefs-dev.apps.silver.devops.gov.bc.ca/app`) |
+| `CHEFS_FORM_LEGAL_FORMID`     | `Chefs__Forms__legal__FormId`    | CHEFS form GUID for the `legal` form key.                                      |
+| `CHEFS_FORM_LEGAL_API_KEY`    | `Chefs__Forms__legal__ApiKey`    | API key for the `legal` form.                                                  |
+| `CHEFS_FORM_NONLEGAL_FORMID`  | `Chefs__Forms__nonlegal__FormId` | CHEFS form GUID for the `nonlegal` form key.                                   |
+| `CHEFS_FORM_NONLEGAL_API_KEY` | `Chefs__Forms__nonlegal__ApiKey` | API key for the `nonlegal` form.                                               |
 
-### Example: two forms
+### Example
 
 ```
-Chefs__BaseUrl=https://chefs-dev.apps.silver.devops.gov.bc.ca/app
-Chefs__Forms__legal__FormId=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
-Chefs__Forms__legal__ApiKey=legal-api-key
-Chefs__Forms__nonlegal__FormId=yyyyyyyy-yyyy-yyyy-yyyy-yyyyyyyyyyyy
-Chefs__Forms__nonlegal__ApiKey=nonlegal-api-key
+CHEFS_BASE_URL=https://chefs-dev.apps.silver.devops.gov.bc.ca/app
+CHEFS_FORM_LEGAL_FORMID=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+CHEFS_FORM_LEGAL_API_KEY=legal-api-key
+CHEFS_FORM_NONLEGAL_FORMID=yyyyyyyy-yyyy-yyyy-yyyy-yyyyyyyyyyyy
+CHEFS_FORM_NONLEGAL_API_KEY=nonlegal-api-key
 ```
 
 The frontend calls `?formKey=legal` or `?formKey=nonlegal`. Form GUIDs and API keys remain server-side only.
+
+### Adding a new form
+
+The `legal`/`nonlegal` keys are hardcoded in the `api` service's `environment` block in [docker/docker-compose.yaml](../docker/docker-compose.yaml). To add another form:
+
+1. Add `CHEFS_FORM_<KEY>_FORMID` and `CHEFS_FORM_<KEY>_API_KEY` to `docker/.env.template` and `docker/.env`.
+2. Add a corresponding `Chefs__Forms__<key>__FormId` / `Chefs__Forms__<key>__ApiKey` entry to the `api` service's `environment` list in `docker/docker-compose.yaml`.
