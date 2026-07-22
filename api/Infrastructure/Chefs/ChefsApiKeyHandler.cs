@@ -18,6 +18,11 @@ namespace Probate.Api.Infrastructure.Chefs;
 /// </summary>
 public class ChefsApiKeyHandler : DelegatingHandler
 {
+    private static readonly Regex FormIdPathRegex = new(
+        @"(?:/api/v1/forms/|/gateway/v1/auth/token/forms/)([^/]+)",
+        RegexOptions.IgnoreCase | RegexOptions.Compiled
+    );
+
     private readonly ChefsOptions _options;
 
     public ChefsApiKeyHandler(IOptions<ChefsOptions> options)
@@ -32,12 +37,7 @@ public class ChefsApiKeyHandler : DelegatingHandler
     {
         var path = request.RequestUri?.AbsolutePath ?? "";
 
-        // Matches /api/v1/forms/{formId}/... or /gateway/v1/auth/token/forms/{formId}/...
-        var formIdMatch = Regex.Match(
-            path,
-            @"(?:/api/v1/forms/|/gateway/v1/auth/token/forms/)([^/]+)",
-            RegexOptions.IgnoreCase
-        );
+        var formIdMatch = FormIdPathRegex.Match(path);
 
         if (!formIdMatch.Success)
             throw new InvalidOperationException(

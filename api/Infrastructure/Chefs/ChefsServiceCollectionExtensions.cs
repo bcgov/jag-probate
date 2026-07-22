@@ -9,7 +9,7 @@ using Refit;
 namespace Probate.Api.Infrastructure.Chefs;
 
 /// <summary>
-/// Registers CHEFS API client and options. Fails at startup if BaseUrl or ApiKey are missing.
+/// Registers CHEFS API client and options. Fails at startup if BaseUrl or Forms are missing.
 /// Form ID is passed in per request from the controller (no default).
 /// </summary>
 public static class ChefsServiceCollectionExtensions

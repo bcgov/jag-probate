@@ -18,14 +18,14 @@ Copy `docker/.env.template` to `docker/.env` and set the following variables:
 
 | Variable | Description |
 |---|---|
-| `Chefs__BaseUrl` | CHEFS API base URL (e.g. `https://chefs-dev.apps.silver.devops.gov.bc.ca/app/api/v1`) |
+| `Chefs__BaseUrl` | CHEFS app base URL (e.g. `https://chefs-dev.apps.silver.devops.gov.bc.ca/app`) |
 | `Chefs__Forms__<key>__FormId` | Maps a logical form key to its CHEFS form GUID. Add one entry per form. |
 | `Chefs__Forms__<key>__ApiKey` | API key for that CHEFS form. Add one entry per form. |
 
 ### Example: two forms
 
 ```
-Chefs__BaseUrl=https://chefs-dev.apps.silver.devops.gov.bc.ca/app/api/v1
+Chefs__BaseUrl=https://chefs-dev.apps.silver.devops.gov.bc.ca/app
 Chefs__Forms__legal__FormId=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
 Chefs__Forms__legal__ApiKey=legal-api-key
 Chefs__Forms__nonlegal__FormId=yyyyyyyy-yyyy-yyyy-yyyy-yyyyyyyyyyyy

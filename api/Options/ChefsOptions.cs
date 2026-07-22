@@ -26,7 +26,7 @@ public class ChefsOptions
         new(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>
-    /// CHEFS API base URL. Dev: https://chefs-dev.apps.silver.devops.gov.bc.ca/app/api/v1
+    /// CHEFS app base URL. Dev: https://chefs-dev.apps.silver.devops.gov.bc.ca/app
     /// (Form submit URL is same host: /app/form/submit?f={formId}).
     /// </summary>
     public string BaseUrl { get; set; } = string.Empty;

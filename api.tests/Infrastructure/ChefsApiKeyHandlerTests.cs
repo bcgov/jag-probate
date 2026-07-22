@@ -20,9 +20,12 @@ public class ChefsApiKeyHandlerTests
     {
         var captureHandler = new CaptureHandler();
         using var invoker = CreateInvoker(captureHandler);
-        var request = new HttpRequestMessage(HttpMethod.Get, $"https://chefs.example.com{path}");
+        using var request = new HttpRequestMessage(
+            HttpMethod.Get,
+            $"https://chefs.example.com{path}"
+        );
 
-        await invoker.SendAsync(request, CancellationToken.None);
+        using var response = await invoker.SendAsync(request, CancellationToken.None);
 
         Assert.NotNull(captureHandler.Request);
         Assert.Equal("Basic", captureHandler.Request.Headers.Authorization?.Scheme);
@@ -37,12 +40,12 @@ public class ChefsApiKeyHandlerTests
     {
         var captureHandler = new CaptureHandler();
         using var invoker = CreateInvoker(captureHandler);
-        var request = new HttpRequestMessage(
+        using var request = new HttpRequestMessage(
             HttpMethod.Delete,
             $"https://chefs.example.com/api/v1/forms/{NonLegalFormId}/submissions/submission-id"
         );
 
-        await invoker.SendAsync(request, CancellationToken.None);
+        using var response = await invoker.SendAsync(request, CancellationToken.None);
 
         Assert.Equal(
             Convert.ToBase64String(Encoding.UTF8.GetBytes($"{NonLegalFormId}:nonlegal-api-key")),
@@ -63,7 +66,7 @@ public class ChefsApiKeyHandlerTests
                 },
             }
         );
-        var request = new HttpRequestMessage(
+        using var request = new HttpRequestMessage(
             HttpMethod.Get,
             $"https://chefs.example.com/api/v1/forms/{LegalFormId}/submissions"
         );
@@ -79,7 +82,7 @@ public class ChefsApiKeyHandlerTests
     public async Task SendAsync_WithUnconfiguredForm_ThrowsClearException()
     {
         using var invoker = CreateInvoker(new CaptureHandler());
-        var request = new HttpRequestMessage(
+        using var request = new HttpRequestMessage(
             HttpMethod.Get,
             "https://chefs.example.com/api/v1/forms/33333333-3333-3333-3333-333333333333/submissions"
         );
