@@ -13,8 +13,9 @@ namespace Probate.Api.Infrastructure.Chefs;
 
 /// <summary>
 /// Adds Basic Authentication to every CHEFS request using the per-form API key.
-/// The CHEFS form GUID is extracted from the request path and reverse-looked up
-/// against the configured form options to find the matching API key.
+/// Credentials are attached only for approved CHEFS form API and gateway paths.
+/// The CHEFS form GUID is extracted from approved request paths and reverse-looked
+/// up against the configured form options to find the matching API key.
 /// </summary>
 public class ChefsApiKeyHandler : DelegatingHandler
 {
@@ -35,13 +36,19 @@ public class ChefsApiKeyHandler : DelegatingHandler
         CancellationToken cancellationToken
     )
     {
+        // Refit route templates must start with '/', which makes them absolute-path references.
+        // When combined with a BaseAddress that has a path segment (e.g. ".../app"), the '/app'
+        // segment is dropped by Uri resolution. Re-apply the configured base path here so requests
+        // hit ".../app/api/v1/..." instead of ".../api/v1/..." (which returns SPA HTML, not JSON).
+        request.RequestUri = ApplyBasePath(request.RequestUri);
+
         var path = request.RequestUri?.AbsolutePath ?? "";
 
         var formIdMatch = FormIdPathRegex.Match(path);
 
         if (!formIdMatch.Success)
             throw new InvalidOperationException(
-                $"[CHEFS] Could not extract a formId from request path: {path}"
+                $"[CHEFS] Request path is not an approved CHEFS form endpoint: {path}"
             );
 
         var formId = formIdMatch.Groups[1].Value;
@@ -77,5 +84,31 @@ public class ChefsApiKeyHandler : DelegatingHandler
         }
 
         return response;
+    }
+
+    /// <summary>
+    /// Prepends the base path segment from <see cref="ChefsOptions.BaseUrl"/> (e.g. "/app") to the
+    /// request URI when it is missing. Refit's absolute-path route templates otherwise strip it.
+    /// </summary>
+    private Uri? ApplyBasePath(Uri? requestUri)
+    {
+        if (requestUri is null || string.IsNullOrWhiteSpace(_options.BaseUrl))
+            return requestUri;
+
+        if (!Uri.TryCreate(_options.BaseUrl, UriKind.Absolute, out var baseUri))
+            return requestUri;
+
+        var basePath = baseUri.AbsolutePath.TrimEnd('/');
+        if (basePath.Length == 0)
+            return requestUri;
+
+        var currentPath = requestUri.AbsolutePath;
+        if (
+            currentPath.Equals(basePath, StringComparison.OrdinalIgnoreCase)
+            || currentPath.StartsWith(basePath + "/", StringComparison.OrdinalIgnoreCase)
+        )
+            return requestUri;
+
+        return new UriBuilder(requestUri) { Path = basePath + currentPath }.Uri;
     }
 }

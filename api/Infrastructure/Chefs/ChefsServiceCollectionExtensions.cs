@@ -36,6 +36,24 @@ public static class ChefsServiceCollectionExtensions
                 "CHEFS API requires Chefs:Forms (e.g. Chefs__Forms in .env)."
             );
 
+        foreach (var (formKey, formOptions) in forms)
+        {
+            if (string.IsNullOrWhiteSpace(formKey))
+                throw new ConfigurationException(
+                    "CHEFS API requires each Chefs:Forms entry to have a non-empty logical key."
+                );
+
+            if (string.IsNullOrWhiteSpace(formOptions?.FormId))
+                throw new ConfigurationException(
+                    $"CHEFS API requires env variable Chefs:Forms:{formKey}:FormId (e.g. Chefs__Forms__{formKey}__FormId)."
+                );
+
+            if (string.IsNullOrWhiteSpace(formOptions.ApiKey))
+                throw new ConfigurationException(
+                    $"CHEFS API requires env variable Chefs:Forms:{formKey}:ApiKey (e.g. Chefs__Forms__{formKey}__ApiKey)."
+                );
+        }
+
         services.AddTransient<ChefsApiKeyHandler>();
         services
             .AddRefitClient<IChefsApi>()

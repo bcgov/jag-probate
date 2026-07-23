@@ -96,6 +96,22 @@ public class ChefsApiKeyHandlerTests
         Assert.Contains("No form configuration found", exception.Message);
     }
 
+    [Fact]
+    public async Task SendAsync_WithUnapprovedPath_ThrowsClearException()
+    {
+        using var invoker = CreateInvoker(new CaptureHandler());
+        using var request = new HttpRequestMessage(
+            HttpMethod.Get,
+            $"https://chefs.example.com/app/admin/forms/{LegalFormId}/submissions"
+        );
+
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            invoker.SendAsync(request, CancellationToken.None)
+        );
+
+        Assert.Contains("not an approved CHEFS form endpoint", exception.Message);
+    }
+
     private static HttpMessageInvoker CreateInvoker(
         HttpMessageHandler innerHandler,
         ChefsOptions? options = null

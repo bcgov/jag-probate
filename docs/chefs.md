@@ -36,6 +36,8 @@ CHEFS_FORM_NONLEGAL_API_KEY=nonlegal-api-key
 
 The frontend calls `?formKey=legal` or `?formKey=nonlegal`. Form GUIDs and API keys remain server-side only.
 
+CHEFS credentials are attached only to approved outbound form endpoints (`/app/api/v1/forms/{formId}/...` and `/app/gateway/v1/auth/token/forms/{formId}`). Other CHEFS paths are rejected instead of being sent with credentials.
+
 ### Adding a new form
 
 The `legal`/`nonlegal` keys are hardcoded in the `api` service's `environment` block in [docker/docker-compose.yaml](../docker/docker-compose.yaml). To add another form:
