@@ -1,6 +1,13 @@
-# Release workflow: builds versioned API and Web images from a GitHub Release tag,
-# then promotes them through dev -> test environments via ArgoCD/Kustomize
-# and opens a GitOps pull request for prod promotion.
+# Release workflow: builds versioned API and Web images from a GitHub Release tag
+# or a manual workflow_dispatch, then promotes them through dev -> test -> prod
+# via ArgoCD/Kustomize.
+#
+# Manual dispatch (workflow_dispatch):
+#   - Enter a tag (e.g. v1.2.3). If it exists, the workflow rebuilds from that
+#     tag (useful for rollbacks). If it doesn't exist, it builds HEAD of the
+#     current branch and creates the tag after a successful build.
+#   - Running from any branch other than main automatically flags the release as
+#     a prerelease, skipping the prod deployment.
 #
 # Prerequisites - GitHub Environments must be configured in repo Settings -> Environments:
 #   - "dev"  : no approval gates required (auto-deploys on release publish)
@@ -37,13 +44,21 @@ jobs:
     outputs:
       image_tag: ${{ steps.resolve.outputs.IMAGE_TAG }}
       release_ref: ${{ steps.resolve.outputs.RELEASE_REF }}
+      is_prerelease: ${{ steps.resolve.outputs.IS_PRERELEASE }}
+      needs_tagging: ${{ steps.resolve.outputs.NEEDS_TAGGING }}
+      commit_sha: ${{ steps.sha.outputs.COMMIT_SHA }}
     steps:
       - name: Resolve tag
         id: resolve
         env:
           EVENT_NAME: ${{ github.event_name }}
           RELEASE_TAG: ${{ github.event.release.tag_name }}
+          RELEASE_PRERELEASE: ${{ github.event.release.prerelease }}
           INPUT_TAG: ${{ github.event.inputs.tag }}
+          REF_NAME: ${{ github.ref_name }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
         run: |
           set -euo pipefail
 
@@ -53,16 +68,64 @@ jobs:
             RAW_TAG="${INPUT_TAG}"
           fi
 
-          if [[ ! "${RAW_TAG}" =~ ^v?[0-9]+\.[0-9]+\.[0-9]+(-[A-Za-z0-9.-]+)?$ ]]; then
-            echo "Release tag must match vMAJOR.MINOR.PATCH or vMAJOR.MINOR.PATCH-prerelease, for example v1.2.3 or v1.2.3-rc1."
+          # Normalize: ensure v prefix
+          [[ "${RAW_TAG}" =~ ^v ]] || RAW_TAG="v${RAW_TAG}"
+
+          if [[ ! "${RAW_TAG}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[A-Za-z0-9.-]+)?$ ]]; then
+            echo "::error::Release tag must match vMAJOR.MINOR.PATCH or vMAJOR.MINOR.PATCH-prerelease, for example v1.2.3 or v1.2.3-rc1."
             exit 1
           fi
 
           IMAGE_TAG="${RAW_TAG#v}"
+
+          # Determine whether the tag already exists and what ref to build from
+          NEEDS_TAGGING="false"
+          if [ "${EVENT_NAME}" = "release" ]; then
+            # Release event: GitHub already created the tag
+            SOURCE_REF="${RAW_TAG}"
+          else
+            if gh api "repos/${REPO}/git/ref/tags/${RAW_TAG}" > /dev/null 2>&1; then
+              echo "Tag ${RAW_TAG} exists — building from existing tag."
+              SOURCE_REF="${RAW_TAG}"
+            else
+              echo "Tag ${RAW_TAG} does not exist — will build HEAD of '${REF_NAME}' and tag after build."
+              SOURCE_REF="${REF_NAME}"
+              NEEDS_TAGGING="true"
+            fi
+          fi
+
+          # Determine prerelease status
+          IS_PRERELEASE="false"
+          if [ "${EVENT_NAME}" = "release" ]; then
+            IS_PRERELEASE="${RELEASE_PRERELEASE}"
+          else
+            DEFAULT="${DEFAULT_BRANCH:-main}"
+            if [ "${REF_NAME}" != "${DEFAULT}" ]; then
+              IS_PRERELEASE="true"
+              echo "::notice::Branch '${REF_NAME}' is not '${DEFAULT}' — treating as prerelease. Prod deployment will be skipped."
+            fi
+          fi
+
+          # Tags with a prerelease suffix are always prereleases
+          if [[ "${RAW_TAG}" =~ -[A-Za-z0-9] ]]; then
+            IS_PRERELEASE="true"
+          fi
+
           {
             printf 'IMAGE_TAG=%s\n' "${IMAGE_TAG}"
             printf 'RELEASE_REF=%s\n' "${RAW_TAG}"
+            printf 'SOURCE_REF=%s\n' "${SOURCE_REF}"
+            printf 'IS_PRERELEASE=%s\n' "${IS_PRERELEASE}"
+            printf 'NEEDS_TAGGING=%s\n' "${NEEDS_TAGGING}"
           } >> "$GITHUB_OUTPUT"
+
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          ref: ${{ steps.resolve.outputs.SOURCE_REF }}
+
+      - name: Pin commit SHA
+        id: sha
+        run: echo "COMMIT_SHA=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
 
   build-images:
     name: Build and Push ${{ matrix.name }} Image
@@ -91,7 +154,7 @@ jobs:
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
-          ref: ${{ needs.setup.outputs.release_ref }}
+          ref: ${{ needs.setup.outputs.commit_sha }}
 
       - uses: docker/login-action@b45d80f862d83dbcd57f89517bcf500b2ab88fb2 # v4.0.0
         with:
@@ -121,6 +184,28 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           build-args: ${{ matrix.build_args }}
+
+  create-tag:
+    name: Tag Release
+    needs: [setup, build-images]
+    if: needs.setup.outputs.needs_tagging == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          ref: ${{ needs.setup.outputs.commit_sha }}
+
+      - name: Create tag
+        env:
+          RELEASE_REF: ${{ needs.setup.outputs.release_ref }}
+        run: |
+          set -euo pipefail
+          git config user.email "actions@github.com"
+          git config user.name "GitHub Actions"
+          git tag -a "${RELEASE_REF}" -m "Release ${RELEASE_REF}"
+          git push origin "${RELEASE_REF}"
 
   deploy-dev:
     name: Deploy to Dev
@@ -169,6 +254,7 @@ jobs:
   deploy-prod:
     name: Deploy to Prod
     needs: [setup, build-images, deploy-test]
+    if: success() && needs.setup.outputs.is_prerelease != 'true'
     runs-on: ubuntu-latest
     environment: prod
     permissions:
@@ -197,3 +283,90 @@ jobs:
             Images:
             - ${{ env.GITHUB_IMAGE_REPO }}/api:${{ needs.setup.outputs.image_tag }}
             - ${{ env.GITHUB_IMAGE_REPO }}/web:${{ needs.setup.outputs.image_tag }}
+
+  summary:
+    name: Release Summary
+    needs: [setup, build-images, create-tag, deploy-dev, deploy-test, deploy-prod]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Evaluate release outcome
+        env:
+          IMAGE_TAG: ${{ needs.setup.outputs.image_tag }}
+          RELEASE_REF: ${{ needs.setup.outputs.release_ref }}
+          IS_PRERELEASE: ${{ needs.setup.outputs.is_prerelease }}
+          NEEDS_TAGGING: ${{ needs.setup.outputs.needs_tagging }}
+          SETUP_RESULT: ${{ needs.setup.result }}
+          BUILD_RESULT: ${{ needs.build-images.result }}
+          TAG_RESULT: ${{ needs.create-tag.result }}
+          DEV_RESULT: ${{ needs.deploy-dev.result }}
+          TEST_RESULT: ${{ needs.deploy-test.result }}
+          PROD_RESULT: ${{ needs.deploy-prod.result }}
+        run: |
+          set -euo pipefail
+
+          {
+            echo "## Release Summary"
+            echo ""
+            echo "| Property | Value |"
+            echo "|----------|-------|"
+            echo "| **Tag** | \`${RELEASE_REF}\` |"
+            echo "| **Image Tag** | \`${IMAGE_TAG}\` |"
+            echo "| **Prerelease** | ${IS_PRERELEASE} |"
+            echo ""
+            echo "### Deployment Status"
+            echo ""
+            echo "| Stage | Result |"
+            echo "|-------|--------|"
+            echo "| Build Images | ${BUILD_RESULT} |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          if [ "${NEEDS_TAGGING}" = "true" ]; then
+            echo "| Create Tag | ${TAG_RESULT} |" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+          {
+            echo "| Deploy Dev | ${DEV_RESULT} |"
+            echo "| Deploy Test | ${TEST_RESULT} |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          if [ "${IS_PRERELEASE}" = "true" ]; then
+            echo "| Deploy Prod | — *(skipped — prerelease)* |" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "| Deploy Prod | ${PROD_RESULT} |" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+          # ── Determine overall outcome ──
+
+          if [ "${SETUP_RESULT}" != "success" ]; then
+            echo "::error::Release failed — setup did not succeed."
+            exit 1
+          fi
+
+          if [ "${BUILD_RESULT}" != "success" ]; then
+            echo "::error::Release failed — image build did not succeed."
+            exit 1
+          fi
+
+          if [ "${NEEDS_TAGGING}" = "true" ] && [ "${TAG_RESULT}" != "success" ]; then
+            echo "::error::Release failed — tag creation did not succeed."
+            exit 1
+          fi
+
+          if [ "${IS_PRERELEASE}" = "true" ]; then
+            if [ "${DEV_RESULT}" = "success" ] && [ "${TEST_RESULT}" = "success" ]; then
+              echo "" >> "$GITHUB_STEP_SUMMARY"
+              echo "**Prerelease ${RELEASE_REF} deployed successfully to dev and test.**" >> "$GITHUB_STEP_SUMMARY"
+            else
+              echo "::error::Prerelease deployment did not fully succeed (dev=${DEV_RESULT}, test=${TEST_RESULT})."
+              exit 1
+            fi
+          else
+            if [ "${DEV_RESULT}" = "success" ] && [ "${TEST_RESULT}" = "success" ] && [ "${PROD_RESULT}" = "success" ]; then
+              echo "" >> "$GITHUB_STEP_SUMMARY"
+              echo "**Release ${RELEASE_REF} deployed successfully through all environments.**" >> "$GITHUB_STEP_SUMMARY"
+            else
+              echo "::error::Release deployment did not fully succeed (dev=${DEV_RESULT}, test=${TEST_RESULT}, prod=${PROD_RESULT})."
+              exit 1
+            fi
+          fi
