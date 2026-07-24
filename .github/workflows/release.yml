@@ -45,7 +45,6 @@ jobs:
       image_tag: ${{ steps.resolve.outputs.IMAGE_TAG }}
       release_ref: ${{ steps.resolve.outputs.RELEASE_REF }}
       is_prerelease: ${{ steps.resolve.outputs.IS_PRERELEASE }}
-      is_default_branch: ${{ steps.resolve.outputs.IS_DEFAULT_BRANCH }}
       needs_tagging: ${{ steps.resolve.outputs.NEEDS_TAGGING }}
       commit_sha: ${{ steps.sha.outputs.COMMIT_SHA }}
     steps:
@@ -95,25 +94,16 @@ jobs:
             fi
           fi
 
-          # Determine if running from the default branch
-          DEFAULT="${DEFAULT_BRANCH:-main}"
-          IS_DEFAULT_BRANCH="true"
-          if [ "${EVENT_NAME}" = "release" ]; then
-            # Release events are always treated as default-branch releases
-            IS_DEFAULT_BRANCH="true"
-          else
-            if [ "${REF_NAME}" != "${DEFAULT}" ]; then
-              IS_DEFAULT_BRANCH="false"
-            fi
-          fi
-
           # Determine prerelease status
           IS_PRERELEASE="false"
           if [ "${EVENT_NAME}" = "release" ]; then
             IS_PRERELEASE="${RELEASE_PRERELEASE}"
-          elif [ "${IS_DEFAULT_BRANCH}" = "false" ]; then
-            IS_PRERELEASE="true"
-            echo "::notice::Branch '${REF_NAME}' is not '${DEFAULT}' — treating as prerelease. Only dev will be deployed."
+          else
+            DEFAULT="${DEFAULT_BRANCH:-main}"
+            if [ "${REF_NAME}" != "${DEFAULT}" ]; then
+              IS_PRERELEASE="true"
+              echo "::notice::Branch '${REF_NAME}' is not '${DEFAULT}' — treating as prerelease. Prod deployment will be skipped."
+            fi
           fi
 
           # Tags with a prerelease suffix are always prereleases
@@ -126,7 +116,6 @@ jobs:
             printf 'RELEASE_REF=%s\n' "${RAW_TAG}"
             printf 'SOURCE_REF=%s\n' "${SOURCE_REF}"
             printf 'IS_PRERELEASE=%s\n' "${IS_PRERELEASE}"
-            printf 'IS_DEFAULT_BRANCH=%s\n' "${IS_DEFAULT_BRANCH}"
             printf 'NEEDS_TAGGING=%s\n' "${NEEDS_TAGGING}"
           } >> "$GITHUB_OUTPUT"
 
@@ -243,7 +232,6 @@ jobs:
   deploy-test:
     name: Deploy to Test
     needs: [setup, build-images, deploy-dev]
-    if: success() && needs.setup.outputs.is_default_branch == 'true'
     runs-on: ubuntu-latest
     environment: test
     permissions:
@@ -307,7 +295,6 @@ jobs:
           IMAGE_TAG: ${{ needs.setup.outputs.image_tag }}
           RELEASE_REF: ${{ needs.setup.outputs.release_ref }}
           IS_PRERELEASE: ${{ needs.setup.outputs.is_prerelease }}
-          IS_DEFAULT_BRANCH: ${{ needs.setup.outputs.is_default_branch }}
           NEEDS_TAGGING: ${{ needs.setup.outputs.needs_tagging }}
           SETUP_RESULT: ${{ needs.setup.result }}
           BUILD_RESULT: ${{ needs.build-images.result }}
@@ -338,13 +325,10 @@ jobs:
             echo "| Create Tag | ${TAG_RESULT} |" >> "$GITHUB_STEP_SUMMARY"
           fi
 
-          echo "| Deploy Dev | ${DEV_RESULT} |" >> "$GITHUB_STEP_SUMMARY"
-
-          if [ "${IS_DEFAULT_BRANCH}" = "true" ]; then
-            echo "| Deploy Test | ${TEST_RESULT} |" >> "$GITHUB_STEP_SUMMARY"
-          else
-            echo "| Deploy Test | — *(skipped — feature branch)* |" >> "$GITHUB_STEP_SUMMARY"
-          fi
+          {
+            echo "| Deploy Dev | ${DEV_RESULT} |"
+            echo "| Deploy Test | ${TEST_RESULT} |"
+          } >> "$GITHUB_STEP_SUMMARY"
 
           if [ "${IS_PRERELEASE}" = "true" ]; then
             echo "| Deploy Prod | — *(skipped — prerelease)* |" >> "$GITHUB_STEP_SUMMARY"
@@ -369,17 +353,7 @@ jobs:
             exit 1
           fi
 
-          if [ "${IS_DEFAULT_BRANCH}" != "true" ]; then
-            # Feature branch: only dev is expected to succeed
-            if [ "${DEV_RESULT}" = "success" ]; then
-              echo "" >> "$GITHUB_STEP_SUMMARY"
-              echo "**Prerelease ${RELEASE_REF} deployed successfully to dev.**" >> "$GITHUB_STEP_SUMMARY"
-            else
-              echo "::error::Prerelease deployment failed (dev=${DEV_RESULT})."
-              exit 1
-            fi
-          elif [ "${IS_PRERELEASE}" = "true" ]; then
-            # Default branch prerelease (e.g. -rc1): dev + test expected
+          if [ "${IS_PRERELEASE}" = "true" ]; then
             if [ "${DEV_RESULT}" = "success" ] && [ "${TEST_RESULT}" = "success" ]; then
               echo "" >> "$GITHUB_STEP_SUMMARY"
               echo "**Prerelease ${RELEASE_REF} deployed successfully to dev and test.**" >> "$GITHUB_STEP_SUMMARY"
