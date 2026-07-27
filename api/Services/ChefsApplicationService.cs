@@ -40,8 +40,8 @@ public class ChefsApplicationService : IChefsApplicationService
     )
     {
         if (
-            !_options.Forms.TryGetValue(formKey, out var formGuid)
-            || string.IsNullOrWhiteSpace(formGuid)
+            !_options.Forms.TryGetValue(formKey, out var formOptions)
+            || string.IsNullOrWhiteSpace(formOptions?.FormId)
         )
             throw new InvalidOperationException($"Form key '{formKey}' is not configured.");
 
@@ -53,7 +53,7 @@ public class ChefsApplicationService : IChefsApplicationService
         List<ChefsSubmissionSummary> response;
         try
         {
-            response = await _chefsApi.GetSubmissionsAsync(formGuid, cancellationToken);
+            response = await _chefsApi.GetSubmissionsAsync(formOptions.FormId, cancellationToken);
         }
         catch (ApiException ex)
         {
@@ -116,8 +116,8 @@ public class ChefsApplicationService : IChefsApplicationService
     )
     {
         if (
-            !_options.Forms.TryGetValue(formKey, out var formGuid)
-            || string.IsNullOrWhiteSpace(formGuid)
+            !_options.Forms.TryGetValue(formKey, out var formOptions)
+            || string.IsNullOrWhiteSpace(formOptions?.FormId)
         )
             throw new InvalidOperationException($"Form key '{formKey}' is not configured.");
 
@@ -130,8 +130,8 @@ public class ChefsApplicationService : IChefsApplicationService
         try
         {
             response = await _chefsApi.GetAuthTokenAsync(
-                formGuid,
-                new ChefsAuthTokenRequest { FormId = formGuid },
+                formOptions.FormId,
+                new ChefsAuthTokenRequest { FormId = formOptions.FormId },
                 cancellationToken
             );
         }
@@ -176,7 +176,7 @@ public class ChefsApplicationService : IChefsApplicationService
         return new ChefsAuthTokenDto
         {
             Token = response.Token,
-            FormId = formGuid,
+            FormId = formOptions.FormId,
             BaseUrl = _options.BaseUrl.TrimEnd('/'),
         };
     }

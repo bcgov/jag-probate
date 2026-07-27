@@ -1,7 +1,9 @@
 using System;
+using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Options;
@@ -10,12 +12,18 @@ using Probate.Api.Options;
 namespace Probate.Api.Infrastructure.Chefs;
 
 /// <summary>
-/// Adds the CHEFS api-key header to every request. We use api-key only (auth-token is not used).
-/// form-id is sent per request by the Refit method (path + header).
-/// For auth token requests, uses Basic Authentication with formId:apiKey.
+/// Adds Basic Authentication to every CHEFS request using the per-form API key.
+/// Credentials are attached only for approved CHEFS form API and gateway paths.
+/// The CHEFS form GUID is extracted from approved request paths and reverse-looked
+/// up against the configured form options to find the matching API key.
 /// </summary>
 public class ChefsApiKeyHandler : DelegatingHandler
 {
+    private static readonly Regex FormIdPathRegex = new(
+        @"(?:/app)?(?:/api/v1/forms/|/gateway/v1/auth/token/forms/)([^/]+)",
+        RegexOptions.IgnoreCase | RegexOptions.Compiled
+    );
+
     private readonly ChefsOptions _options;
 
     public ChefsApiKeyHandler(IOptions<ChefsOptions> options)
@@ -28,65 +36,45 @@ public class ChefsApiKeyHandler : DelegatingHandler
         CancellationToken cancellationToken
     )
     {
+        // Refit route templates must start with '/', which makes them absolute-path references.
+        // When combined with a BaseAddress that has a path segment (e.g. ".../app"), the '/app'
+        // segment is dropped by Uri resolution. Re-apply the configured base path here so requests
+        // hit ".../app/api/v1/..." instead of ".../api/v1/..." (which returns SPA HTML, not JSON).
+        request.RequestUri = ApplyBasePath(request.RequestUri);
+
         var path = request.RequestUri?.AbsolutePath ?? "";
 
-        string? formId = null;
+        var formIdMatch = FormIdPathRegex.Match(path);
 
-        // Submissions endpoint: /app/api/v1/forms/{formId}/submissions
-        if (path.StartsWith("/app/api/v1/forms/", StringComparison.OrdinalIgnoreCase))
-        {
-            var segments = path.Split('/', StringSplitOptions.RemoveEmptyEntries);
-            if (
-                segments.Length >= 5
-                && segments[3].Equals("forms", StringComparison.OrdinalIgnoreCase)
-            )
-            {
-                formId = segments[4];
-            }
-        }
-        // Auth token endpoint: app/gateway/v1/auth/token/forms/{formId}
-        else if (
-            path.StartsWith("/app/gateway/v1/auth/token/forms/", StringComparison.OrdinalIgnoreCase)
-        )
-        {
-            var segments = path.Split('/', StringSplitOptions.RemoveEmptyEntries);
-            if (
-                segments.Length >= 7
-                && segments[5].Equals("forms", StringComparison.OrdinalIgnoreCase)
-            )
-            {
-                formId = segments[6];
-            }
-        }
-
-        if (!string.IsNullOrEmpty(formId) && !string.IsNullOrEmpty(_options.ApiKey))
-        {
-            // Apply Basic Auth for dynamic formId
-            var authValue = Convert.ToBase64String(
-                Encoding.UTF8.GetBytes($"{formId}:{_options.ApiKey}")
+        if (!formIdMatch.Success)
+            throw new InvalidOperationException(
+                $"[CHEFS] Request path is not an approved CHEFS form endpoint: {path}"
             );
-            request.Headers.Authorization = new AuthenticationHeaderValue("Basic", authValue);
 
-            // Optional debug logging
-            System.Diagnostics.Debug.WriteLine(
-                $"[CHEFS] Basic Auth applied for formId={formId}, URL={request.RequestUri}"
+        var formId = formIdMatch.Groups[1].Value;
+
+        // Reverse lookup: the path contains the CHEFS GUID; Forms is keyed by logical name.
+        var formOptions = _options.Forms.Values.FirstOrDefault(f =>
+            string.Equals(f.FormId, formId, StringComparison.OrdinalIgnoreCase)
+        );
+
+        if (formOptions is null)
+            throw new InvalidOperationException(
+                $"[CHEFS] No form configuration found for formId '{formId}'. Check Chefs:Forms in configuration."
             );
-        }
-        else
-        {
-            // Fallback: apply API key header for other requests
-            if (!string.IsNullOrEmpty(_options.ApiKey))
-            {
-                request.Headers.TryAddWithoutValidation("api-key", _options.ApiKey);
-                System.Diagnostics.Debug.WriteLine(
-                    $"[CHEFS] API Key header applied, URL={request.RequestUri}"
-                );
-            }
-        }
+
+        if (string.IsNullOrWhiteSpace(formOptions.ApiKey))
+            throw new InvalidOperationException(
+                $"[CHEFS] API key is not configured for formId '{formId}'. Check Chefs:Forms configuration."
+            );
+
+        var authValue = Convert.ToBase64String(
+            Encoding.UTF8.GetBytes($"{formId}:{formOptions.ApiKey}")
+        );
+        request.Headers.Authorization = new AuthenticationHeaderValue("Basic", authValue);
 
         var response = await base.SendAsync(request, cancellationToken).ConfigureAwait(false);
 
-        // Optional debug logging for non-success responses
         if (!response.IsSuccessStatusCode)
         {
             var content = await response.Content.ReadAsStringAsync(cancellationToken);
@@ -96,5 +84,31 @@ public class ChefsApiKeyHandler : DelegatingHandler
         }
 
         return response;
+    }
+
+    /// <summary>
+    /// Prepends the base path segment from <see cref="ChefsOptions.BaseUrl"/> (e.g. "/app") to the
+    /// request URI when it is missing. Refit's absolute-path route templates otherwise strip it.
+    /// </summary>
+    private Uri? ApplyBasePath(Uri? requestUri)
+    {
+        if (requestUri is null || string.IsNullOrWhiteSpace(_options.BaseUrl))
+            return requestUri;
+
+        if (!Uri.TryCreate(_options.BaseUrl, UriKind.Absolute, out var baseUri))
+            return requestUri;
+
+        var basePath = baseUri.AbsolutePath.TrimEnd('/');
+        if (basePath.Length == 0)
+            return requestUri;
+
+        var currentPath = requestUri.AbsolutePath;
+        if (
+            currentPath.Equals(basePath, StringComparison.OrdinalIgnoreCase)
+            || currentPath.StartsWith(basePath + "/", StringComparison.OrdinalIgnoreCase)
+        )
+            return requestUri;
+
+        return new UriBuilder(requestUri) { Path = basePath + currentPath }.Uri;
     }
 }

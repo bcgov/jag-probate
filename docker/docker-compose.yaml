@@ -39,9 +39,10 @@ services:
       - Keycloak__KcIdpHint=${OIDC_RP_KC_IDP_HINT}
       - Keycloak__RefreshThreshold=${OIDC_RP_REFRESH_THRESHOLD:-00:05:00}
       - TokenRefreshThreshold=${TOKEN_REFRESH_THRESHOLD}
-      - Chefs__Forms__legal=${CHEFS_FORM_ID_LEGAL}
-      - Chefs__Forms__nonlegal=${CHEFS_FORM_ID_NONLEGAL}
-      - Chefs__ApiKey=${CHEFS_API_KEY}
+      - Chefs__Forms__legal__FormId=${CHEFS_FORM_LEGAL_FORMID}
+      - Chefs__Forms__legal__ApiKey=${CHEFS_FORM_LEGAL_API_KEY}
+      - Chefs__Forms__nonlegal__FormId=${CHEFS_FORM_NONLEGAL_FORMID}
+      - Chefs__Forms__nonlegal__ApiKey=${CHEFS_FORM_NONLEGAL_API_KEY}
       - Chefs__BaseUrl=${CHEFS_BASE_URL}
       - CDogs__BaseUrl=${CDOGS_BASE_URL}
       - CDogs__TokenUrl=${CDOGS_TOKEN_URL}

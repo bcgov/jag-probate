@@ -10,12 +10,12 @@ namespace Probate.Api.Infrastructure.Chefs;
 
 /// <summary>
 /// Refit client for the CHEFS (Common Hosted Form Service) API.
-/// We use form-id (per request) and api-key only; auth-token (JWT) is not used.
+/// The auth handler adds Basic Authentication from each form's configured API key.
 /// </summary>
 public interface IChefsApi
 {
     /// <summary>
-    /// Get submissions for a form. Sends form-id as path and header; api-key is added by ChefsApiKeyHandler.
+    /// Get submissions for a form. Sends form-id as path; authentication is added by ChefsApiKeyHandler.
     /// </summary>
     [Get("/api/v1/forms/{formId}/submissions")]
     Task<List<ChefsSubmissionSummary>> GetSubmissionsAsync(
