@@ -37,6 +37,8 @@ public static class SubmissionEnricher
         root["hasIncapableAdults"] = incapableAdults.Count > 0;
         root["computedIncapableAdults"] = new JArray(incapableAdults);
 
+        root["applicantRole"] = DetermineApplicantRole(root);
+
         return root;
     }
 
@@ -324,6 +326,129 @@ public static class SubmissionEnricher
         root["deliveredElectronic"] = new JArray(electronic);
 
         return root;
+    }
+
+    private static string DetermineApplicantRole(JObject root)
+    {
+        var applicantName =
+            root.SelectToken("applicant.applicantName")?.Value<string>() ?? "";
+        if (string.IsNullOrWhiteSpace(applicantName))
+            return "";
+
+        var compare = StringComparison.OrdinalIgnoreCase;
+
+        // Check spouseData
+        var spouseData = root.SelectToken("spouse.spouseData") as JArray;
+        if (spouseData != null)
+        {
+            for (int i = 1; i < spouseData.Count; i++)
+            {
+                var s = spouseData[i] as JObject;
+                if (s == null)
+                    continue;
+
+                if (string.Equals(s.Value<string>("spouseName"), applicantName, compare))
+                    return "spouse";
+
+                if (
+                    s.Value<string>("spouseIsAdult") == "no"
+                    && string.Equals(
+                        s.Value<string>("spouseGuardianName"),
+                        applicantName,
+                        compare
+                    )
+                )
+                    return $"guardian of {s.Value<string>("spouseName")}, a minor spouse";
+
+                if (
+                    s.Value<string>("spouseIsCompetent") == "no"
+                    && string.Equals(
+                        s.Value<string>("spouseNomineeName"),
+                        applicantName,
+                        compare
+                    )
+                )
+                    return $"nominee of {s.Value<string>("spouseName")}, a mentally incapable spouse";
+            }
+        }
+
+        // Check childData
+        var childData = root.SelectToken("child.childData") as JArray;
+        if (childData != null)
+        {
+            for (int i = 1; i < childData.Count; i++)
+            {
+                var c = childData[i] as JObject;
+                if (c == null)
+                    continue;
+
+                if (string.Equals(c.Value<string>("childName"), applicantName, compare))
+                    return "child";
+
+                if (
+                    c.Value<string>("childIsAdult") == "no"
+                    && string.Equals(
+                        c.Value<string>("childGuardianName"),
+                        applicantName,
+                        compare
+                    )
+                )
+                    return $"guardian of {c.Value<string>("childName")}, a minor child";
+
+                if (
+                    c.Value<string>("childIsCompetent") == "no"
+                    && string.Equals(
+                        c.Value<string>("childNomineeName"),
+                        applicantName,
+                        compare
+                    )
+                )
+                    return $"nominee of {c.Value<string>("childName")}, a mentally incapable child";
+            }
+        }
+
+        // Check creditorPersonData
+        var creditorData = root.SelectToken("creditor.creditorPersonData") as JArray;
+        if (creditorData != null)
+        {
+            for (int i = 1; i < creditorData.Count; i++)
+            {
+                var cr = creditorData[i] as JObject;
+                if (cr == null)
+                    continue;
+
+                if (
+                    string.Equals(
+                        cr.Value<string>("creditorPersonName"),
+                        applicantName,
+                        compare
+                    )
+                )
+                    return "creditor";
+
+                if (
+                    cr.Value<string>("creditorPersonIsAdult") == "no"
+                    && string.Equals(
+                        cr.Value<string>("creditorPersonGuardianName"),
+                        applicantName,
+                        compare
+                    )
+                )
+                    return $"guardian of {cr.Value<string>("creditorPersonName")}, a minor creditor";
+
+                if (
+                    cr.Value<string>("creditorPersonIsCompetent") == "no"
+                    && string.Equals(
+                        cr.Value<string>("creditorPersonNomineeName"),
+                        applicantName,
+                        compare
+                    )
+                )
+                    return $"nominee of {cr.Value<string>("creditorPersonName")}, a mentally incapable creditor";
+            }
+        }
+
+        return "";
     }
 
     private static string FormatAddress(
