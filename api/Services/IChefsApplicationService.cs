@@ -24,4 +24,10 @@ public interface IChefsApplicationService
         string formKey,
         CancellationToken cancellationToken = default
     );
+
+    /// <summary>
+    /// Gets the application sidebar navigation structure (step/substep title, icon, order) driven
+    /// entirely by Chefs:Forms configuration.
+    /// </summary>
+    IReadOnlyList<SidebarStepDto> GetSidebarStructure();
 }

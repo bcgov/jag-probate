@@ -145,7 +145,7 @@
           <h3 class="text-uppercase fw-semibold text-white mb-1">New Users</h3>
           <button
             type="button"
-            class="btn btn-primary btn-lg px-4 mt-2"
+            class="px-4 mt-2 landing-cta-btn landing-cta-btn-primary"
             @click="handleRegister"
           >
             Register for a <strong>Basic</strong> BCeID
@@ -157,7 +157,7 @@
           </h3>
           <button
             type="button"
-            class="btn btn-warning btn-lg px-4 mt-2"
+            class="px-4 mt-2 landing-cta-btn landing-cta-btn-warning"
             @click="handleReturning"
           >
             Use an existing <strong>Basic</strong> BCeID
@@ -203,6 +203,56 @@
 
   ul.disc-list li {
     list-style-type: disc;
+  }
+
+  .landing-cta-btn {
+    display: inline-block !important;
+    min-width: 17rem !important;
+    padding: 0.5rem 1rem !important;
+    font-size: 1.25rem !important;
+    line-height: 1.5 !important;
+    border: 1px solid white !important;
+    font-weight: 600 !important;
+    text-align: center !important;
+    text-decoration: none !important;
+    cursor: pointer !important;
+    appearance: none !important;
+    letter-spacing: normal !important;
+    box-shadow: none !important;
+    transition:
+      background-color 0.2s ease,
+      border-color 0.2s ease,
+      color 0.2s ease !important;
+  }
+
+  .landing-cta-btn-primary {
+    background: #0d6efd !important;
+    border-color: #0d6efd !important;
+    color: #fff !important;
+  }
+
+  .landing-cta-btn-primary:hover,
+  .landing-cta-btn-primary:focus,
+  .landing-cta-btn-primary:active {
+    background: #0b5ed7 !important;
+    border-color: #0a58ca !important;
+    color: #fff !important;
+    box-shadow: none !important;
+  }
+
+  .landing-cta-btn-warning {
+    background: #ffc107 !important;
+    border-color: #ffc107 !important;
+    color: #212529 !important;
+  }
+
+  .landing-cta-btn-warning:hover,
+  .landing-cta-btn-warning:focus,
+  .landing-cta-btn-warning:active {
+    background: #ffca2c !important;
+    border-color: #ffc720 !important;
+    color: #212529 !important;
+    box-shadow: none !important;
   }
 
   @media (max-width: 767.98px) {

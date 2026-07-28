@@ -11,32 +11,39 @@
         :aria-label="collapsed ? 'Expand sidebar' : 'Collapse sidebar'"
         @click="collapsed = !collapsed"
       >
-        <font-awesome-icon :icon="collapsed ? 'circle-arrow-right' : 'circle-arrow-left'" />
+        <font-awesome-icon
+          :icon="collapsed ? 'circle-arrow-right' : 'circle-arrow-left'"
+        />
       </button>
     </div>
 
     <div class="wiz-steps-container">
-      <template
-        v-for="step in steps"
-        :key="step.key"
+      <!-- Back to survey — not a real wizard step, just a shortcut back to step0 -->
+      <button
+        class="wiz-survey-btn"
+        type="button"
+        aria-label="Back to Survey"
+        @click="goToSurvey"
       >
+        <font-awesome-icon icon="list-check" class="me-1" />
+        <span class="wiz-survey-btn-label">Back to Survey</span>
+      </button>
+
+      <template v-for="step in steps" :key="step.key">
         <!-- Step header row -->
         <div
           class="wiz-step"
           :class="{
             'is-active': isStepActive(step.key),
             'is-disabled': isStepDisabled(step.key),
+            'is-ghost': isStepHidden(step.key),
           }"
-          :style="{ display: isStepHidden(step.key) ? 'none' : 'flex' }"
           @click="onStepClick(step)"
           @mouseenter="onStepMouseEnter(step, $event)"
           @mouseleave="onStepMouseLeave"
         >
           <div class="wiz-icon">
-            <font-awesome-icon
-              v-if="step.icon"
-              :icon="step.icon"
-            />
+            <font-awesome-icon v-if="step.icon" :icon="step.icon" />
             <template v-else>{{ step.number }}</template>
           </div>
           <div class="wiz-step-text">
@@ -46,7 +53,9 @@
           <button
             v-if="!isStepActive(step.key)"
             class="wiz-expand-btn"
-            :aria-label="expandedSteps[step.key] ? 'Collapse substeps' : 'Expand substeps'"
+            :aria-label="
+              expandedSteps[step.key] ? 'Collapse substeps' : 'Expand substeps'
+            "
             @click.stop="toggleExpand(step.key)"
           >
             <font-awesome-icon
@@ -68,14 +77,11 @@
             :class="{
               'is-active': activeSubstep === substep.key,
               'is-disabled': isSubstepDisabled(substep.key),
+              'is-ghost': isSubstepHidden(substep.key),
             }"
-            :style="{ display: isSubstepHidden(substep.key) ? 'none' : 'flex' }"
             @click="onSubstepClick(substep.key)"
           >
-            <span
-              class="wiz-dot"
-              :class="statusDotClass(substep.key)"
-            >
+            <span class="wiz-dot" :class="statusDotClass(substep.key)">
               <font-awesome-icon :icon="statusIconName(substep.key)" />
             </span>
             {{ substep.label }}
@@ -102,14 +108,14 @@
         :class="{
           'is-active': activeSubstep === substep.key,
           'is-disabled': isSubstepDisabled(substep.key),
+          'is-ghost': isSubstepHidden(substep.key),
         }"
-        :style="{ display: isSubstepHidden(substep.key) ? 'none' : 'flex' }"
-        @click="onSubstepClick(substep.key); hoveredStepKey = null"
+        @click="
+          onSubstepClick(substep.key);
+          hoveredStepKey = null;
+        "
       >
-        <span
-          class="wiz-dot"
-          :class="statusDotClass(substep.key)"
-        >
+        <span class="wiz-dot" :class="statusDotClass(substep.key)">
           <font-awesome-icon :icon="statusIconName(substep.key)" />
         </span>
         {{ substep.label }}
@@ -119,7 +125,15 @@
 </template>
 
 <script setup lang="ts">
-  import type { WizardNavState, WizardStep, StepStatus } from '@/types/applicationStep';
+  import type {
+    WizardNavState,
+    WizardStep,
+    StepStatus,
+  } from '@/types/applicationStep';
+  import {
+    initWizardState,
+    useWizardState,
+  } from '@/composables/useWizardState';
   import { computed, onMounted, onUnmounted, ref } from 'vue';
 
   // ── Props ────────────────────────────────────────────────────────────────────
@@ -132,13 +146,23 @@
     initialNavState?: WizardNavState;
     initialStatusMap?: Record<string, StepStatus>;
     initialDisabledMap?: Record<string, boolean>;
+    /**
+     * When true (default), registers window.wizard* bridge functions on mount.
+     * Set false for secondary instances (e.g. mobile drawer) so the primary
+     * desktop sidebar always owns the bridge.
+     */
+    registerBridge?: boolean;
+    /** Logical key of the pre-qualifying survey form. */
+    surveyStepKey?: string;
   }
 
   const props = withDefaults(defineProps<Props>(), {
-    initialStep: 'step1',
+    initialStep: '',
     initialNavState: () => ({ hiddenSteps: {}, hiddenSubsteps: {} }),
     initialStatusMap: () => ({}),
     initialDisabledMap: () => ({}),
+    registerBridge: true,
+    surveyStepKey: '',
   });
 
   // ── Emits ────────────────────────────────────────────────────────────────────
@@ -150,18 +174,9 @@
     (e: 'validation', stepKey: string, status: StepStatus | null): void;
   }>();
 
-  // ── Reactive state ───────────────────────────────────────────────────────────
+  // ── Reactive state (shared across all instances via composable) ──────────────
 
-  const activeSubstep = ref(props.initialStep);
-
-  const navState = ref<WizardNavState>({
-    hiddenSteps: { ...props.initialNavState.hiddenSteps },
-    hiddenSubsteps: { ...props.initialNavState.hiddenSubsteps },
-  });
-
-  const statusMap = ref<Record<string, StepStatus>>({ ...props.initialStatusMap });
-
-  const disabledMap = ref<Record<string, boolean>>({ ...props.initialDisabledMap });
+  const { navState, statusMap, disabledMap, activeSubstep } = useWizardState();
 
   const collapsed = ref(false);
 
@@ -173,7 +188,9 @@
   let hoverClearTimer: ReturnType<typeof setTimeout> | null = null;
 
   const hoveredStepData = computed(() =>
-    hoveredStepKey.value ? props.steps.find((s) => s.key === hoveredStepKey.value) : null
+    hoveredStepKey.value
+      ? props.steps.find((s) => s.key === hoveredStepKey.value)
+      : null
   );
 
   function onStepMouseEnter(step: WizardStep, event: MouseEvent) {
@@ -187,24 +204,26 @@
   }
 
   function onStepMouseLeave() {
-    hoverClearTimer = setTimeout(() => { hoveredStepKey.value = null; }, 150);
+    hoverClearTimer = setTimeout(() => {
+      hoveredStepKey.value = null;
+    }, 150);
   }
 
   function cancelHoverClear() {
-    if (hoverClearTimer) { clearTimeout(hoverClearTimer); hoverClearTimer = null; }
+    if (hoverClearTimer) {
+      clearTimeout(hoverClearTimer);
+      hoverClearTimer = null;
+    }
   }
 
   function clearHover() {
-    hoverClearTimer = setTimeout(() => { hoveredStepKey.value = null; }, 150);
+    hoverClearTimer = setTimeout(() => {
+      hoveredStepKey.value = null;
+    }, 150);
   }
 
   /** Steps manually expanded via the chevron button (independent of active step). */
   const expandedSteps = ref<Record<string, boolean>>({});
-
-  /**
-   * Substeps that were just started (no prior status). Skip validation on first exit.
-   */
-  const skipValidationOnFirstExit: Record<string, boolean> = {};
 
   // ── Computed ─────────────────────────────────────────────────────────────────
 
@@ -231,9 +250,9 @@
   /** Returns visible substeps in config order. */
   function getVisibleSubstepsOrdered(): string[] {
     return allSubstepKeys.value.filter((key) => {
-      if (navState.value.hiddenSubsteps[key]) return false;
+      if (navState.hiddenSubsteps[key]) return false;
       const parent = getParentStepKey(key);
-      if (parent && navState.value.hiddenSteps[parent]) return false;
+      if (parent && navState.hiddenSteps[parent]) return false;
       return true;
     });
   }
@@ -254,8 +273,10 @@
     const ordered = getVisibleSubstepsOrdered();
     if (!ordered.length) return null;
     if (preferred) {
-      const prefParent = preferred.split('_')[0];
-      const sameParent = ordered.find((k) => k.split('_')[0] === prefParent);
+      const prefParent = getParentStepKey(preferred);
+      const sameParent = prefParent
+        ? ordered.find((k) => getParentStepKey(k) === prefParent)
+        : null;
       if (sameParent) return sameParent;
     }
     if (activeSubstep.value && ordered.includes(activeSubstep.value)) {
@@ -267,12 +288,12 @@
   // ── Status icon helpers ───────────────────────────────────────────────────────
 
   function statusDotClass(substepKey: string): string {
-    const s = statusMap.value[substepKey];
+    const s = statusMap[substepKey];
     return s ? `status-${s}` : '';
   }
 
   function statusIconName(substepKey: string): string {
-    const s = statusMap.value[substepKey];
+    const s = statusMap[substepKey];
     if (s === 'completed') return 'circle-check';
     if (s === 'incomplete') return 'circle-half-stroke';
     if (s === 'error') return 'circle-xmark';
@@ -286,7 +307,7 @@
   }
 
   function isSubMenuOpen(stepKey: string): boolean {
-    if (navState.value.hiddenSteps[stepKey]) return false;
+    if (navState.hiddenSteps[stepKey]) return false;
     return isStepActive(stepKey) || !!expandedSteps.value[stepKey];
   }
 
@@ -295,48 +316,48 @@
   }
 
   function isStepHidden(stepKey: string): boolean {
-    return !!navState.value.hiddenSteps[stepKey];
+    return !!navState.hiddenSteps[stepKey];
   }
 
   function isSubstepHidden(substepKey: string): boolean {
-    return !!navState.value.hiddenSubsteps[substepKey];
+    return !!navState.hiddenSubsteps[substepKey];
   }
 
   function isStepDisabled(stepKey: string): boolean {
-    return !!disabledMap.value[stepKey];
+    return !!disabledMap[stepKey];
   }
 
   function isSubstepDisabled(substepKey: string): boolean {
-    return !!disabledMap.value[substepKey];
+    return !!disabledMap[substepKey];
   }
 
   // ── Step status lifecycle ─────────────────────────────────────────────────────
 
   function ensureStartedStatus(substepKey: string) {
-    if (!statusMap.value[substepKey]) {
-      statusMap.value[substepKey] = 'incomplete';
-      skipValidationOnFirstExit[substepKey] = true;
+    if (!statusMap[substepKey]) {
+      statusMap[substepKey] = 'incomplete';
       emit('validation', substepKey, 'incomplete');
     }
   }
 
   /**
-   * Called when leaving a substep. Skips validation on very first exit
-   * (user hasn't had a chance to fill anything in yet).
-   * Full validation wiring happens in Step 4 of the refactor plan.
+   * Called when leaving a substep to update its sidebar status icon. If the
+   * caller already knows the validity (e.g. the Next button just validated
+   * before navigating — see navigateNext/attemptNext), pass it via
+   * knownValidity: window.wizardValidateStep already updated the status as a
+   * side effect in that case, so calling it again would be a second
+   * checkValidity call in the same tick, which was found to break Form.io's
+   * error rendering.
    */
-  function finalizeSubstepStatus(substepKey: string) {
-    if (!statusMap.value[substepKey]) return;
-    if (skipValidationOnFirstExit[substepKey]) {
-      skipValidationOnFirstExit[substepKey] = false;
-      return;
-    }
-    // TODO Step 4: call actual panel validation here; for now status stays as-is.
+  function finalizeSubstepStatus(substepKey: string, knownValidity?: boolean) {
+    if (!statusMap[substepKey]) return;
+    if (knownValidity !== undefined) return;
+    window.wizardValidateStep?.(substepKey);
   }
 
   // ── Core navigation ───────────────────────────────────────────────────────────
 
-  function updateSidebar(stepKey: string) {
+  function updateSidebar(stepKey: string, leavingValidity?: boolean) {
     const ordered = getVisibleSubstepsOrdered();
 
     let resolved = stepKey;
@@ -350,7 +371,11 @@
     if (!resolved) return;
 
     if (activeSubstep.value && activeSubstep.value !== resolved) {
-      finalizeSubstepStatus(activeSubstep.value);
+      finalizeSubstepStatus(activeSubstep.value, leavingValidity);
+      // Save the departing step's data immediately (bypassing the auto-save
+      // debounce) — covers Next, Previous, and direct sidebar clicks, since
+      // they all funnel through this single navigation choke point.
+      window.wizardSaveStep?.(activeSubstep.value);
     }
 
     activeSubstep.value = resolved;
@@ -371,11 +396,51 @@
     updateSidebar(step.defaultSubstep);
   }
 
+  /**
+   * Back to the step0 pre-qualifying survey. step0 isn't part of the wizard's
+   * own step/substep bookkeeping (no status, no disabled/hidden map, no
+   * validation), so this bypasses updateSidebar entirely and just tells the
+   * parent (ApplicationManager) to show it directly.
+   */
+  function goToSurvey() {
+    if (!props.surveyStepKey) return;
+    emit('navigate', props.surveyStepKey);
+  }
+
   // ── Public API ────────────────────────────────────────────────────────────────
 
+  // Pure navigation — trusts that the caller (the CHEFS-native Next button script,
+  // or attemptNext() below) has already validated the current substep. Never calls
+  // window.wizardValidateStep itself: calling Form.io's checkValidity twice for the
+  // same click was found to break its error rendering.
   function navigateNext() {
-    const next = getAdjacentVisibleSubstep(activeSubstep.value, 1);
-    if (next) updateSidebar(next);
+    const current = activeSubstep.value;
+    const next = getAdjacentVisibleSubstep(current, 1);
+    if (next) updateSidebar(next, true);
+  }
+
+  /**
+   * Validate-then-navigate entry point for the Vue "Next >" button, so it behaves
+   * identically to the CHEFS-native Next button (which validates via its own
+   * schema script before calling window.wizardNavigateNext). Only the Next button
+   * blocks navigation on invalid input. window.wizardValidateStep sets the status
+   * icon itself as a side effect (see StepFormViewer.vue).
+   *
+   * Also unlocks (makes clickable) the immediately-following substep, matching
+   * the progressive unlock previously done by the CHEFS-embedded Next buttons
+   * (e.g. step3's nextS3s/nextS3c calling window.wizardSetStepClickable) — now
+   * that in-form nav buttons are being removed, this is the only place that
+   * still does it.
+   */
+  function attemptNext() {
+    const current = activeSubstep.value;
+    const isValid = window.wizardValidateStep
+      ? window.wizardValidateStep(current)
+      : true;
+    const next = getAdjacentVisibleSubstep(current, 1);
+    if (next) setStepClickable(next, true);
+    if (!isValid) return;
+    navigateNext();
   }
 
   function navigatePrevious() {
@@ -385,66 +450,69 @@
 
   function setStepStatus(substepKey: string, status: StepStatus | null) {
     if (status) {
-      statusMap.value[substepKey] = status;
+      statusMap[substepKey] = status;
     } else {
-      delete statusMap.value[substepKey];
+      delete statusMap[substepKey];
     }
     emit('validation', substepKey, status);
   }
 
   function setAllStatuses(map: Record<string, StepStatus>) {
-    statusMap.value = { ...map };
+    Object.keys(statusMap).forEach((k) => delete statusMap[k]);
+    Object.assign(statusMap, map);
   }
 
   function setStepVisibility(stepKey: string, isVisible: boolean) {
     if (isVisible) {
-      delete navState.value.hiddenSteps[stepKey];
+      delete navState.hiddenSteps[stepKey];
     } else {
-      navState.value.hiddenSteps[stepKey] = true;
+      navState.hiddenSteps[stepKey] = true;
     }
-    // If current substep belongs to a newly-hidden step, navigate away.
     const parentOfCurrent = getParentStepKey(activeSubstep.value);
     if (parentOfCurrent === stepKey && !isVisible) {
       const fallback =
         getFallbackSubstep(activeSubstep.value) ??
         getVisibleSubstepsOrdered()[0] ??
-        'step1';
+        '';
       updateSidebar(fallback);
     }
   }
 
   function setSubstepVisibility(substepKey: string, isVisible: boolean) {
     if (isVisible) {
-      delete navState.value.hiddenSubsteps[substepKey];
+      delete navState.hiddenSubsteps[substepKey];
     } else {
-      navState.value.hiddenSubsteps[substepKey] = true;
+      navState.hiddenSubsteps[substepKey] = true;
     }
     if (activeSubstep.value === substepKey && !isVisible) {
       const fallback =
-        getFallbackSubstep(substepKey) ??
-        getVisibleSubstepsOrdered()[0] ??
-        'step1';
+        getFallbackSubstep(substepKey) ?? getVisibleSubstepsOrdered()[0] ?? '';
       updateSidebar(fallback);
     }
   }
 
   function setAllVisibility(nextState: WizardNavState) {
-    navState.value = {
-      hiddenSteps: { ...(nextState.hiddenSteps ?? {}) },
-      hiddenSubsteps: { ...(nextState.hiddenSubsteps ?? {}) },
-    };
+    Object.keys(navState.hiddenSteps).forEach(
+      (k) => delete navState.hiddenSteps[k]
+    );
+    Object.assign(navState.hiddenSteps, nextState.hiddenSteps ?? {});
+    Object.keys(navState.hiddenSubsteps).forEach(
+      (k) => delete navState.hiddenSubsteps[k]
+    );
+    Object.assign(navState.hiddenSubsteps, nextState.hiddenSubsteps ?? {});
     const ordered = getVisibleSubstepsOrdered();
     if (!ordered.includes(activeSubstep.value)) {
-      const fallback = getFallbackSubstep(activeSubstep.value) ?? ordered[0] ?? 'step1';
+      const fallback =
+        getFallbackSubstep(activeSubstep.value) ?? ordered[0] ?? '';
       updateSidebar(fallback);
     }
   }
 
   function setStepClickable(stepKey: string, isClickable: boolean) {
     if (isClickable) {
-      delete disabledMap.value[stepKey];
+      delete disabledMap[stepKey];
     } else {
-      disabledMap.value[stepKey] = true;
+      disabledMap[stepKey] = true;
     }
   }
 
@@ -458,7 +526,15 @@
     () => getAdjacentVisibleSubstep(activeSubstep.value, 1) !== null
   );
 
-  const isLastStep = computed(() => !hasNext.value);
+  // True only on the literal final substep (last substep of the last step in
+  // config order) — NOT simply "no visible next substep", which can be true
+  // temporarily whenever later steps/substeps haven't been unlocked yet. Using
+  // !hasNext here previously showed the Submit button prematurely (e.g. on
+  // step6 while step7 was still hidden).
+  const isLastStep = computed(() => {
+    const all = allSubstepKeys.value;
+    return all.length > 0 && activeSubstep.value === all[all.length - 1];
+  });
 
   // ── Window function bridge ────────────────────────────────────────────────────
   // Preserves backward compat with CHEFS form JS that calls window.wizard* functions.
@@ -474,8 +550,8 @@
     window.wizardSetSubstepVisibility = setSubstepVisibility;
     window.wizardSetAllVisibility = setAllVisibility;
     window.wizardSetStepClickable = setStepClickable;
-    // Stub — returns true until Step 4 wires actual panel validation.
-    window.wizardValidateStep = (_substep: string) => true;
+    // Note: window.wizardValidateStep is owned by StepFormViewer (it has direct
+    // access to the Form.io instance) — not assigned here.
   }
 
   function unregisterWindowFunctions() {
@@ -483,7 +559,6 @@
       'wizardUpdateSidebar',
       'wizardNavigateNext',
       'wizardNavigatePrevious',
-      'wizardValidateStep',
       'wizardSetStepStatus',
       'wizardSetAllStatuses',
       'wizardSetStepVisibility',
@@ -497,7 +572,17 @@
   let resizeCleanup: (() => void) | null = null;
 
   onMounted(() => {
-    registerWindowFunctions();
+    // Primary instance seeds the shared state; secondary instances (mobile drawer)
+    // skip this so they don't overwrite what the primary already set.
+    if (props.registerBridge) {
+      initWizardState(
+        props.initialStep,
+        props.initialNavState,
+        props.initialStatusMap,
+        props.initialDisabledMap
+      );
+      registerWindowFunctions();
+    }
 
     // Keep collapsed state in sync with viewport — reset to expanded on small screens
     // so Vue state never contradicts the CSS override.
@@ -507,19 +592,20 @@
       }
     }
     window.addEventListener('resize', syncCollapsedToViewport);
-    resizeCleanup = () => window.removeEventListener('resize', syncCollapsedToViewport);
+    resizeCleanup = () =>
+      window.removeEventListener('resize', syncCollapsedToViewport);
     syncCollapsedToViewport();
 
     // Navigate to first visible substep (or initialStep if already visible).
     const ordered = getVisibleSubstepsOrdered();
     const initial = ordered.includes(props.initialStep)
       ? props.initialStep
-      : (ordered[0] ?? 'step1');
+      : (ordered[0] ?? '');
     updateSidebar(initial);
   });
 
   onUnmounted(() => {
-    unregisterWindowFunctions();
+    if (props.registerBridge) unregisterWindowFunctions();
     resizeCleanup?.();
     if (hoverClearTimer) clearTimeout(hoverClearTimer);
   });
@@ -532,6 +618,7 @@
     hasNext,
     isLastStep,
     navigateNext,
+    attemptNext,
     navigatePrevious,
     updateSidebar,
     setStepStatus,
@@ -559,7 +646,9 @@
     display: flex;
     flex-direction: column;
     overflow: hidden;
-    transition: width 0.25s ease, min-width 0.25s ease;
+    transition:
+      width 0.25s ease,
+      min-width 0.25s ease;
   }
 
   .wiz-sidebar.is-collapsed {
@@ -585,7 +674,9 @@
   .wiz-header-title {
     white-space: nowrap;
     overflow: hidden;
-    transition: opacity 0.2s ease, width 0.25s ease;
+    transition:
+      opacity 0.2s ease,
+      width 0.25s ease;
   }
 
   .wiz-sidebar.is-collapsed .wiz-header {
@@ -619,6 +710,41 @@
     overflow-y: auto;
     overflow-x: hidden;
     padding: 8px 0;
+  }
+
+  .wiz-survey-btn {
+    display: flex;
+    align-items: center;
+    width: calc(100% - 24px);
+    margin: 0 16px 12px;
+    padding: 8px 12px;
+    background: none;
+    border: 1px solid #234075;
+    border-radius: 4px;
+    color: #234075;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.15s;
+  }
+
+  .wiz-survey-btn:hover {
+    background-color: rgba(35, 64, 117, 0.08);
+  }
+
+  .wiz-sidebar.is-collapsed .wiz-survey-btn {
+    width: calc(100% - 16px);
+    margin: 0 8px 12px;
+    padding: 8px 0;
+    justify-content: center;
+  }
+
+  .wiz-sidebar.is-collapsed .wiz-survey-btn .me-1 {
+    margin: 0 !important;
+  }
+
+  .wiz-sidebar.is-collapsed .wiz-survey-btn-label {
+    display: none;
   }
 
   .wiz-sidebar.is-collapsed .wiz-step-text,
@@ -664,6 +790,14 @@
 
   .wiz-step.is-disabled {
     opacity: 0.5;
+    cursor: not-allowed;
+    pointer-events: none;
+  }
+
+  /* Ghosted (not-yet-reachable) steps: shown at low opacity instead of being
+     hidden entirely, so users can see how many steps remain. Not clickable. */
+  .wiz-step.is-ghost {
+    opacity: 0.3;
     cursor: not-allowed;
     pointer-events: none;
   }
@@ -747,6 +881,12 @@
 
   .wiz-subitem.is-disabled {
     opacity: 0.5;
+    cursor: not-allowed;
+    pointer-events: none;
+  }
+
+  .wiz-subitem.is-ghost {
+    opacity: 0.3;
     cursor: not-allowed;
     pointer-events: none;
   }
@@ -871,6 +1011,12 @@
 
   .wiz-flyout-item.is-disabled {
     opacity: 0.5;
+    cursor: not-allowed;
+    pointer-events: none;
+  }
+
+  .wiz-flyout-item.is-ghost {
+    opacity: 0.3;
     cursor: not-allowed;
     pointer-events: none;
   }

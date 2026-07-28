@@ -1,5 +1,6 @@
 import type {
   ChefsAuthToken,
+  SidebarStepDto,
   SubmissionResponseDto,
   UpsertSubmissionDto,
 } from '@/types';
@@ -39,6 +40,13 @@ class ChefsService {
     return await this.httpService.get<any[]>(
       `api/Chefs/Applications?formKey=${encodeURIComponent(formKey)}`
     );
+  }
+
+  /**
+   * Fetches the sidebar steps and substeps.
+   */
+  async getSidebarStructure(): Promise<SidebarStepDto[]> {
+    return await this.httpService.get<SidebarStepDto[]>('api/Chefs/Sidebar');
   }
 
   async getSubmissions(): Promise<SubmissionResponseDto[]> {

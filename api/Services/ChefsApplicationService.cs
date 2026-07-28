@@ -180,4 +180,46 @@ public class ChefsApplicationService : IChefsApplicationService
             BaseUrl = _options.BaseUrl.TrimEnd('/'),
         };
     }
+
+    /// <inheritdoc />
+    public IReadOnlyList<SidebarStepDto> GetSidebarStructure()
+    {
+        var steps = _options
+            .Forms.Where(kv => !string.IsNullOrWhiteSpace(kv.Value.Title))
+            .Select(kv =>
+            {
+                var (formKey, formOptions) = kv;
+
+                var orderedSubsteps = formOptions
+                    .Children.Where(s =>
+                        !string.IsNullOrWhiteSpace(s.Key) && !string.IsNullOrWhiteSpace(s.Title)
+                    )
+                    .Select(s =>
+                    {
+                        return new SidebarSubstepDto
+                        {
+                            Key = s.Key,
+                            Order = s.Order ?? int.MaxValue,
+                            Title = s.Title,
+                            Icon = s.Icon,
+                            Disabled = s.Disabled,
+                        };
+                    })
+                    .OrderBy(s => s.Order)
+                    .ToList();
+
+                return new SidebarStepDto
+                {
+                    Key = formKey,
+                    Order = formOptions.Order ?? int.MaxValue,
+                    Title = formOptions.Title,
+                    Icon = formOptions.Icon,
+                    Children = orderedSubsteps,
+                };
+            })
+            .OrderBy(s => s.Order)
+            .ToList();
+
+        return steps;
+    }
 }

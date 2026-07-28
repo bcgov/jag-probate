@@ -27,10 +27,7 @@ public class ChefsServiceCollectionExtensionsTests
     {
         var services = new ServiceCollection();
         var configuration = BuildConfiguration(
-            new Dictionary<string, string?>
-            {
-                ["Chefs:BaseUrl"] = "https://chefs.example.com/app",
-            }
+            new Dictionary<string, string?> { ["Chefs:BaseUrl"] = "https://chefs.example.com/app" }
         );
 
         var exception = Assert.Throws<ConfigurationException>(() =>
@@ -102,9 +99,7 @@ public class ChefsServiceCollectionExtensionsTests
         Assert.Contains("Chefs__Forms__legal__ApiKey", exception.Message);
     }
 
-    private static IConfiguration BuildConfiguration(
-        Dictionary<string, string?>? overrides = null
-    )
+    private static IConfiguration BuildConfiguration(Dictionary<string, string?>? overrides = null)
     {
         var configData =
             overrides

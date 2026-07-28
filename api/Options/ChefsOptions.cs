@@ -3,10 +3,33 @@ using System.Collections.Generic;
 
 namespace Probate.Api.Options;
 
+/// <summary>
+/// Sidebar metadata for a substep (panel) within a parent CHEFS form.
+/// Substeps are not separate CHEFS forms - they are panels within the parent
+/// form's schema, gated by a substepKey (see e.g. "step3_spouse").
+/// </summary>
+public class ChefsSubstepOptions
+{
+    /// <summary>
+    /// Logical substep key (e.g. "form_spouse").
+    /// </summary>
+    public string Key { get; set; } = string.Empty;
+    public string Title { get; set; } = string.Empty;
+    public string Icon { get; set; } = string.Empty;
+    public int? Order { get; set; }
+    public bool Disabled { get; set; }
+}
+
 public class ChefsFormOptions
 {
     public string FormId { get; set; } = string.Empty;
     public string ApiKey { get; set; } = string.Empty;
+    public int? Order { get; set; }
+    public string Title { get; set; } = string.Empty;
+
+    /// <summary>Font Awesome free-solid icon name, e.g. "users".</summary>
+    public string Icon { get; set; } = string.Empty;
+    public List<ChefsSubstepOptions> Children { get; set; } = new();
 }
 
 /// <summary>

@@ -121,10 +121,10 @@ const routes: RouteRecordRaw[] = [
     meta: { requiresAuth: true },
   },
   {
-    path: '/app-preview',
+    path: '/v2/get-started',
     name: 'ApplicationManager',
     component: () => import('@/views/ApplicationManager.vue'),
-    meta: { requiresAuth: false },
+    meta: { requiresAuth: true },
   },
   {
     path: '/error',

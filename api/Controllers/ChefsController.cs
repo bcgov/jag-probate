@@ -92,4 +92,17 @@ public class ChefsController : ControllerBase
         );
         return Ok(tokenResponse);
     }
+
+    /// <summary>
+    /// Gets the sidebar navigation structure (step/substep title, icon, order),
+    /// driven entirely by Chefs:Forms configuration. FormId and ApiKey are never
+    /// included in the response.
+    /// </summary>
+    /// <response code="200">Ordered list of sidebar steps and their substeps.</response>
+    [HttpGet("Sidebar")]
+    [ProducesResponseType(typeof(IReadOnlyList<SidebarStepDto>), StatusCodes.Status200OK)]
+    public ActionResult<IReadOnlyList<SidebarStepDto>> GetSidebarStructure()
+    {
+        return Ok(_chefsApplicationService.GetSidebarStructure());
+    }
 }

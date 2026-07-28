@@ -54,10 +54,19 @@ declare global {
     wizardSetAllStatuses?: (statusMap: Record<string, StepStatus>) => void;
     // Visibility
     wizardSetStepVisibility?: (stepKey: string, isVisible: boolean) => void;
-    wizardSetSubstepVisibility?: (substepKey: string, isVisible: boolean) => void;
+    wizardSetSubstepVisibility?: (
+      substepKey: string,
+      isVisible: boolean
+    ) => void;
     wizardSetAllVisibility?: (nextState: WizardNavState) => void;
     // Disabled
     wizardSetStepClickable?: (stepKey: string, isClickable: boolean) => void;
+    // Review edit navigation
+    wizardGoToField?: (substepKey: string, fieldKey: string) => void;
+    // Immediate save on navigation (bypasses the auto-save debounce)
+    wizardSaveStep?: (substepKey: string) => void;
+    // Returns a save-ready payload (business data + wizard state metadata).
+    wizardGetPersistedPayload?: () => unknown;
     // Callback registration (added in Step 4)
     wizardRegisterCallback?: (
       event: 'navigate' | 'validation',

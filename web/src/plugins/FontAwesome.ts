@@ -8,6 +8,7 @@ import {
   faAnglesLeft,
   faAnglesRight,
   faArrowLeft,
+  faBars,
   faCircleArrowLeft,
   faCircleArrowRight,
   faBook,
@@ -20,12 +21,15 @@ import {
   faCoins,
   faEnvelopeOpenText,
   faFileLines,
+  faFloppyDisk,
   faList,
+  faListCheck,
   faRightFromBracket,
   faSkull,
   faUser,
   faUserTie,
   faUsers,
+  faXmark,
 } from '@fortawesome/free-solid-svg-icons';
 
 export default function registerFontAwesome(app: App) {
@@ -33,6 +37,7 @@ export default function registerFontAwesome(app: App) {
     faAnglesLeft,
     faAnglesRight,
     faArrowLeft,
+    faBars,
     faCircleArrowLeft,
     faCircleArrowRight,
     faBook,
@@ -45,12 +50,15 @@ export default function registerFontAwesome(app: App) {
     faCoins,
     faEnvelopeOpenText,
     faFileLines,
+    faFloppyDisk,
     faList,
+    faListCheck,
     faRightFromBracket,
     faSkull,
     faUser,
     faUserTie,
     faUsers,
+    faXmark
   );
   app.component('font-awesome-icon', FontAwesomeIcon);
 }

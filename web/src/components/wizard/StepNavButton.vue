@@ -28,16 +28,9 @@
         Next &gt;
       </button>
 
-      <slot
-        v-if="isLastStep"
-        name="submit"
-      >
+      <slot v-if="isLastStep" name="submit">
         <!-- Default submit button rendered when no override slot provided -->
-        <button
-          type="button"
-          class="btn btn-success"
-          @click="$emit('submit')"
-        >
+        <button type="button" class="btn btn-success" @click="$emit('submit')">
           Submit Application
         </button>
       </slot>
@@ -66,3 +59,10 @@
     (e: 'submit'): void;
   }>();
 </script>
+
+<style scoped>
+  .wizard-nav-buttons {
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
+  }
+</style>

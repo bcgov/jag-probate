@@ -1,6 +1,14 @@
 /* === Import BC Gov Bootstrap v5 Theme === */
 @import '@bcgov/bootstrap-v5-theme/css/bootstrap-theme.min.css';
 
+/* === CHEFS overrides === */
+@import './chefs-form.scss';
+
+/* Remove max-width caps CHEFS injects via .v-container at various breakpoints */
+.v-container {
+  max-width: none !important;
+}
+
 /* === BC Government Visual Identity Styles === */
 
 // BC Gov colors
@@ -22,10 +30,15 @@ $bcgov-white: #ffffff;
   flex-direction: column;
   min-height: 0;
   overflow: visible !important;
+  /* Prevent CHEFS form internal elements from causing horizontal page scroll */
+  max-width: 100vw;
 }
 
 // Header
 .app-header {
+  position: sticky;
+  top: 0;
+  z-index: 1030;
   background-color: $bcgov-blue;
 
   .navbar {
