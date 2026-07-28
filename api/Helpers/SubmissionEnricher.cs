@@ -330,8 +330,7 @@ public static class SubmissionEnricher
 
     private static string DetermineApplicantRole(JObject root)
     {
-        var applicantName =
-            root.SelectToken("applicant.applicantName")?.Value<string>() ?? "";
+        var applicantName = root.SelectToken("applicant.applicantName")?.Value<string>() ?? "";
         if (string.IsNullOrWhiteSpace(applicantName))
             return "";
 
@@ -352,21 +351,13 @@ public static class SubmissionEnricher
 
                 if (
                     s.Value<string>("spouseIsAdult") == "no"
-                    && string.Equals(
-                        s.Value<string>("spouseGuardianName"),
-                        applicantName,
-                        compare
-                    )
+                    && string.Equals(s.Value<string>("spouseGuardianName"), applicantName, compare)
                 )
                     return $"guardian of {s.Value<string>("spouseName")}, a minor spouse";
 
                 if (
                     s.Value<string>("spouseIsCompetent") == "no"
-                    && string.Equals(
-                        s.Value<string>("spouseNomineeName"),
-                        applicantName,
-                        compare
-                    )
+                    && string.Equals(s.Value<string>("spouseNomineeName"), applicantName, compare)
                 )
                     return $"nominee of {s.Value<string>("spouseName")}, a mentally incapable spouse";
             }
@@ -387,21 +378,13 @@ public static class SubmissionEnricher
 
                 if (
                     c.Value<string>("childIsAdult") == "no"
-                    && string.Equals(
-                        c.Value<string>("childGuardianName"),
-                        applicantName,
-                        compare
-                    )
+                    && string.Equals(c.Value<string>("childGuardianName"), applicantName, compare)
                 )
                     return $"guardian of {c.Value<string>("childName")}, a minor child";
 
                 if (
                     c.Value<string>("childIsCompetent") == "no"
-                    && string.Equals(
-                        c.Value<string>("childNomineeName"),
-                        applicantName,
-                        compare
-                    )
+                    && string.Equals(c.Value<string>("childNomineeName"), applicantName, compare)
                 )
                     return $"nominee of {c.Value<string>("childName")}, a mentally incapable child";
             }
@@ -417,13 +400,7 @@ public static class SubmissionEnricher
                 if (cr == null)
                     continue;
 
-                if (
-                    string.Equals(
-                        cr.Value<string>("creditorPersonName"),
-                        applicantName,
-                        compare
-                    )
-                )
+                if (string.Equals(cr.Value<string>("creditorPersonName"), applicantName, compare))
                     return "creditor";
 
                 if (
