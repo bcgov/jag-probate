@@ -806,7 +806,15 @@
     margin-left: 0;
     border-left: 4px solid transparent;
     cursor: pointer;
-    transition: color 0.2s ease;
+    transition:
+      background-color 0.15s ease,
+      color 0.15s ease,
+      border-left-color 0.15s ease;
+  }
+
+  .wiz-step:hover:not(.is-active):not(.is-disabled):not(.is-ghost) {
+    background: rgba(35, 64, 117, 0.06);
+    border-left-color: rgba(35, 64, 117, 0.35);
   }
 
   .wiz-step.is-active {
@@ -911,6 +919,16 @@
     font-size: 14px;
     color: #555;
     cursor: pointer;
+    transition:
+      background-color 0.15s ease,
+      color 0.15s ease,
+      transform 0.15s ease;
+  }
+
+  .wiz-subitem:hover:not(.is-active):not(.is-disabled):not(.is-ghost) {
+    background: rgba(35, 64, 117, 0.06);
+    color: #234075;
+    transform: translateX(2px);
   }
 
   .wiz-subitem.is-active {
