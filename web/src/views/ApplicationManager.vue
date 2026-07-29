@@ -362,7 +362,15 @@
   }
 
   .wizard-col {
-    flex-shrink: 0;
+    flex: 0 0 320px;
+    width: 320px;
+    min-width: 320px;
+  }
+
+  .wizard-col:has(.wiz-sidebar.is-collapsed) {
+    flex-basis: 62px;
+    width: 62px;
+    min-width: 62px;
   }
 
   .content-col {
@@ -395,6 +403,12 @@
   @media (max-width: 991px) {
     .wizard-preview-layout {
       flex-direction: column;
+    }
+
+    .wizard-col {
+      flex-basis: auto;
+      width: auto;
+      min-width: 0;
     }
 
     .content-col {

@@ -1,18 +1,15 @@
 <template>
-  <div
-    id="wizardSidebar"
-    class="wiz-sidebar"
-    :class="{ 'is-collapsed': collapsed }"
-  >
+  <div class="wiz-sidebar" :class="{ 'is-collapsed': collapsed }">
     <div class="wiz-header">
       <strong class="wiz-header-title">Application Steps</strong>
       <button
         class="wiz-toggle-btn"
         :aria-label="collapsed ? 'Expand sidebar' : 'Collapse sidebar'"
+        :title="collapsed ? 'Expand sidebar' : 'Collapse sidebar'"
         @click="collapsed = !collapsed"
       >
         <font-awesome-icon
-          :icon="collapsed ? 'circle-arrow-right' : 'circle-arrow-left'"
+          :icon="collapsed ? 'chevron-right' : 'chevron-left'"
         />
       </button>
     </div>
@@ -23,6 +20,7 @@
         class="wiz-survey-btn"
         type="button"
         aria-label="Back to Survey"
+        :title="collapsed ? 'Back to Survey' : undefined"
         @click="goToSurvey"
       >
         <font-awesome-icon icon="list-check" class="me-1" />
@@ -42,8 +40,11 @@
           @mouseenter="onStepMouseEnter(step, $event)"
           @mouseleave="onStepMouseLeave"
         >
-          <div class="wiz-icon">
-            <font-awesome-icon v-if="step.icon" :icon="step.icon" />
+          <div class="wiz-icon" :class="stepIconClass(step)">
+            <font-awesome-icon
+              v-if="stepIconName(step)"
+              :icon="stepIconName(step)!"
+            />
             <template v-else>{{ step.number }}</template>
           </div>
           <div class="wiz-step-text">
@@ -298,6 +299,25 @@
     if (s === 'incomplete') return 'circle-half-stroke';
     if (s === 'error') return 'circle-xmark';
     return 'circle';
+  }
+
+  function isStepCompleted(step: WizardStep): boolean {
+    const relevantSubsteps = step.substeps
+      .map((s) => s.key)
+      .filter((k) => !isSubstepHidden(k) && !isSubstepDisabled(k));
+
+    if (!relevantSubsteps.length) return false;
+
+    return relevantSubsteps.every((k) => statusMap[k] === 'completed');
+  }
+
+  function stepIconName(step: WizardStep): string | null {
+    if (isStepCompleted(step)) return 'check';
+    return step.icon || null;
+  }
+
+  function stepIconClass(step: WizardStep): string | undefined {
+    return isStepCompleted(step) ? 'wiz-icon-complete' : undefined;
   }
 
   // ── UI state helpers ──────────────────────────────────────────────────────────
@@ -633,8 +653,10 @@
 
 <style scoped>
   .wiz-sidebar {
-    position: sticky;
+    position: fixed;
+    left: 0;
     top: 62px;
+    z-index: 1;
     height: calc(100vh - 62px);
     width: 320px;
     min-width: 320px;
@@ -709,14 +731,14 @@
     flex: 1;
     overflow-y: auto;
     overflow-x: hidden;
-    padding: 8px 0;
+    padding: 8px 0 100px;
   }
 
   .wiz-survey-btn {
     display: flex;
     align-items: center;
-    width: calc(100% - 24px);
-    margin: 0 16px 12px;
+    width: auto;
+    margin: 12px;
     padding: 8px 12px;
     background: none;
     border: 1px solid #234075;
@@ -733,9 +755,10 @@
   }
 
   .wiz-sidebar.is-collapsed .wiz-survey-btn {
-    width: calc(100% - 16px);
-    margin: 0 8px 12px;
-    padding: 8px 0;
+    width: 46px;
+    height: 46px;
+    margin: 8px auto 12px;
+    padding: 0;
     justify-content: center;
   }
 
@@ -756,9 +779,18 @@
   .wiz-sidebar.is-collapsed .wiz-step {
     justify-content: center;
     align-items: center;
-    padding: 13px 0;
+    width: 100%;
+    height: 62px;
+    min-height: 62px;
+    margin-left: 0;
+    padding: 0;
     gap: 0;
+    border-left-width: 0;
     border-left-color: transparent !important;
+  }
+
+  .wiz-sidebar.is-collapsed .wiz-icon {
+    margin: 0;
   }
 
   /* Keep active highlight full-width in collapsed mode */
@@ -771,7 +803,7 @@
     align-items: flex-start;
     gap: 12px;
     padding: 14px 18px;
-    margin-left: 8px;
+    margin-left: 0;
     border-left: 4px solid transparent;
     cursor: pointer;
     transition: color 0.2s ease;
@@ -784,8 +816,8 @@
   }
 
   .wiz-step.is-active .wiz-icon {
-    background: rgba(255, 255, 255, 0.3);
-    color: #fff;
+    background: #fff;
+    color: #234075;
   }
 
   .wiz-step.is-disabled {
@@ -833,16 +865,23 @@
   }
 
   .wiz-icon {
-    width: 32px;
-    height: 32px;
+    width: 38px;
+    height: 38px;
     border-radius: 50%;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     font-weight: 700;
-    background: #d9d9d9;
+    background: #fff;
     color: #555;
-    flex: 0 0 32px;
+    flex: 0 0 38px;
+  }
+
+  .wiz-icon.wiz-icon-complete,
+  .wiz-step.is-active .wiz-icon.wiz-icon-complete {
+    background: #234075;
+    border: none;
+    color: #fff;
   }
 
   .wiz-label {
@@ -904,7 +943,7 @@
   }
 
   .wiz-dot.status-completed {
-    color: #2e8540;
+    color: #234075;
   }
 
   .wiz-dot.status-incomplete {

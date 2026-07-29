@@ -73,7 +73,7 @@
 
   function scrollToTop() {
     nextTick(() => {
-      viewerEl.value?.scrollIntoView({ behavior: 'instant', block: 'start' });
+      viewerEl.value?.scrollIntoView({ behavior: 'auto', block: 'start' });
     });
   }
 
@@ -742,14 +742,22 @@
     if (!el?.formioInstance?.data || !ownKeys) return;
     try {
       const accumulated = wizardDataStore.accumulatedData;
+      const injectedKeys =
+        stepInjectedKeys[stepKey] ?? (stepInjectedKeys[stepKey] = new Set());
       let hasChanges = false;
       for (const [key, value] of Object.entries(accumulated)) {
         if (!ownKeys.has(key) && el.formioInstance.data[key] !== value) {
           el.formioInstance.data[key] = value;
+          // Keep late-synced keys marked as injected so captureStepData does not
+          // treat them as dynamic step-owned fields on future changes.
+          injectedKeys.add(key);
           hasChanges = true;
         }
       }
       if (!hasChanges) return;
+      // Re-run Form.io logic triggers so review-table scripts recompute using
+      // freshly synced cross-step data.
+      el.formioInstance.triggerChange?.();
       // redraw() re-renders all components including fieldset legends, panel titles,
       // and HTML content components that use {{ data.xxx }} template expressions.
       // triggerChange() alone only recalculates computed values, not static DOM.

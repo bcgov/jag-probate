@@ -4,8 +4,10 @@
 /* === CHEFS overrides === */
 @import './chefs-form.scss';
 
-/* Remove max-width caps CHEFS injects via .v-container at various breakpoints */
-.v-container {
+/* Remove max-width caps only inside CHEFS hosts to avoid global Vuetify impact */
+.chefs-form-viewer .v-container,
+chefs-form-viewer .v-container,
+.step-form-viewer .v-container {
   max-width: none !important;
 }
 
@@ -64,6 +66,8 @@ $bcgov-white: #ffffff;
 footer {
   background-color: $bcgov-blue;
   margin-top: auto;
+  position: relative;
+  z-index: 3;
 
   .navbar {
     padding: 0.75rem 1rem;
