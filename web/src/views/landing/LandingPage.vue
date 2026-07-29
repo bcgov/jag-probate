@@ -206,53 +206,56 @@
   }
 
   .landing-cta-btn {
-    display: inline-block !important;
-    min-width: 17rem !important;
-    padding: 0.5rem 1rem !important;
-    font-size: 1.25rem !important;
-    line-height: 1.5 !important;
-    border: 1px solid white !important;
-    font-weight: 600 !important;
-    text-align: center !important;
-    text-decoration: none !important;
-    cursor: pointer !important;
-    appearance: none !important;
-    letter-spacing: normal !important;
-    box-shadow: none !important;
+    display: inline-block;
+    padding: 0.5rem 1.5rem;
+    font-size: 1.25rem;
+    line-height: 1.5;
+    border: 1px solid transparent;
+    border-radius: 0.5rem;
+    font-weight: 400;
+    text-align: center;
+    text-decoration: none;
+    cursor: pointer;
+    appearance: none;
+    letter-spacing: normal;
+    box-shadow: none;
     transition:
       background-color 0.2s ease,
       border-color 0.2s ease,
-      color 0.2s ease !important;
+      color 0.2s ease,
+      box-shadow 0.2s ease;
   }
 
   .landing-cta-btn-primary {
-    background: #0d6efd !important;
-    border-color: #0d6efd !important;
-    color: #fff !important;
+    background: #38598a;
+    border-color: #38598a;
+    color: #fff;
+    margin-bottom: 0.5rem;
   }
 
   .landing-cta-btn-primary:hover,
   .landing-cta-btn-primary:focus,
   .landing-cta-btn-primary:active {
-    background: #0b5ed7 !important;
-    border-color: #0a58ca !important;
-    color: #fff !important;
-    box-shadow: none !important;
+    background: #304c75;
+    border-color: #304c75;
+    color: #fff;
+    box-shadow: none;
   }
 
   .landing-cta-btn-warning {
-    background: #ffc107 !important;
-    border-color: #ffc107 !important;
-    color: #212529 !important;
+    background: #ffc107;
+    border-color: #ffc107;
+    color: #212529;
+    margin-bottom: 0.5rem;
   }
 
   .landing-cta-btn-warning:hover,
   .landing-cta-btn-warning:focus,
   .landing-cta-btn-warning:active {
-    background: #ffca2c !important;
-    border-color: #ffc720 !important;
-    color: #212529 !important;
-    box-shadow: none !important;
+    background: #ffca2c;
+    border-color: #ffc720;
+    color: #212529;
+    box-shadow: none;
   }
 
   @media (max-width: 767.98px) {
