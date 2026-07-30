@@ -17,6 +17,7 @@ chefs-form-viewer .v-container,
 $bcgov-blue: #003366;
 $bcgov-gold: #fcba19;
 $bcgov-white: #ffffff;
+$app-header-height: 62px;
 
 // Layout
 .app-outer {
@@ -27,7 +28,7 @@ $bcgov-white: #ffffff;
 
 .app-main {
   flex: 1 0 auto;
-  padding: 2rem 0 0;
+  padding: calc(#{$app-header-height} + 2rem) 0 0;
   display: flex;
   flex-direction: column;
   min-height: 0;
@@ -38,12 +39,16 @@ $bcgov-white: #ffffff;
 
 // Header
 .app-header {
-  position: sticky;
+  position: fixed;
   top: 0;
+  left: 0;
+  right: 0;
+  width: 100%;
   z-index: 1030;
   background-color: $bcgov-blue;
 
   .navbar {
+    min-height: $app-header-height;
     padding: 0.5rem 1rem;
   }
 
