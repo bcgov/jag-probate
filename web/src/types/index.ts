@@ -14,6 +14,23 @@ export interface ChefsAuthToken {
   baseUrl: string;
 }
 
+/** Sidebar substep (panel) metadata. */
+export interface SidebarSubstepDto {
+  key: string;
+  title: string;
+  icon: string;
+  disabled: boolean;
+}
+
+/** Sidebar step metadata for a single top-level step.*/
+export interface SidebarStepDto {
+  key: string;
+  order: number;
+  title: string;
+  icon: string;
+  children: SidebarSubstepDto[];
+}
+
 export type {
   PreviousApplication,
   SubmissionResponseDto,

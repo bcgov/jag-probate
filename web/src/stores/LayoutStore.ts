@@ -26,6 +26,14 @@ export const useLayoutStore = defineStore('LayoutStore', () => {
     (navSubtitle.value = newSubtitle);
   const resetNavSubtitle = () => (navSubtitle.value = undefined);
 
+  // Mobile nav drawer state
+  // Pages that include the step sidebar set hasMobileNav = true on mount.
+  const hasMobileNav = ref(false);
+  const mobileNavOpen = ref(false);
+  const setHasMobileNav = (value: boolean) => (hasMobileNav.value = value);
+  const openMobileNav = () => (mobileNavOpen.value = true);
+  const closeMobileNav = () => (mobileNavOpen.value = false);
+
   return {
     navHeader,
     setNavHeader,
@@ -36,5 +44,10 @@ export const useLayoutStore = defineStore('LayoutStore', () => {
     backdropClass,
     setBackdropClass,
     resetBackdropClass,
+    hasMobileNav,
+    mobileNavOpen,
+    setHasMobileNav,
+    openMobileNav,
+    closeMobileNav,
   };
 });

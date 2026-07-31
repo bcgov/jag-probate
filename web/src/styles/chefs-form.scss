@@ -1,0 +1,788 @@
+:root {
+    --space-1: 0.25rem;
+    --space-2: 0.5rem;
+    --space-3: 0.75rem;
+    --space-4: 1rem;
+    --space-5: 1.25rem;
+    --space-6: 1.5rem;
+    --space-8: 2rem;
+    --space-10: 2.5rem;
+    --radius-sm: 0.375rem;
+    --radius-md: 0.625rem;
+    --radius-lg: 1rem;
+    --radius-pill: 9999px;
+    --color-primary: #234075;
+    --color-primary-hover: #1a3261;
+    --color-primary-active: #132549;
+    --color-primary-subtle: rgba(35, 64, 117, 0.07);
+    --color-gold: #e3a82b;
+    --color-gold-hover: #c99221;
+    --color-gold-active: #b07e1a;
+    --color-border: #d0d7de;
+    --color-border-strong: #9198a1;
+    --color-text: #212529;
+    --color-text-muted: #6c757d;
+    --color-surface: #ffffff;
+    --color-surface-subtle: #f8f9fa;
+    --text-sm: 0.875rem;
+    --text-base: 1rem;
+    --text-lg: 1.125rem;
+    --text-xl: 1.25rem;
+    --text-2xl: 1.5rem;
+    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08);
+    --shadow-md: 0 4px 12px rgba(35, 64, 117, 0.10);
+    --shadow-lg: 0 8px 24px rgba(35, 64, 117, 0.14);
+    --transition: 0.2s ease;
+}
+
+label,
+.col-form-label {
+    font-weight: 500 !important;
+    font-size: var(--text-base) !important;
+    color: var(--color-text) !important;
+    margin-bottom: var(--space-1) !important;
+    word-break: normal !important;
+    overflow-wrap: normal !important;
+    hyphens: none !important;
+}
+
+p {
+    margin-bottom: var(--space-3);
+    line-height: 1.65;
+}
+
+.formio-component {
+    margin-bottom: var(--space-3) !important;
+}
+
+.formio-component:last-child {
+    margin-bottom: 0 !important;
+}
+
+.formio-component-panel {
+    margin-bottom: var(--space-4) !important;
+}
+
+.form-control {
+    word-break: normal !important;
+    padding: 0.5rem 0.75rem !important;
+    border: 1px solid var(--color-border) !important;
+    border-radius: var(--radius-sm) !important;
+    font-size: var(--text-base) !important;
+    line-height: 1.5 !important;
+    color: var(--color-text) !important;
+    background-color: var(--color-surface) !important;
+    transition: border-color var(--transition), box-shadow var(--transition) !important;
+}
+
+.form-control:hover {
+    border-color: var(--color-border-strong) !important;
+}
+
+.form-control:focus {
+    border-color: var(--color-primary) !important;
+    box-shadow: 0 0 0 3px rgba(35, 64, 117, 0.18) !important;
+    outline: none !important;
+}
+
+.form-control.is-invalid,
+.was-validated .form-control:invalid {
+    border-color: #dc3545 !important;
+}
+
+.form-control.is-invalid:focus,
+.was-validated .form-control:invalid:focus {
+    box-shadow: 0 0 0 3px rgba(220, 53, 69, 0.18) !important;
+}
+
+.input-group .form-control:not(:last-child) {
+    border-right: none !important;
+    border-radius: var(--radius-sm) 0 0 var(--radius-sm) !important;
+}
+
+.input-group .input-group-text {
+    border: 1px solid var(--color-border) !important;
+    border-left: none !important;
+    border-radius: 0 var(--radius-sm) var(--radius-sm) 0 !important;
+    background-color: var(--color-surface-subtle) !important;
+    color: var(--color-text-muted) !important;
+    padding: 0.5rem 0.65rem !important;
+    height: 100% !important;
+    align-self: stretch !important;
+    display: flex !important;
+    align-items: center !important;
+}
+
+.formio-component-simpledatetimeadvanced .input-group,
+.formio-component-datetime .input-group,
+.formio-component-day .input-group {
+    max-width: 260px !important;
+}
+
+
+.btn.btn-primary {
+    background: linear-gradient(135deg, #234075 0%, #1a3261 100%) !important;
+    border: none !important;
+    min-width: 6.25rem !important;
+    color: #ffffff !important;
+    font-weight: 600 !important;
+    font-size: var(--text-base) !important;
+    padding: 0.5625rem 1.5rem !important;
+    border-radius: var(--radius-md) !important;
+    transition: background var(--transition), box-shadow var(--transition) !important;
+    letter-spacing: 0.01em !important;
+}
+
+.btn.btn-primary:hover {
+    background: linear-gradient(135deg, #1a3261 0%, #132549 100%) !important;
+    box-shadow: var(--shadow-sm) !important;
+}
+
+.btn.btn-primary:active {
+    background: linear-gradient(135deg, #132549 0%, #1a3261 100%) !important;
+}
+
+.btn.btn-primary:focus {
+    box-shadow: 0 0 0 3px rgba(35, 64, 117, 0.30) !important;
+}
+
+.btn.btn-success {
+    background: linear-gradient(135deg, #28a745 0%, #218838 100%) !important;
+    border: none !important;
+    min-width: 6.25rem !important;
+    color: #ffffff !important;
+    font-weight: 600 !important;
+    padding: 0.5625rem 1.5rem !important;
+    border-radius: var(--radius-md) !important;
+    transition: background var(--transition), box-shadow var(--transition) !important;
+}
+
+.btn.btn-success:hover {
+    background: linear-gradient(135deg, #218838 0%, #1e7e34 100%) !important;
+    box-shadow: var(--shadow-sm) !important;
+}
+
+.btn.btn-secondary {
+    background: linear-gradient(135deg, #5a6268 0%, #495057 100%) !important;
+    border: none !important;
+    color: #ffffff !important;
+    font-weight: 600 !important;
+    padding: 0.5625rem 1.5rem !important;
+    border-radius: var(--radius-md) !important;
+    transition: background var(--transition), box-shadow var(--transition) !important;
+}
+
+.btn.btn-secondary:hover {
+    background: linear-gradient(135deg, #495057 0%, #3d4349 100%) !important;
+    box-shadow: var(--shadow-sm) !important;
+}
+
+.btn.btn-warning {
+    background: linear-gradient(135deg, #e3a82b 0%, #c99221 100%) !important;
+    border: none !important;
+    min-width: 6.25rem !important;
+    color: #ffffff !important;
+    font-weight: 600 !important;
+    padding: 0.5625rem 1.5rem !important;
+    border-radius: var(--radius-md) !important;
+    transition: background var(--transition), box-shadow var(--transition) !important;
+}
+
+.btn.btn-warning:hover {
+    background: linear-gradient(135deg, #c99221 0%, #b07e1a 100%) !important;
+    box-shadow: var(--shadow-sm) !important;
+}
+
+.btn.btn-danger {
+    background: linear-gradient(135deg, #c82333 0%, #dc3545 100%) !important;
+    border: none !important;
+    color: #ffffff !important;
+    font-weight: 600 !important;
+    padding: 0.5625rem 1.5rem !important;
+    border-radius: var(--radius-md) !important;
+    transition: background var(--transition), box-shadow var(--transition) !important;
+}
+.card.home-content {
+    width: 100% !important;
+    margin: inherit !important;
+}
+
+.main.v-container {
+  max-width: 100%;
+}
+.btn.btn-danger:hover {
+    background: linear-gradient(135deg, #dc3545 0%, #e04555 100%) !important;
+    box-shadow: var(--shadow-sm) !important;
+}
+
+.btn.btn-info {
+    background: linear-gradient(135deg, #5a6268 0%, #495057 100%) !important;
+    border: none !important;
+    color: #ffffff !important;
+    font-weight: 600 !important;
+    padding: 0.5625rem 1.5rem !important;
+    border-radius: var(--radius-md) !important;
+    transition: background var(--transition), box-shadow var(--transition) !important;
+}
+
+.btn.btn-info:hover {
+    background: linear-gradient(135deg, #495057 0%, #3d4349 100%) !important;
+    box-shadow: var(--shadow-sm) !important;
+}
+
+.btn.btn-light {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%) !important;
+    border: none !important;
+    min-width: 6.25rem !important;
+    margin-bottom: 0 !important;
+    color: #212529 !important;
+    font-weight: 600 !important;
+    font-size: var(--text-base) !important;
+    padding: 0.5625rem 1.5rem !important;
+    border-radius: var(--radius-md) !important;
+    transition: background var(--transition), box-shadow var(--transition) !important;
+    letter-spacing: 0.01em !important;
+}
+
+.btn.btn-light:hover {
+    background: linear-gradient(135deg, #e9ecef 0%, #dee2e6 100%) !important;
+    box-shadow: var(--shadow-sm) !important;
+}
+
+.btn.btn-light:active {
+    background: linear-gradient(135deg, #dee2e6 0%, #e9ecef 100%) !important;
+}
+
+.btn.btn-light:focus {
+    box-shadow: 0 0 0 3px rgba(248, 249, 250, 0.30) !important;
+}
+
+.btn:focus {
+    outline: none !important;
+}
+
+.card.card-body {
+    background-color: var(--color-surface) !important;
+    border: 1px solid var(--color-border) !important;
+    border-radius: var(--radius-lg) !important;
+    padding: var(--space-6) var(--space-8) !important;
+    margin-bottom: var(--space-4) !important;
+    box-shadow: var(--shadow-sm) !important;
+}
+
+.well-container {
+    margin-top: var(--space-4);
+    margin-bottom: var(--space-4);
+}
+
+.well-container .card.card-body {
+    border-radius: var(--radius-lg) !important;
+    padding: var(--space-6) var(--space-8) !important;
+    box-shadow: var(--shadow-sm) !important;
+}
+
+.no-border .card {
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    margin-top: var(--space-4) !important;
+}
+
+.question-block fieldset {
+    border: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+}
+
+.question-block fieldset legend {
+    font-size: 1.375rem !important;
+    color: var(--color-text) !important;
+    margin-top: var(--space-5) !important;
+    margin-bottom: var(--space-3) !important;
+    line-height: 1.4 !important;
+    float: none !important;
+    width: 100% !important;
+    padding-bottom: var(--space-2) !important;
+    border-bottom: 2px solid var(--color-primary-subtle) !important;
+}
+
+.question-block h3 {
+    font-size: var(--text-lg) !important;
+    font-weight: 600 !important;
+    color: var(--color-text) !important;
+    margin-bottom: var(--space-3) !important;
+}
+
+.question-bold {
+    color: var(--color-primary) !important;
+    font-weight: 600 !important;
+    font-size: inherit !important;
+}
+
+.blue-background {
+    background: linear-gradient(135deg, #e8f0fb 0%, #f0f5ff 100%) !important;
+    padding: var(--space-6) var(--space-8) !important;
+    border-radius: var(--radius-lg) !important;
+    border: 1px solid rgba(35, 64, 117, 0.15) !important;
+    margin-top: var(--space-4) !important;
+    margin-bottom: var(--space-4) !important;
+    box-shadow: var(--shadow-md) !important;
+}
+
+.blue-background.formio-hidden {
+    display: none !important;
+}
+
+.red-background {
+    background: linear-gradient(135deg, #fff0f0 0%, #fff5f5 100%) !important;
+    padding: var(--space-6) var(--space-8) !important;
+    border-radius: var(--radius-lg) !important;
+    border: 1px solid rgba(220, 53, 69, 0.20) !important;
+    margin-top: var(--space-4) !important;
+    margin-bottom: var(--space-4) !important;
+    box-shadow: 0 4px 12px rgba(220, 53, 69, 0.08) !important;
+}
+
+.red-background.formio-hidden {
+    display: none !important;
+}
+
+.info-panel {
+    margin-top: var(--space-2) !important;
+    margin-bottom: var(--space-4) !important;
+}
+
+.info-panel .card-title {
+    color: var(--color-primary) !important;
+    font-weight: 500 !important;
+    font-size: var(--text-base) !important;
+    margin-bottom: var(--space-2) !important;
+    line-height: 1.5 !important;
+}
+
+.form-title h1 {
+    color: var(--color-text) !important;
+    font-size: var(--text-2xl) !important;
+    font-weight: 700 !important;
+    text-align: center !important;
+    padding: var(--space-8) var(--space-4) !important;
+    margin-bottom: 0 !important;
+}
+
+.circle-radio .form-radio {
+    display: flex !important;
+    gap: var(--space-2) !important;
+    padding-top: var(--space-4) !important;
+}
+
+.circle-radio .form-check {
+    margin: 0 !important;
+}
+
+.circle-radio input[type="radio"] {
+    position: absolute !important;
+    opacity: 0 !important;
+    width: 1px !important;
+    height: 1px !important;
+}
+
+.circle-radio .form-check-label {
+    width: 60px !important;
+    height: 60px !important;
+    border-radius: var(--radius-pill) !important;
+    background-color: var(--color-surface) !important;
+    color: #666 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    font-size: var(--text-sm) !important;
+    font-weight: 600 !important;
+    border: 2px solid var(--color-border) !important;
+    cursor: pointer !important;
+    transition: all var(--transition) !important;
+    margin: 0 0 var(--space-5) 0 !important;
+    user-select: none !important;
+}
+
+.circle-radio input:checked+label,
+.circle-radio input:checked~label,
+.circle-radio input:checked+.form-check-label,
+.circle-radio input:checked~.form-check-label,
+.circle-radio .form-check input:checked+label,
+.circle-radio .form-check input:checked~label,
+.circle-radio label:has(input:checked),
+.circle-radio .form-check:has(input:checked) label,
+.circle-radio .form-check:has(input:checked) .form-check-label {
+    background-color: var(--color-primary) !important;
+    border-color: var(--color-primary) !important;
+    color: #ffffff !important;
+    box-shadow: 0 2px 8px rgba(35, 64, 117, 0.28) !important;
+}
+
+.circle-radio .form-check:not(:has(input:checked)) .form-check-label:hover {
+    border-color: var(--color-primary) !important;
+    background-color: var(--color-primary-subtle) !important;
+    color: var(--color-primary) !important;
+}
+
+.circle-radio input:checked+label:hover,
+.circle-radio input:checked~label:hover,
+.circle-radio input:checked+.form-check-label:hover,
+.circle-radio input:checked~.form-check-label:hover,
+.circle-radio .form-check input:checked+label:hover,
+.circle-radio .form-check input:checked~label:hover,
+.circle-radio label:has(input:checked):hover,
+.circle-radio .form-check:has(input:checked) label:hover,
+.circle-radio .form-check:has(input:checked) .form-check-label:hover {
+    background-color: #1a2d4d !important;
+    border-color: #1a2d4d !important;
+    color: #ffffff !important;
+    box-shadow: 0 3px 10px rgba(35, 64, 117, 0.4) !important;
+}
+
+.tooltip-icon-blue {
+    color: var(--color-primary) !important;
+    cursor: pointer !important;
+    transition: opacity var(--transition) !important;
+}
+
+.tooltip-icon-blue:hover {
+    opacity: 0.75 !important;
+}
+
+.align-inputs.row>[class*="col-"] {
+    display: flex !important;
+}
+
+.align-inputs.row>[class*="col-"]>.formio-component {
+    display: flex !important;
+    flex-direction: column !important;
+    flex: 1 !important;
+}
+
+.align-inputs.row>[class*="col-"]>.formio-component>label {
+    flex: 1 !important;
+    display: flex !important;
+    align-items: flex-end !important;
+}
+
+.formio-component-datagrid {
+    margin-top: var(--space-4) !important;
+    margin-bottom: var(--space-4) !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+}
+
+.datagrid-table tbody tr td input[type="text"].form-control,
+.datagrid-table tbody tr td input[type="email"].form-control {
+    max-width: 220px !important;
+}
+
+.datagrid-table {
+    border-radius: var(--radius-md) !important;
+    border-collapse: separate !important;
+    border-spacing: 0 !important;
+    width: 100% !important;
+    background-color: var(--color-surface) !important;
+}
+
+.datagrid-table thead tr th {
+    background-color: var(--color-primary-subtle) !important;
+    color: var(--color-primary) !important;
+    font-weight: 600 !important;
+    font-size: var(--text-sm) !important;
+    letter-spacing: 0.02em !important;
+    text-transform: uppercase !important;
+    padding: var(--space-3) var(--space-4) !important;
+    border-bottom: 1px solid var(--color-border) !important;
+    border-right: 1px solid var(--color-border) !important;
+    white-space: nowrap !important;
+}
+
+.datagrid-table thead tr th:last-child {
+    border-right: none !important;
+    width: 48px !important;
+    min-width: 48px !important;
+    max-width: 48px !important;
+    text-align: center !important;
+}
+
+.datagrid-table thead tr th:last-child span.sr-only {
+    position: absolute !important;
+    width: 1px !important;
+    height: 1px !important;
+    overflow: hidden !important;
+    clip: rect(0, 0, 0, 0) !important;
+}
+
+.datagrid-table tbody tr td {
+    border-top: 1px solid var(--color-border) !important;
+    border-right: 1px solid var(--color-border) !important;
+    padding: var(--space-4) !important;
+    vertical-align: top !important;
+    background-color: var(--color-surface) !important;
+}
+
+.datagrid-table tbody tr td {
+    position: relative !important;
+}
+
+.datagrid-table tbody tr td:last-child {
+    border-right: none !important;
+    width: 48px !important;
+    min-width: 48px !important;
+    max-width: 48px !important;
+    text-align: center !important;
+    vertical-align: middle !important;
+    padding: var(--space-2) var(--space-1) !important;
+}
+
+.datagrid-table.table-bordered,
+.datagrid-table.table-bordered td,
+.datagrid-table.table-bordered th {
+    border: none !important;
+}
+
+.datagrid-table tfoot tr td,
+.datagrid-table tbody tr.formio-button-add-row-wrapper td {
+    border-top: 1px solid var(--color-border) !important;
+    padding: var(--space-3) var(--space-4) !important;
+    background-color: var(--color-surface-subtle) !important;
+}
+
+.btn.formio-button-add-row,
+.btn.btn-primary.formio-button-add-row {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: var(--space-1) !important;
+    background: rgba(35, 64, 117, 0.07) !important;
+    color: #234075 !important;
+    border: 1.5px solid rgba(35, 64, 117, 0.30) !important;
+    border-radius: var(--radius-md) !important;
+    font-weight: 600 !important;
+    font-size: var(--text-sm) !important;
+    padding: 0.375rem 0.875rem !important;
+    min-width: unset !important;
+    box-shadow: none !important;
+    transition: background var(--transition), border-color var(--transition) !important;
+}
+
+.btn.formio-button-add-row:hover,
+.btn.btn-primary.formio-button-add-row:hover {
+    background: rgba(35, 64, 117, 0.13) !important;
+    border-color: #234075 !important;
+    box-shadow: none !important;
+}
+
+.datagrid-table .btn.formio-button-remove-row,
+.datagrid-table .btn.btn-secondary.formio-button-remove-row,
+button.btn.btn-secondary.formio-button-remove-row {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 36px !important;
+    height: 36px !important;
+    padding: 0 !important;
+    min-width: unset !important;
+    border-radius: 50% !important;
+    background: #fef2f2 !important;
+    border: 1.5px solid #f5c6cb !important;
+    color: #dc3545 !important;
+    font-size: 16px !important;
+    transition: background var(--transition), color var(--transition), border-color var(--transition), transform var(--transition) !important;
+    box-shadow: none !important;
+    letter-spacing: 0 !important;
+    cursor: pointer !important;
+}
+
+.datagrid-table .btn.formio-button-remove-row:hover,
+.datagrid-table .btn.btn-secondary.formio-button-remove-row:hover,
+button.btn.btn-secondary.formio-button-remove-row:hover {
+    background: #dc3545 !important;
+    border-color: #dc3545 !important;
+    color: #ffffff !important;
+    box-shadow: 0 2px 6px rgba(220, 53, 69, 0.3) !important;
+    transform: scale(1.08) !important;
+}
+
+td.formio-component-reason,
+th.formio-component-reason {
+    width: 150px !important;
+    max-width: 150px !important;
+}
+
+td.formio-component-type,
+th.formio-component-type {
+    width: 250px !important;
+}
+.continue-watcher-hidden input {
+    height: 0 !important;
+    min-height: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    overflow: hidden !important;
+    display: block !important;
+}
+.card-header.bg-default {
+    background-color: transparent !important;
+    border: none !important;
+    border-bottom: 1px solid var(--color-border) !important;
+    padding: var(--space-3) var(--space-4) !important;
+}
+
+.card-header.bg-default button {
+    color: var(--color-primary) !important;
+    font-weight: 500 !important;
+    font-size: var(--text-base) !important;
+    text-align: left !important;
+    width: 100% !important;
+    background: none !important;
+    border: none !important;
+    padding: 0 !important;
+    cursor: pointer !important;
+}
+
+.card-header.bg-default button:hover {
+    color: var(--color-primary-hover) !important;
+}
+
+.red-text,
+.formio-error-wrapper .help-block,
+.invalid-feedback {
+    color: #dc3545 !important;
+    font-size: var(--text-sm) !important;
+    margin-top: var(--space-1) !important;
+}
+
+@keyframes formioFadeUp {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes formioFadeIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+.step-container {
+    animation: formioFadeUp 0.22s ease-out forwards;
+    margin-top: 1em
+}
+
+.formio-component-panel,
+.formio-component-fieldset {
+    animation: formioFadeUp 0.22s ease-out forwards;
+}
+
+.blue-background,
+.red-background {
+    animation: formioFadeUp 0.25s ease-out forwards;
+}
+
+.no-anim {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+}
+
+
+@media (prefers-reduced-motion: reduce) {
+
+    .formio-component,
+    .blue-background,
+    .red-background
+    {
+        animation: none !important;
+        transition: none !important;
+    }
+}
+
+.align-inputs.row>[class*="col-"]>.formio-component.has-error {
+    position: relative !important;
+}
+
+.align-inputs.row>[class*="col-"]>.formio-component.has-error>.formio-errors.invalid-feedback {
+    position: absolute !important;
+    top: 100% !important;
+    left: 0 !important;
+    width: 100% !important;
+    max-height: none !important;
+    height: auto !important;
+    display: block !important;
+}
+
+.formio-component-fieldset:has(.align-inputs .has-error) {
+    padding-bottom: 3.5em !important;
+}
+
+.blue-background ul,
+.blue-background ol,
+.red-background ul,
+.red-background ol {
+    padding-left: var(--space-6) !important;
+    margin-bottom: var(--space-3) !important;
+}
+
+.blue-background li,
+.red-background li {
+    margin-bottom: var(--space-2) !important;
+    line-height: 1.65 !important;
+}
+
+.blue-background strong,
+.red-background strong {
+    color: var(--color-primary) !important;
+}
+
+.formio-component-radio.formio-component-label-hidden.required .form-check-label:before {
+    display: none;
+}
+
+chefs-form-viewer {
+    --space-1: 0.25rem;
+    --space-2: 0.5rem;
+    --space-3: 0.75rem;
+    --space-4: 1rem;
+    --space-5: 1.25rem;
+    --space-6: 1.5rem;
+    --space-8: 2rem;
+    --space-10: 2.5rem;
+    --radius-sm: 0.375rem;
+    --radius-md: 0.625rem;
+    --radius-lg: 1rem;
+    --radius-pill: 9999px;
+    --color-primary: #234075;
+    --color-primary-hover: #1a3261;
+    --color-primary-active: #132549;
+    --color-primary-subtle: rgba(35, 64, 117, 0.07);
+    --color-gold: #e3a82b;
+    --color-gold-hover: #c99221;
+    --color-gold-active: #b07e1a;
+    --color-border: #d0d7de;
+    --color-border-strong: #9198a1;
+    --color-text: #212529;
+    --color-text-muted: #6c757d;
+    --color-surface: #ffffff;
+    --color-surface-subtle: #f8f9fa;
+    --text-sm: 0.875rem;
+    --text-base: 1rem;
+    --text-lg: 1.125rem;
+    --text-xl: 1.25rem;
+    --text-2xl: 1.5rem;
+    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08);
+    --shadow-md: 0 4px 12px rgba(35, 64, 117, 0.10);
+    --shadow-lg: 0 8px 24px rgba(35, 64, 117, 0.14);
+    --transition: 0.2s ease;
+}

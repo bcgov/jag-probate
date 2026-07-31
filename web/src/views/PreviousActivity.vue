@@ -81,7 +81,12 @@
                       :sort-desc="sortDesc"
                     />Status
                   </th>
-                  <th style="font-size: 10pt; width: 15%">Package#</th>
+                  <th
+                    style="font-size: 10pt; width: 15%"
+                    class="d-none d-lg-table-cell"
+                  >
+                    Package#
+                  </th>
                   <th style="font-size: 10pt; width: 10%"></th>
                 </tr>
               </thead>
@@ -101,7 +106,9 @@
                     {{ beautifyDate(app.lastFiledDate ?? app.createdAt) }}
                   </td>
                   <td class="border-top">{{ app.status }}</td>
-                  <td class="border-top">{{ app.chefsSubmissionId }}</td>
+                  <td class="border-top d-none d-lg-table-cell">
+                    {{ app.chefsSubmissionId }}
+                  </td>
                   <td class="border-top">
                     <!-- Trash: only shown when application has never been filed -->
                     <button

@@ -1,12 +1,23 @@
 /* === Import BC Gov Bootstrap v5 Theme === */
 @import '@bcgov/bootstrap-v5-theme/css/bootstrap-theme.min.css';
 
+/* === CHEFS overrides === */
+@import './chefs-form.scss';
+
+/* Remove max-width caps only inside CHEFS hosts to avoid global Vuetify impact */
+.chefs-form-viewer .v-container,
+chefs-form-viewer .v-container,
+.step-form-viewer .v-container {
+  max-width: none !important;
+}
+
 /* === BC Government Visual Identity Styles === */
 
 // BC Gov colors
 $bcgov-blue: #003366;
 $bcgov-gold: #fcba19;
 $bcgov-white: #ffffff;
+$app-header-height: 62px;
 
 // Layout
 .app-outer {
@@ -17,18 +28,27 @@ $bcgov-white: #ffffff;
 
 .app-main {
   flex: 1 0 auto;
-  padding: 2rem 0 0;
+  padding: calc(#{$app-header-height} + 2rem) 0 0;
   display: flex;
   flex-direction: column;
   min-height: 0;
   overflow: visible !important;
+  /* Prevent CHEFS form internal elements from causing horizontal page scroll */
+  max-width: 100vw;
 }
 
 // Header
 .app-header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  width: 100%;
+  z-index: 1030;
   background-color: $bcgov-blue;
 
   .navbar {
+    min-height: $app-header-height;
     padding: 0.5rem 1rem;
   }
 
@@ -51,6 +71,8 @@ $bcgov-white: #ffffff;
 footer {
   background-color: $bcgov-blue;
   margin-top: auto;
+  position: relative;
+  z-index: 3;
 
   .navbar {
     padding: 0.75rem 1rem;

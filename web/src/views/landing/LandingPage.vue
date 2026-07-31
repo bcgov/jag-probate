@@ -145,7 +145,7 @@
           <h3 class="text-uppercase fw-semibold text-white mb-1">New Users</h3>
           <button
             type="button"
-            class="btn btn-primary btn-lg px-4 mt-2"
+            class="px-4 mt-2 landing-cta-btn landing-cta-btn-primary"
             @click="handleRegister"
           >
             Register for a <strong>Basic</strong> BCeID
@@ -157,7 +157,7 @@
           </h3>
           <button
             type="button"
-            class="btn btn-warning btn-lg px-4 mt-2"
+            class="px-4 mt-2 landing-cta-btn landing-cta-btn-warning"
             @click="handleReturning"
           >
             Use an existing <strong>Basic</strong> BCeID
@@ -203,6 +203,59 @@
 
   ul.disc-list li {
     list-style-type: disc;
+  }
+
+  .landing-cta-btn {
+    display: inline-block;
+    padding: 0.5rem 1.5rem;
+    font-size: 1.25rem;
+    line-height: 1.5;
+    border: 1px solid transparent;
+    border-radius: 0.5rem;
+    font-weight: 400;
+    text-align: center;
+    text-decoration: none;
+    cursor: pointer;
+    appearance: none;
+    letter-spacing: normal;
+    box-shadow: none;
+    transition:
+      background-color 0.2s ease,
+      border-color 0.2s ease,
+      color 0.2s ease,
+      box-shadow 0.2s ease;
+  }
+
+  .landing-cta-btn-primary {
+    background: #38598a;
+    border-color: #38598a;
+    color: #fff;
+    margin-bottom: 0.5rem;
+  }
+
+  .landing-cta-btn-primary:hover,
+  .landing-cta-btn-primary:focus,
+  .landing-cta-btn-primary:active {
+    background: #304c75;
+    border-color: #304c75;
+    color: #fff;
+    box-shadow: none;
+  }
+
+  .landing-cta-btn-warning {
+    background: #ffc107;
+    border-color: #ffc107;
+    color: #212529;
+    margin-bottom: 0.5rem;
+  }
+
+  .landing-cta-btn-warning:hover,
+  .landing-cta-btn-warning:focus,
+  .landing-cta-btn-warning:active {
+    background: #ffca2c;
+    border-color: #ffc720;
+    color: #212529;
+    box-shadow: none;
   }
 
   @media (max-width: 767.98px) {
