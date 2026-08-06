@@ -358,7 +358,6 @@
     margin-top: -2rem;
     margin-left: calc(var(--bs-gutter-x, 1.5rem) * -0.5);
     margin-right: calc(var(--bs-gutter-x, 1.5rem) * -0.5);
-    max-width: 100vw;
   }
 
   .wizard-col {
