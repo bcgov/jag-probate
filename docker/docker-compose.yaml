@@ -102,6 +102,12 @@ services:
       - Chefs__Forms__form-application-documents__Children__2__Title=${CHEFS_FORM_APPLICATION_DOCUMENTS_CHILD_2_TITLE:-Fill out a Form P10}
       - Chefs__Forms__form-application-documents__Children__3__Title=${CHEFS_FORM_APPLICATION_DOCUMENTS_CHILD_3_TITLE:-Fill out an Application for Search of Wills Notice}
       - Chefs__Forms__form-application-documents__Children__4__Title=${CHEFS_FORM_APPLICATION_DOCUMENTS_CHILD_4_TITLE:-Fill out a Form P2}
+      - Chefs__Forms__form-filing__FormId=${CHEFS_FORM_FILING_FORMID}
+      - Chefs__Forms__form-filing__ApiKey=${CHEFS_FORM_FILING_API_KEY}
+      - Chefs__Forms__form-filing__Order=${CHEFS_FORM_FILING_ORDER:-8}
+      - Chefs__Forms__form-filing__Title=${CHEFS_FORM_FILING_TITLE:-Filing Instructions}
+      - Chefs__Forms__form-filing__Icon=${CHEFS_FORM_FILING_ICON:-file-arrow-up}
+      - Chefs__Forms__form-filing__Children__0__Title=${CHEFS_FORM_FILING_CHILD_0_TITLE:-Filing Instructions}
       - Chefs__BaseUrl=${CHEFS_BASE_URL}
       - CDogs__BaseUrl=${CDOGS_BASE_URL}
       - CDogs__TokenUrl=${CDOGS_TOKEN_URL}
