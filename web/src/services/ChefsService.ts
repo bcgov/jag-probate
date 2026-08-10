@@ -1,7 +1,9 @@
 import type {
   ChefsAuthToken,
   SidebarStepDto,
+  StepDataResponseDto,
   SubmissionResponseDto,
+  UpsertStepDataDto,
   UpsertSubmissionDto,
 } from '@/types';
 import HttpService from './HttpService';
@@ -70,6 +72,50 @@ class ChefsService {
 
   async deleteSubmission(id: string): Promise<void> {
     await this.httpService.delete<void>(`api/Submissions/${id}`);
+  }
+
+  // ── Step Data endpoints ─────────────────────────────────────────────
+
+  async upsertStepData(
+    submissionPublicId: string,
+    formId: string,
+    data: UpsertStepDataDto
+  ): Promise<StepDataResponseDto> {
+    return await this.httpService.put<StepDataResponseDto>(
+      `api/submissions/${submissionPublicId}/steps/${encodeURIComponent(formId)}`,
+      data
+    );
+  }
+
+  async getStepData(
+    submissionPublicId: string,
+    formId: string
+  ): Promise<StepDataResponseDto> {
+    return await this.httpService.get<StepDataResponseDto>(
+      `api/submissions/${submissionPublicId}/steps/${encodeURIComponent(formId)}`
+    );
+  }
+
+  async getAllStepData(
+    submissionPublicId: string
+  ): Promise<StepDataResponseDto[]> {
+    return await this.httpService.get<StepDataResponseDto[]>(
+      `api/submissions/${submissionPublicId}/steps`
+    );
+  }
+
+  async getCompiledData(submissionPublicId: string): Promise<string> {
+    return await this.httpService.get<string>(
+      `api/submissions/${submissionPublicId}/steps/compiled`
+    );
+  }
+
+  async submitApplication(
+    submissionPublicId: string
+  ): Promise<SubmissionResponseDto> {
+    return await this.httpService.post<SubmissionResponseDto>(
+      `api/submissions/${submissionPublicId}/submit`
+    );
   }
 }
 

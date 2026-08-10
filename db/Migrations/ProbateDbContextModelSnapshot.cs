@@ -142,6 +142,59 @@ namespace Probate.Db.Migrations
                     b.ToTable("documents", (string)null);
                 });
 
+            modelBuilder.Entity("Probate.Db.Models.StepData", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasColumnName("id");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Data")
+                        .HasColumnType("text")
+                        .HasColumnName("data");
+
+                    b.Property<string>("FormId")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("form_id");
+
+                    b.Property<string>("FormVersion")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("form_version");
+
+                    b.Property<Guid>("PublicId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("public_id");
+
+                    b.Property<int>("SubmissionId")
+                        .HasColumnType("integer")
+                        .HasColumnName("submission_id");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id")
+                        .HasName("pk_step_data");
+
+                    b.HasIndex("SubmissionId")
+                        .HasDatabaseName("ix_step_data_submission_id");
+
+                    b.HasIndex("SubmissionId", "FormId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_step_data_submission_id_form_id");
+
+                    b.ToTable("step_data", (string)null);
+                });
+
             modelBuilder.Entity("Probate.Db.Models.Submission", b =>
                 {
                     b.Property<int>("Id")
@@ -278,9 +331,26 @@ namespace Probate.Db.Migrations
                     b.Navigation("Case");
                 });
 
+            modelBuilder.Entity("Probate.Db.Models.StepData", b =>
+                {
+                    b.HasOne("Probate.Db.Models.Submission", "Submission")
+                        .WithMany("StepDataEntries")
+                        .HasForeignKey("SubmissionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_step_data_submissions_submission_id");
+
+                    b.Navigation("Submission");
+                });
+
             modelBuilder.Entity("Probate.Db.Models.Case", b =>
                 {
                     b.Navigation("Documents");
+                });
+
+            modelBuilder.Entity("Probate.Db.Models.Submission", b =>
+                {
+                    b.Navigation("StepDataEntries");
                 });
 #pragma warning restore 612, 618
         }

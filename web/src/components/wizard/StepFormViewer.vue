@@ -96,6 +96,8 @@
     surveyStepKey?: string;
     /** Lookup from substep key to parent step key (and step->step identity). */
     substepToStepMap?: Record<string, string>;
+    /** Public ID of the parent submission — required for step-based auto-save. */
+    submissionPublicId?: string | null;
   }
 
   const props = withDefaults(defineProps<Props>(), {
@@ -103,6 +105,7 @@
     initialSubmissionData: null,
     surveyStepKey: '',
     substepToStepMap: () => ({}),
+    submissionPublicId: null,
   });
 
   function getSurveyStepKey(): string {
@@ -237,7 +240,31 @@
     };
   }
 
-  function hydrateFromPersistedPayload() {
+  async function hydrateFromPersistedPayload() {
+    // If we have a submission ID, try loading step data from the API first.
+    if (props.submissionPublicId) {
+      try {
+        const allSteps = await chefsService.getAllStepData(
+          props.submissionPublicId
+        );
+        for (const step of allSteps) {
+          if (step.data) {
+            const parsed = JSON.parse(step.data);
+            if (parsed && typeof parsed === 'object') {
+              wizardDataStore.setStepData(step.formId, parsed);
+            }
+          }
+        }
+        return; // Hydrated from API — skip legacy payload parsing.
+      } catch (err) {
+        console.warn(
+          '[StepFormViewer] Failed to hydrate from step data API, falling back to payload:',
+          err
+        );
+      }
+    }
+
+    // Legacy fallback: hydrate from initialSubmissionData JSON blob.
     if (!props.initialSubmissionData) return;
     try {
       const parsed = JSON.parse(
@@ -843,11 +870,10 @@
     );
   }
 
-  // TODO: Consider using a queue to serialize saves if multiple steps are saving at once.
   async function performAutoSave(stepKey: string) {
     const rt = getRuntime(stepKey);
     if (rt.isSaving) {
-      if (rt.isSaving) rt.pendingSave = true;
+      rt.pendingSave = true;
       return;
     }
 
@@ -855,10 +881,23 @@
     rt.pendingSave = false;
 
     try {
-      // Keep step data fresh in-memory. Future save/resume can post buildPersistedPayload().
       captureStepData(stepKey);
+
+      // Persist to DB via step data endpoint if we have a submission ID.
+      if (props.submissionPublicId) {
+        const stepPayload = wizardDataStore.getStepData(stepKey);
+        await chefsService.upsertStepData(
+          props.submissionPublicId,
+          stepKey,
+          {
+            formId: stepKey,
+            data: JSON.stringify(stepPayload),
+          }
+        );
+        emit('saved', stepKey, props.submissionPublicId);
+      }
     } catch (err) {
-      console.warn('[StepFormViewer] local autosave capture failed:', err);
+      console.warn('[StepFormViewer] autosave failed:', err);
     } finally {
       rt.isSaving = false;
       if (rt.pendingSave) {
@@ -972,8 +1011,8 @@
   );
 
   // ── Cleanup on unmount ────────────────────────────────────────────────────
-  onMounted(() => {
-    hydrateFromPersistedPayload();
+  onMounted(async () => {
+    await hydrateFromPersistedPayload();
     window.wizardGoToField = goToField;
     window.wizardValidateStep = validateSubstep;
     window.wizardSaveStep = flushSaveStep;

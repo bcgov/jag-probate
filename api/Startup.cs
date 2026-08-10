@@ -57,6 +57,7 @@ namespace Probate.Api
             services.AddScoped<MigrationService>();
             services.AddScoped<IChefsApplicationService, ChefsApplicationService>();
             services.AddScoped<ISubmissionService, SubmissionService>();
+            services.AddScoped<IStepDataService, StepDataService>();
             services.AddScoped<ICourtLocationService, CourtLocationService>();
             services.AddScoped<ITemplateService, TemplateService>();
 

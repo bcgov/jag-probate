@@ -21,7 +21,9 @@
         :step-keys="allStepKeys"
         :survey-step-key="surveyStepKey"
         :substep-to-step-map="substepToStepMap"
+        :submission-public-id="submissionPublicId"
         @survey-complete="onSurveyComplete"
+        @saved="onStepSaved"
       />
 
       <!-- Dev controls -->
@@ -147,7 +149,7 @@
   import ApplicationStepSidebar from '@/components/wizard/ApplicationStepSidebar.vue';
   import StepFormViewer from '@/components/wizard/StepFormViewer.vue';
   import { useAuthStore, useLayoutStore } from '@/stores';
-  import { useRouter } from 'vue-router';
+  import { useRoute, useRouter } from 'vue-router';
   import {
     mapSidebarStepsToWizardSteps,
     deriveInitialNavState,
@@ -162,6 +164,7 @@
   import type ChefsService from '@/services/ChefsService';
 
   const chefsService = inject<ChefsService>('chefsService')!;
+  const route = useRoute();
 
   const sidebarRef = ref<InstanceType<typeof ApplicationStepSidebar> | null>(
     null
@@ -170,6 +173,7 @@
   const surveyStepKey = ref('');
   const firstWizardStepKey = ref('');
   const showDevControls = ref(false);
+  const submissionPublicId = ref<string | null>(null);
 
   /** All logical form step keys in display order, including step0 (survey), sourced from the backend. */
   const allStepKeys = ref<string[]>([]);
@@ -223,6 +227,12 @@
   }
 
   onMounted(async () => {
+    // Check for resume route param
+    const rawId = route.params.id;
+    if (rawId) {
+      submissionPublicId.value = Array.isArray(rawId) ? rawId[0] : rawId;
+    }
+
     try {
       const sortedDtos = (await chefsService.getSidebarStructure())
         .slice()
@@ -344,8 +354,34 @@
     sidebarRef.value?.setStepStatus(activeStep.value, 'error');
   }
 
-  function onSubmit() {
-    alert('Submit triggered (preview only)');
+  function onStepSaved(_stepKey: string, publicId: string) {
+    if (!submissionPublicId.value) {
+      submissionPublicId.value = publicId;
+      // Replace URL so refresh reloads the saved submission.
+      if (route.name === 'ApplicationManager') {
+        router.replace({
+          name: 'ResumeApplicationV2',
+          params: { id: publicId },
+        });
+      }
+    }
+  }
+
+  async function onSubmit() {
+    if (!submissionPublicId.value) {
+      console.warn('[ApplicationManager] No submission to submit.');
+      return;
+    }
+
+    try {
+      await chefsService.submitApplication(submissionPublicId.value);
+      router.push({
+        name: 'PreviousActivity',
+        query: { submitted: submissionPublicId.value },
+      });
+    } catch (err) {
+      console.error('[ApplicationManager] Submit failed:', err);
+    }
   }
 </script>
 

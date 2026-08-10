@@ -127,6 +127,12 @@ const routes: RouteRecordRaw[] = [
     meta: { requiresAuth: true },
   },
   {
+    path: '/v2/application/:id',
+    name: 'ResumeApplicationV2',
+    component: () => import('@/views/ApplicationManager.vue'),
+    meta: { requiresAuth: true },
+  },
+  {
     path: '/error',
     name: 'Error',
     component: () => import('@/views/ErrorView.vue'),

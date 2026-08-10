@@ -37,6 +37,15 @@ namespace Probate.Api.Services
         Task DeleteSubmissionAsync(Guid id, CancellationToken cancellationToken = default);
 
         /// <summary>
+        /// Compiles all step data into the submission record and marks it as submitted.
+        /// </summary>
+        Task<SubmissionResponseDto> FinalizeSubmissionAsync(
+            Guid publicId,
+            string compiledData,
+            CancellationToken cancellationToken = default
+        );
+
+        /// <summary>
         /// Returns a single submission including its raw stored form data.
         /// Throws <see cref="KeyNotFoundException"/> if not found or soft-deleted.
         /// </summary>
@@ -161,6 +170,29 @@ namespace Probate.Api.Services
                 throw new KeyNotFoundException($"Submission {id} not found.");
 
             return submission;
+        }
+
+        public async Task<SubmissionResponseDto> FinalizeSubmissionAsync(
+            Guid publicId,
+            string compiledData,
+            CancellationToken cancellationToken = default
+        )
+        {
+            var submission = await _db.Submissions.FirstOrDefaultAsync(
+                s => s.PublicId == publicId && s.DeletedAt == null,
+                cancellationToken
+            ) ?? throw new KeyNotFoundException(
+                $"Submission {publicId} not found."
+            );
+
+            submission.SubmissionData = compiledData;
+            submission.Status = "submitted";
+            submission.LastFiledAt = DateTime.UtcNow;
+            submission.LastUpdatedAt = DateTime.UtcNow;
+
+            await _db.SaveChangesAsync(cancellationToken);
+
+            return submission.Adapt<SubmissionResponseDto>();
         }
 
         public async Task DeleteSubmissionAsync(

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 
 namespace Probate.Db.Models
@@ -30,5 +31,7 @@ namespace Probate.Db.Models
         public DateTime? LastFiledAt { get; set; }
         public DateTime? DeletedAt { get; set; }
         public string SubmissionData { get; set; }
+
+        public ICollection<StepData> StepDataEntries { get; set; } = new List<StepData>();
     }
 }

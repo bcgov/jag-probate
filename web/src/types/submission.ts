@@ -22,6 +22,23 @@ export interface UpsertSubmissionDto {
   submissionData: string | null;
 }
 
+/** API response shape for step data (GET /api/submissions/{id}/steps/{formId}). */
+export interface StepDataResponseDto {
+  publicId: string;
+  formId: string;
+  data: string;
+  formVersion: string | null;
+  createdAt: string;
+  updatedAt: string | null;
+}
+
+/** Payload sent to PUT /api/submissions/{id}/steps/{formId}. */
+export interface UpsertStepDataDto {
+  formId: string;
+  data: string;
+  formVersion?: string | null;
+}
+
 /** UI-mapped shape used in the Previous Activity table. */
 export interface PreviousApplication {
   deceased_name: string;
