@@ -16,15 +16,33 @@ namespace Probate.Db.Migrations
                 name: "step_data",
                 columns: table => new
                 {
-                    id = table.Column<int>(type: "integer", nullable: false)
-                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    id = table
+                        .Column<int>(type: "integer", nullable: false)
+                        .Annotation(
+                            "Npgsql:ValueGenerationStrategy",
+                            NpgsqlValueGenerationStrategy.IdentityByDefaultColumn
+                        ),
                     public_id = table.Column<Guid>(type: "uuid", nullable: false),
-                    form_id = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
+                    form_id = table.Column<string>(
+                        type: "character varying(100)",
+                        maxLength: 100,
+                        nullable: false
+                    ),
                     data = table.Column<string>(type: "text", nullable: true),
                     submission_id = table.Column<int>(type: "integer", nullable: false),
-                    form_version = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: true),
-                    created_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                    updated_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: true)
+                    form_version = table.Column<string>(
+                        type: "character varying(50)",
+                        maxLength: 50,
+                        nullable: true
+                    ),
+                    created_at = table.Column<DateTime>(
+                        type: "timestamp with time zone",
+                        nullable: false
+                    ),
+                    updated_at = table.Column<DateTime>(
+                        type: "timestamp with time zone",
+                        nullable: true
+                    ),
                 },
                 constraints: table =>
                 {
@@ -34,19 +52,23 @@ namespace Probate.Db.Migrations
                         column: x => x.submission_id,
                         principalTable: "submissions",
                         principalColumn: "id",
-                        onDelete: ReferentialAction.Cascade);
-                });
+                        onDelete: ReferentialAction.Cascade
+                    );
+                }
+            );
 
             migrationBuilder.CreateIndex(
                 name: "ix_step_data_submission_id",
                 table: "step_data",
-                column: "submission_id");
+                column: "submission_id"
+            );
 
             migrationBuilder.CreateIndex(
                 name: "ix_step_data_submission_id_form_id",
                 table: "step_data",
                 columns: new[] { "submission_id", "form_id" },
-                unique: true);
+                unique: true
+            );
         }
 
         /// <inheritdoc />
