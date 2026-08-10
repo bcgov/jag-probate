@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Mapster;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Probate.Api.Models;
 using Probate.Db.Models;
@@ -154,11 +155,8 @@ namespace Probate.Api.Services
 
             var compiled = new JObject();
 
-            foreach (var row in stepDataRows)
+            foreach (var row in stepDataRows.Where(r => !string.IsNullOrWhiteSpace(r.Data)))
             {
-                if (string.IsNullOrWhiteSpace(row.Data))
-                    continue;
-
                 try
                 {
                     var stepJson = JObject.Parse(row.Data);
@@ -171,7 +169,7 @@ namespace Probate.Api.Services
                         }
                     );
                 }
-                catch (Exception ex)
+                catch (JsonReaderException ex)
                 {
                     _logger.LogWarning(
                         ex,
