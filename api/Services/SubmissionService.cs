@@ -179,12 +179,13 @@ namespace Probate.Api.Services
         )
         {
             var submission =
-                await _db.Submissions
-                    .Include(s => s.StepDataEntries)
+                await _db
+                    .Submissions.Include(s => s.StepDataEntries)
                     .FirstOrDefaultAsync(
                         s => s.PublicId == publicId && s.DeletedAt == null,
                         cancellationToken
-                    ) ?? throw new KeyNotFoundException($"Submission {publicId} not found.");
+                    )
+                ?? throw new KeyNotFoundException($"Submission {publicId} not found.");
 
             submission.SubmissionData = compiledData;
             submission.Status = "submitted";
@@ -196,10 +197,13 @@ namespace Probate.Api.Services
             // Submit each step to CHEFS for platform visibility (best-effort).
             foreach (var step in submission.StepDataEntries)
             {
-                if (string.IsNullOrWhiteSpace(step.Data)) continue;
+                if (string.IsNullOrWhiteSpace(step.Data))
+                    continue;
 
-                if (!_options.Forms.TryGetValue(step.FormId, out var formOptions)
-                    || string.IsNullOrWhiteSpace(formOptions?.FormId))
+                if (
+                    !_options.Forms.TryGetValue(step.FormId, out var formOptions)
+                    || string.IsNullOrWhiteSpace(formOptions?.FormId)
+                )
                 {
                     _logger.LogWarning(
                         "No CHEFS form configured for step {FormId}, skipping CHEFS submission",
