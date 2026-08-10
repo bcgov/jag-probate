@@ -17,6 +17,7 @@
     <div class="content-col">
       <!-- CHEFS form viewer-->
       <StepFormViewer
+        ref="stepFormViewerRef"
         :active-step="activeStepKey"
         :step-keys="allStepKeys"
         :survey-step-key="surveyStepKey"
@@ -166,6 +167,9 @@
   const chefsService = inject<ChefsService>('chefsService')!;
   const route = useRoute();
 
+  const stepFormViewerRef = ref<InstanceType<typeof StepFormViewer> | null>(
+    null
+  );
   const sidebarRef = ref<InstanceType<typeof ApplicationStepSidebar> | null>(
     null
   );
@@ -370,6 +374,23 @@
   async function onSubmit() {
     if (!submissionPublicId.value) {
       console.warn('[ApplicationManager] No submission to submit.');
+      return;
+    }
+
+    // Validate all steps before submitting.
+    const validation = stepFormViewerRef.value?.validateAllSteps();
+    if (validation && !validation.valid) {
+      console.warn(
+        '[ApplicationManager] Validation failed for steps:',
+        validation.failedSteps
+      );
+      // Navigate to the first failed step so the user can fix it.
+      const firstFailed = validation.failedSteps[0];
+      if (firstFailed) {
+        activeStep.value = firstFailed;
+        sidebarRef.value?.updateSidebar?.(firstFailed);
+        sidebarRef.value?.setStepStatus(firstFailed, 'error');
+      }
       return;
     }
 

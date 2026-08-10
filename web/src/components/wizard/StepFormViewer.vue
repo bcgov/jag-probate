@@ -1006,6 +1006,33 @@
     { immediate: true }
   );
 
+  // ── Validate all steps ─────────────────────────────────────────────────────
+  function validateAllSteps(): { valid: boolean; failedSteps: string[] } {
+    const failedSteps: string[] = [];
+
+    for (const stepKey of props.stepKeys) {
+      if (isSurveyStep(stepKey)) continue;
+
+      const el = stepEls[stepKey];
+      const formio = el?.formioInstance;
+      if (!formio || typeof formio.checkValidity !== 'function') continue;
+
+      try {
+        const data = formio.submission?.data ?? formio.data ?? {};
+        const isValid = !!formio.checkValidity(data, true);
+        if (!isValid) {
+          failedSteps.push(stepKey);
+        }
+      } catch {
+        failedSteps.push(stepKey);
+      }
+    }
+
+    return { valid: failedSteps.length === 0, failedSteps };
+  }
+
+  defineExpose({ validateAllSteps });
+
   // ── Cleanup on unmount ────────────────────────────────────────────────────
   onMounted(async () => {
     await hydrateFromPersistedPayload();
