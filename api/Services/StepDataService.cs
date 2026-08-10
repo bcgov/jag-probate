@@ -42,10 +42,7 @@ namespace Probate.Api.Services
         private readonly ProbateDbContext _db;
         private readonly ILogger<StepDataService> _logger;
 
-        public StepDataService(
-            ProbateDbContext db,
-            ILogger<StepDataService> logger
-        )
+        public StepDataService(ProbateDbContext db, ILogger<StepDataService> logger)
         {
             _db = db;
             _logger = logger;
@@ -57,12 +54,11 @@ namespace Probate.Api.Services
             CancellationToken cancellationToken = default
         )
         {
-            var submission = await _db.Submissions.FirstOrDefaultAsync(
-                s => s.PublicId == submissionPublicId && s.DeletedAt == null,
-                cancellationToken
-            ) ?? throw new KeyNotFoundException(
-                $"Submission {submissionPublicId} not found."
-            );
+            var submission =
+                await _db.Submissions.FirstOrDefaultAsync(
+                    s => s.PublicId == submissionPublicId && s.DeletedAt == null,
+                    cancellationToken
+                ) ?? throw new KeyNotFoundException($"Submission {submissionPublicId} not found.");
 
             var existing = await _db.StepData.FirstOrDefaultAsync(
                 sd => sd.SubmissionId == submission.Id && sd.FormId == dto.FormId,
@@ -105,7 +101,8 @@ namespace Probate.Api.Services
                 cancellationToken
             );
 
-            if (submission == null) return null;
+            if (submission == null)
+                return null;
 
             var stepData = await _db.StepData.FirstOrDefaultAsync(
                 sd => sd.SubmissionId == submission.Id && sd.FormId == formId,
@@ -125,10 +122,11 @@ namespace Probate.Api.Services
                 cancellationToken
             );
 
-            if (submission == null) return Array.Empty<StepDataResponseDto>();
+            if (submission == null)
+                return Array.Empty<StepDataResponseDto>();
 
-            return await _db.StepData
-                .Where(sd => sd.SubmissionId == submission.Id)
+            return await _db
+                .StepData.Where(sd => sd.SubmissionId == submission.Id)
                 .OrderBy(sd => sd.FormId)
                 .Select(sd => sd.Adapt<StepDataResponseDto>())
                 .ToListAsync(cancellationToken);
@@ -143,15 +141,14 @@ namespace Probate.Api.Services
             CancellationToken cancellationToken = default
         )
         {
-            var submission = await _db.Submissions.FirstOrDefaultAsync(
-                s => s.PublicId == submissionPublicId && s.DeletedAt == null,
-                cancellationToken
-            ) ?? throw new KeyNotFoundException(
-                $"Submission {submissionPublicId} not found."
-            );
+            var submission =
+                await _db.Submissions.FirstOrDefaultAsync(
+                    s => s.PublicId == submissionPublicId && s.DeletedAt == null,
+                    cancellationToken
+                ) ?? throw new KeyNotFoundException($"Submission {submissionPublicId} not found.");
 
-            var stepDataRows = await _db.StepData
-                .Where(sd => sd.SubmissionId == submission.Id)
+            var stepDataRows = await _db
+                .StepData.Where(sd => sd.SubmissionId == submission.Id)
                 .OrderBy(sd => sd.FormId)
                 .ToListAsync(cancellationToken);
 
@@ -159,16 +156,20 @@ namespace Probate.Api.Services
 
             foreach (var row in stepDataRows)
             {
-                if (string.IsNullOrWhiteSpace(row.Data)) continue;
+                if (string.IsNullOrWhiteSpace(row.Data))
+                    continue;
 
                 try
                 {
                     var stepJson = JObject.Parse(row.Data);
-                    compiled.Merge(stepJson, new JsonMergeSettings
-                    {
-                        MergeArrayHandling = MergeArrayHandling.Replace,
-                        MergeNullValueHandling = MergeNullValueHandling.Merge
-                    });
+                    compiled.Merge(
+                        stepJson,
+                        new JsonMergeSettings
+                        {
+                            MergeArrayHandling = MergeArrayHandling.Replace,
+                            MergeNullValueHandling = MergeNullValueHandling.Merge,
+                        }
+                    );
                 }
                 catch (Exception ex)
                 {

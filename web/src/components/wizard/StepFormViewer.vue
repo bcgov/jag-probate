@@ -886,14 +886,10 @@
       // Persist to DB via step data endpoint if we have a submission ID.
       if (props.submissionPublicId) {
         const stepPayload = wizardDataStore.getStepData(stepKey);
-        await chefsService.upsertStepData(
-          props.submissionPublicId,
-          stepKey,
-          {
-            formId: stepKey,
-            data: JSON.stringify(stepPayload),
-          }
-        );
+        await chefsService.upsertStepData(props.submissionPublicId, stepKey, {
+          formId: stepKey,
+          data: JSON.stringify(stepPayload),
+        });
         emit('saved', stepKey, props.submissionPublicId);
       }
     } catch (err) {

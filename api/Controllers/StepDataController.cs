@@ -41,7 +41,9 @@ namespace Probate.Api.Controllers
             try
             {
                 var result = await _stepDataService.UpsertStepDataAsync(
-                    publicId, dto, cancellationToken
+                    publicId,
+                    dto,
+                    cancellationToken
                 );
                 return Ok(result);
             }
@@ -64,7 +66,9 @@ namespace Probate.Api.Controllers
         )
         {
             var result = await _stepDataService.GetStepDataAsync(
-                publicId, formId, cancellationToken
+                publicId,
+                formId,
+                cancellationToken
             );
 
             if (result == null)
@@ -83,9 +87,7 @@ namespace Probate.Api.Controllers
             CancellationToken cancellationToken = default
         )
         {
-            var result = await _stepDataService.GetAllStepDataAsync(
-                publicId, cancellationToken
-            );
+            var result = await _stepDataService.GetAllStepDataAsync(publicId, cancellationToken);
             return Ok(result);
         }
 
@@ -104,7 +106,8 @@ namespace Probate.Api.Controllers
             try
             {
                 var result = await _stepDataService.GetCompiledDataAsync(
-                    publicId, cancellationToken
+                    publicId,
+                    cancellationToken
                 );
                 return Content(result, "application/json");
             }

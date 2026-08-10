@@ -7,9 +7,9 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
+using Newtonsoft.Json.Linq;
 using Probate.Api.Models;
 using Probate.Api.Services;
-using Newtonsoft.Json.Linq;
 
 namespace Probate.Api.Controllers
 {
@@ -133,11 +133,14 @@ namespace Probate.Api.Controllers
             try
             {
                 var compiledData = await _stepDataService.GetCompiledDataAsync(
-                    id, cancellationToken
+                    id,
+                    cancellationToken
                 );
 
                 var result = await _submissionService.FinalizeSubmissionAsync(
-                    id, compiledData, cancellationToken
+                    id,
+                    compiledData,
+                    cancellationToken
                 );
 
                 return Ok(result);
