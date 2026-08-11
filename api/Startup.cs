@@ -88,7 +88,10 @@ namespace Probate.Api
                     .UseSnakeCaseNamingConvention()
                     .ConfigureWarnings(w =>
                         w.Ignore(
-                            Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId
+                            Microsoft
+                                .EntityFrameworkCore
+                                .Diagnostics
+                                .RelationalEventId
                                 .PendingModelChangesWarning
                         )
                     );
