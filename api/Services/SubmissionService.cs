@@ -244,7 +244,7 @@ namespace Probate.Api.Services
 
                 try
                 {
-                    var parsedData = Newtonsoft.Json.JsonConvert.DeserializeObject(step.Data);
+                    object? parsedData = Newtonsoft.Json.JsonConvert.DeserializeObject(step.Data);
                     await _chefsApi.CreateSubmissionAsync(
                         formOptions.FormId,
                         new Infrastructure.Chefs.ChefsCreateSubmissionRequest

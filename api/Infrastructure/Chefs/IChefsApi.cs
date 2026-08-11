@@ -83,7 +83,7 @@ public class ChefsCreateSubmissionRequest
 public class ChefsSubmissionPayload
 {
     [JsonPropertyName("data")]
-    public object Data { get; set; }
+    public object? Data { get; set; }
 }
 
 public class ChefsCreateSubmissionResponse
