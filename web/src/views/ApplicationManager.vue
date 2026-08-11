@@ -359,7 +359,7 @@
     sidebarRef.value?.setStepStatus(activeStep.value, 'error');
   }
 
-  async function onNeedsSubmission(_stepKey: string) {
+  async function onNeedsSubmission() {
     if (submissionPublicId.value) return; // Already created.
 
     try {
