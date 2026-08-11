@@ -129,6 +129,8 @@
     (e: 'saved', stepKey: string, submissionId: string): void;
     /** Fired once the step0 pre-qualifying survey sets data.showStepFunction = true. */
     (e: 'survey-complete'): void;
+    /** Fired on first auto-save when no submission exists yet. Parent must create the submission. */
+    (e: 'needs-submission', stepKey: string): void;
   }>();
 
   // ── Services ──────────────────────────────────────────────────────────────
@@ -883,8 +885,12 @@
     try {
       captureStepData(stepKey);
 
-      // Persist to DB via step data endpoint if we have a submission ID.
-      if (props.submissionPublicId) {
+      if (!props.submissionPublicId) {
+        // No submission yet — ask the parent to create one.
+        // The parent will set submissionPublicId, triggering a re-save.
+        emit('needs-submission', stepKey);
+      } else {
+        // Persist to DB via step data endpoint.
         const stepPayload = wizardDataStore.getStepData(stepKey);
         await chefsService.upsertStepData(props.submissionPublicId, stepKey, {
           formId: stepKey,

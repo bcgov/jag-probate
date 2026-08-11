@@ -52,6 +52,27 @@ namespace Probate.Api.Controllers
         }
 
         /// <summary>
+        /// Creates a draft submission record for the step-based wizard flow.
+        /// No CHEFS submission ID is required — CHEFS is only contacted on final submit.
+        /// </summary>
+        [HttpPost("draft")]
+        [ProducesResponseType(typeof(SubmissionResponseDto), StatusCodes.Status201Created)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+        public async Task<ActionResult<SubmissionResponseDto>> CreateDraftSubmission(
+            CancellationToken cancellationToken = default
+        )
+        {
+            var username = User.FindFirstValue("preferred_username");
+            if (string.IsNullOrWhiteSpace(username))
+                return Unauthorized(new { message = "Unable to identify current user." });
+
+            var result = await _submissionService.CreateDraftSubmissionAsync(
+                username, cancellationToken
+            );
+            return CreatedAtAction(nameof(GetSubmission), new { id = result.PublicId }, result);
+        }
+
+        /// <summary>
         /// Gets a single submission by its DB id.
         /// </summary>
         [HttpGet("{id}")]

@@ -541,4 +541,51 @@ public class SubmissionsControllerTests
             Times.Once
         );
     }
+
+    // ── POST /api/Submissions/draft ──────────────────────────────────────
+
+    [Fact]
+    public async Task CreateDraftSubmission_WithAuthenticatedUser_Returns201()
+    {
+        // Arrange
+        SetUser("jdoe");
+        var created = new SubmissionResponseDto
+        {
+            PublicId = Guid.NewGuid(),
+            ChefsSubmissionId = "",
+            ApplicantName = "",
+            CreatedBy = "jdoe",
+            Status = "draft",
+            CreatedAt = DateTime.UtcNow,
+        };
+
+        _mockService
+            .Setup(x => x.CreateDraftSubmissionAsync("jdoe", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(created);
+
+        // Act
+        var result = await _controller.CreateDraftSubmission();
+
+        // Assert
+        var actionResult = Assert.IsType<ActionResult<SubmissionResponseDto>>(result);
+        var createdResult = Assert.IsType<CreatedAtActionResult>(actionResult.Result);
+        Assert.Equal(StatusCodes.Status201Created, createdResult.StatusCode);
+        var returned = Assert.IsType<SubmissionResponseDto>(createdResult.Value);
+        Assert.Equal("draft", returned.Status);
+        Assert.Equal("jdoe", returned.CreatedBy);
+    }
+
+    [Fact]
+    public async Task CreateDraftSubmission_WithNoUsernameClaim_ReturnsUnauthorized()
+    {
+        // Arrange
+        SetUser(null);
+
+        // Act
+        var result = await _controller.CreateDraftSubmission();
+
+        // Assert
+        var actionResult = Assert.IsType<ActionResult<SubmissionResponseDto>>(result);
+        Assert.IsType<UnauthorizedObjectResult>(actionResult.Result);
+    }
 }

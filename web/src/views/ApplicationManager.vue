@@ -25,6 +25,7 @@
         :submission-public-id="submissionPublicId"
         @survey-complete="onSurveyComplete"
         @saved="onStepSaved"
+        @needs-submission="onNeedsSubmission"
       />
 
       <!-- Dev controls -->
@@ -356,6 +357,25 @@
 
   function markCurrentError() {
     sidebarRef.value?.setStepStatus(activeStep.value, 'error');
+  }
+
+  async function onNeedsSubmission(_stepKey: string) {
+    if (submissionPublicId.value) return; // Already created.
+
+    try {
+      const submission = await chefsService.createDraftSubmission();
+      submissionPublicId.value = submission.publicId;
+
+      // Replace URL so refresh reloads the saved submission.
+      if (route.name === 'ApplicationManager') {
+        router.replace({
+          name: 'ResumeApplicationV2',
+          params: { id: submission.publicId },
+        });
+      }
+    } catch (err) {
+      console.error('[ApplicationManager] Failed to create draft submission:', err);
+    }
   }
 
   function onStepSaved(_stepKey: string, publicId: string) {

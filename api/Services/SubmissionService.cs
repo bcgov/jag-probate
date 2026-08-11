@@ -37,6 +37,14 @@ namespace Probate.Api.Services
         Task DeleteSubmissionAsync(Guid id, CancellationToken cancellationToken = default);
 
         /// <summary>
+        /// Creates a bare draft submission for the step-based wizard flow.
+        /// </summary>
+        Task<SubmissionResponseDto> CreateDraftSubmissionAsync(
+            string username,
+            CancellationToken cancellationToken = default
+        );
+
+        /// <summary>
         /// Compiles all step data into the submission record and marks it as submitted.
         /// </summary>
         Task<SubmissionResponseDto> FinalizeSubmissionAsync(
@@ -172,6 +180,27 @@ namespace Probate.Api.Services
             return submission;
         }
 
+        public async Task<SubmissionResponseDto> CreateDraftSubmissionAsync(
+            string username,
+            CancellationToken cancellationToken = default
+        )
+        {
+            var submission = new Submission
+            {
+                PublicId = Guid.NewGuid(),
+                ChefsSubmissionId = string.Empty,
+                ApplicantName = string.Empty,
+                CreatedBy = username,
+                Status = "draft",
+                LastUpdatedAt = DateTime.UtcNow,
+            };
+
+            _db.Submissions.Add(submission);
+            await _db.SaveChangesAsync(cancellationToken);
+
+            return submission.Adapt<SubmissionResponseDto>();
+        }
+
         public async Task<SubmissionResponseDto> FinalizeSubmissionAsync(
             Guid publicId,
             string compiledData,
@@ -195,11 +224,8 @@ namespace Probate.Api.Services
             await _db.SaveChangesAsync(cancellationToken);
 
             // Submit each step to CHEFS for platform visibility (best-effort).
-            foreach (var step in submission.StepDataEntries)
+            foreach (var step in submission.StepDataEntries.Where(s => !string.IsNullOrWhiteSpace(s.Data)))
             {
-                if (string.IsNullOrWhiteSpace(step.Data))
-                    continue;
-
                 if (
                     !_options.Forms.TryGetValue(step.FormId, out var formOptions)
                     || string.IsNullOrWhiteSpace(formOptions?.FormId)

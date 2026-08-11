@@ -74,6 +74,12 @@ class ChefsService {
     await this.httpService.delete<void>(`api/Submissions/${id}`);
   }
 
+  async createDraftSubmission(): Promise<SubmissionResponseDto> {
+    return await this.httpService.post<SubmissionResponseDto>(
+      'api/Submissions/draft'
+    );
+  }
+
   // ── Step Data endpoints ─────────────────────────────────────────────
 
   async upsertStepData(
