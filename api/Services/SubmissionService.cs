@@ -224,7 +224,11 @@ namespace Probate.Api.Services
             await _db.SaveChangesAsync(cancellationToken);
 
             // Submit each step to CHEFS for platform visibility (best-effort).
-            foreach (var step in submission.StepDataEntries.Where(s => !string.IsNullOrWhiteSpace(s.Data)))
+            foreach (
+                var step in submission.StepDataEntries.Where(s =>
+                    !string.IsNullOrWhiteSpace(s.Data)
+                )
+            )
             {
                 if (
                     !_options.Forms.TryGetValue(step.FormId, out var formOptions)

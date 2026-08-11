@@ -67,7 +67,8 @@ namespace Probate.Api.Controllers
                 return Unauthorized(new { message = "Unable to identify current user." });
 
             var result = await _submissionService.CreateDraftSubmissionAsync(
-                username, cancellationToken
+                username,
+                cancellationToken
             );
             return CreatedAtAction(nameof(GetSubmission), new { id = result.PublicId }, result);
         }

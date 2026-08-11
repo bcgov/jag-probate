@@ -117,18 +117,12 @@ const routes: RouteRecordRaw[] = [
   {
     path: '/resume/:id',
     name: 'ResumeApplication',
-    component: () => import('@/views/ApplicationForm.vue'),
+    component: () => import('@/views/ApplicationManager.vue'),
     meta: { requiresAuth: true },
   },
   {
     path: '/v2/get-started',
     name: 'ApplicationManager',
-    component: () => import('@/views/ApplicationManager.vue'),
-    meta: { requiresAuth: true },
-  },
-  {
-    path: '/v2/application/:id',
-    name: 'ResumeApplicationV2',
     component: () => import('@/views/ApplicationManager.vue'),
     meta: { requiresAuth: true },
   },

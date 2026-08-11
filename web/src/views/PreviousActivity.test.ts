@@ -56,14 +56,14 @@ describe('PreviousActivity – createCase', () => {
   }
 
   function createCase(router: { push: (loc: any) => void }) {
-    router.push('/get-started');
+    router.push({ name: 'ApplicationManager' });
   }
 
-  it('navigates to /get-started', () => {
+  it('navigates to ApplicationManager', () => {
     const router = makeRouter();
     createCase(router);
 
-    expect(router.push).toHaveBeenCalledWith('/get-started');
+    expect(router.push).toHaveBeenCalledWith({ name: 'ApplicationManager' });
   });
 
   it('does not navigate to resume route', () => {

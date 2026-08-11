@@ -369,12 +369,15 @@
       // Replace URL so refresh reloads the saved submission.
       if (route.name === 'ApplicationManager') {
         router.replace({
-          name: 'ResumeApplicationV2',
+          name: 'ResumeApplication',
           params: { id: submission.publicId },
         });
       }
     } catch (err) {
-      console.error('[ApplicationManager] Failed to create draft submission:', err);
+      console.error(
+        '[ApplicationManager] Failed to create draft submission:',
+        err
+      );
     }
   }
 
@@ -384,7 +387,7 @@
       // Replace URL so refresh reloads the saved submission.
       if (route.name === 'ApplicationManager') {
         router.replace({
-          name: 'ResumeApplicationV2',
+          name: 'ResumeApplication',
           params: { id: publicId },
         });
       }
