@@ -12,6 +12,13 @@ namespace Probate.Db.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
+            migrationBuilder.AddColumn<string>(
+                name: "submission_data",
+                table: "submissions",
+                type: "text",
+                nullable: true
+            );
+
             migrationBuilder.CreateTable(
                 name: "step_data",
                 columns: table => new
@@ -75,6 +82,8 @@ namespace Probate.Db.Migrations
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropTable(name: "step_data");
+
+            migrationBuilder.DropColumn(name: "submission_data", table: "submissions");
         }
     }
 }
