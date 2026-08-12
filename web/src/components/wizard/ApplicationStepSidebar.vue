@@ -460,7 +460,10 @@
   function attemptNext() {
     const current = activeSubstep.value;
     console.log('[AttemptNext] current substep:', current);
-    console.log('[AttemptNext] wizardValidateStep exists:', typeof window.wizardValidateStep === 'function');
+    console.log(
+      '[AttemptNext] wizardValidateStep exists:',
+      typeof window.wizardValidateStep === 'function'
+    );
     const isValid = window.wizardValidateStep
       ? window.wizardValidateStep(current)
       : true;
