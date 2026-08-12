@@ -135,7 +135,7 @@
     initWizardState,
     useWizardState,
   } from '@/composables/useWizardState';
-  import { computed, onMounted, onUnmounted, ref } from 'vue';
+  import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 
   // ── Props ────────────────────────────────────────────────────────────────────
 
@@ -382,6 +382,22 @@
 
   // ── Core navigation ───────────────────────────────────────────────────────────
 
+  /**
+   * Sets the active substep directly, without emitting 'navigate' or running
+   * the leave-substep side effects (status finalization, forced save). Used
+   * only to seed the initial/resumed position - real user-driven navigation
+   * goes through updateSidebar() below, which the parent listens to.
+   */
+  function seedActiveSubstep(stepKey: string) {
+    const ordered = getVisibleSubstepsOrdered();
+    const resolved = ordered.includes(stepKey)
+      ? stepKey
+      : (getFallbackSubstep(stepKey) ?? ordered[0] ?? '');
+    if (!resolved) return;
+    activeSubstep.value = resolved;
+    ensureStartedStatus(resolved);
+  }
+
   function updateSidebar(stepKey: string, leavingValidity?: boolean) {
     const ordered = getVisibleSubstepsOrdered();
 
@@ -602,6 +618,11 @@
   }
 
   let resizeCleanup: (() => void) | null = null;
+  let hasAppliedInitialStep = false;
+
+  function applyInitialStep(stepKey: string) {
+    seedActiveSubstep(stepKey);
+  }
 
   onMounted(() => {
     // Primary instance seeds the shared state; secondary instances (mobile drawer)
@@ -629,12 +650,29 @@
     syncCollapsedToViewport();
 
     // Navigate to first visible substep (or initialStep if already visible).
-    const ordered = getVisibleSubstepsOrdered();
-    const initial = ordered.includes(props.initialStep)
-      ? props.initialStep
-      : (ordered[0] ?? '');
-    updateSidebar(initial);
+    applyInitialStep(props.initialStep);
+    hasAppliedInitialStep = true;
   });
+
+  // The parent resolves the resumed step/substep from an independent network
+  // fetch that can resolve after this component has already mounted and
+  // seeded itself with the default first step (a race, not a one-time value).
+  // Re-seed once if the resolved initial step changes after mount.
+  watch(
+    () => props.initialStep,
+    (newVal, oldVal) => {
+      if (!hasAppliedInitialStep || !newVal || newVal === oldVal) return;
+      if (props.registerBridge) {
+        initWizardState(
+          newVal,
+          props.initialNavState,
+          props.initialStatusMap,
+          props.initialDisabledMap
+        );
+      }
+      applyInitialStep(newVal);
+    }
+  );
 
   onUnmounted(() => {
     if (props.registerBridge) unregisterWindowFunctions();

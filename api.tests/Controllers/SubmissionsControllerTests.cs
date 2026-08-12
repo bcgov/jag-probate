@@ -479,7 +479,9 @@ public class SubmissionsControllerTests
             .Setup(x => x.GetCompiledDataAsync(publicId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(compiledData);
         _mockService
-            .Setup(x => x.FinalizeSubmissionAsync(publicId, compiledData, It.IsAny<CancellationToken>()))
+            .Setup(x =>
+                x.FinalizeSubmissionAsync(publicId, compiledData, It.IsAny<CancellationToken>())
+            )
             .ReturnsAsync(finalized);
 
         // Act
@@ -522,15 +524,19 @@ public class SubmissionsControllerTests
             .Setup(x => x.GetCompiledDataAsync(publicId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(compiledData);
         _mockService
-            .Setup(x => x.FinalizeSubmissionAsync(publicId, compiledData, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new SubmissionResponseDto
-            {
-                PublicId = publicId,
-                ChefsSubmissionId = "chefs-final",
-                ApplicantName = "Jane Doe",
-                CreatedBy = "jdoe",
-                Status = "submitted",
-            });
+            .Setup(x =>
+                x.FinalizeSubmissionAsync(publicId, compiledData, It.IsAny<CancellationToken>())
+            )
+            .ReturnsAsync(
+                new SubmissionResponseDto
+                {
+                    PublicId = publicId,
+                    ChefsSubmissionId = "chefs-final",
+                    ApplicantName = "Jane Doe",
+                    CreatedBy = "jdoe",
+                    Status = "submitted",
+                }
+            );
 
         // Act
         await _controller.SubmitApplication(publicId);

@@ -1,7 +1,10 @@
 <template>
   <div class="wizard-preview-layout">
     <!-- Desktop sidebar -->
-    <div v-if="!isSurveyStep" class="wizard-col d-none d-lg-block">
+    <div
+      v-if="!isSurveyStep && isActiveStepLoaded"
+      class="wizard-col d-none d-lg-block"
+    >
       <ApplicationStepSidebar
         ref="sidebarRef"
         :steps="wizardSteps"
@@ -26,6 +29,8 @@
         @survey-complete="onSurveyComplete"
         @saved="onStepSaved"
         @needs-submission="onNeedsSubmission"
+        @resume-wizard-state="onResumeWizardState"
+        @step-ready="onStepReady"
       />
 
       <!-- Dev controls -->
@@ -80,7 +85,7 @@
 
       <!-- Step Nav buttons -->
       <StepNavButtons
-        v-if="!isSurveyStep"
+        v-if="!isSurveyStep && isActiveStepLoaded"
         :has-prev="sidebarRef?.hasPrev ?? false"
         :has-next="sidebarRef?.hasNext ?? false"
         :is-last-step="sidebarRef?.isLastStep ?? false"
@@ -114,7 +119,10 @@
         </div>
 
         <!-- Step navigation — hidden during the step0 survey -->
-        <div v-if="!isSurveyStep" class="mobile-drawer-steps">
+        <div
+          v-if="!isSurveyStep && isActiveStepLoaded"
+          class="mobile-drawer-steps"
+        >
           <ApplicationStepSidebar
             :steps="wizardSteps"
             :initial-step="activeStep"
@@ -193,6 +201,8 @@
   const persistedNavState = ref<WizardNavState | null>(null);
   const persistedStatusMap = ref<Record<string, StepStatus>>({});
   const persistedDisabledMap = ref<Record<string, boolean>>({});
+  /** Last-active substep restored from the carrier step's saved host wizard state. */
+  const resumeSubstepKey = ref('');
 
   const { navState, statusMap, disabledMap } = useWizardState();
 
@@ -207,7 +217,10 @@
   );
 
   const firstWizardSubstepKey = computed<string>(
-    () => wizardSteps.value[0]?.defaultSubstep ?? firstWizardStepKey.value
+    () =>
+      resumeSubstepKey.value ||
+      wizardSteps.value[0]?.defaultSubstep ||
+      firstWizardStepKey.value
   );
 
   const substepToStepMap = computed<Record<string, string>>(() => {
@@ -258,40 +271,14 @@
       firstWizardStepKey.value = wizardStepDtos[0]?.key ?? surveyStepKey.value;
 
       wizardSteps.value = mapSidebarStepsToWizardSteps(wizardStepDtos);
-
-      if (submissionPublicId.value) {
-        // Resuming a saved submission — all steps should be visible and
-        // navigable since the user has already progressed through them.
-        initialNavState.value = { hiddenSteps: {}, hiddenSubsteps: {} };
-      } else {
-        // New application — progressive reveal (only first step visible).
-        initialNavState.value = deriveInitialNavState(wizardStepDtos);
-      }
+      // Progressive reveal by default; onResumeWizardState overrides this
+      // with the real saved state if the carrier step has one.
+      initialNavState.value = deriveInitialNavState(wizardStepDtos);
 
       if (!activeStep.value) {
-        if (submissionPublicId.value) {
-          // Resuming — try to restore the last-active substep from localStorage.
-          let resumed = false;
-          try {
-            const saved = localStorage.getItem(
-              `wizard_state_${submissionPublicId.value}`
-            );
-            if (saved) {
-              const { activeSubstep } = JSON.parse(saved);
-              if (activeSubstep) {
-                activeStep.value = activeSubstep;
-                resumed = true;
-              }
-            }
-          } catch {
-            // Best-effort — fall back to first step.
-          }
-          if (!resumed) {
-            activeStep.value = firstWizardStepKey.value;
-          }
-        } else {
-          activeStep.value = surveyStepKey.value;
-        }
+        activeStep.value = submissionPublicId.value
+          ? firstWizardStepKey.value
+          : surveyStepKey.value;
       }
     } catch (error) {
       console.error('Failed to load sidebar structure from backend', error);
@@ -299,6 +286,18 @@
   });
 
   const isSurveyStep = computed(() => activeStep.value === surveyStepKey.value);
+
+  /** Top-level step keys whose form has finished loading (or timed out). */
+  const readyStepKeys = ref(new Set<string>());
+  function onStepReady(stepKey: string) {
+    readyStepKeys.value.add(stepKey);
+    // Trigger reactivity - Set mutation alone isn't tracked by refs.
+    readyStepKeys.value = new Set(readyStepKeys.value);
+  }
+  /** Don't show the sidebar/nav until the currently active step's own form is ready. */
+  const isActiveStepLoaded = computed(() =>
+    readyStepKeys.value.has(activeStepKey.value)
+  );
 
   const authStore = useAuthStore();
   const layoutStore = useLayoutStore();
@@ -349,6 +348,24 @@
 
   function onSurveyComplete() {
     activeStep.value = firstWizardStepKey.value;
+  }
+
+  function onResumeWizardState(state: {
+    activeStep: string;
+    activeSubstep: string;
+    hiddenSteps: Record<string, boolean>;
+    hiddenSubsteps: Record<string, boolean>;
+    statusMap: Record<string, string>;
+    disabledMap: Record<string, boolean>;
+  }) {
+    resumeSubstepKey.value = state.activeSubstep || state.activeStep;
+    persistedNavState.value = {
+      hiddenSteps: state.hiddenSteps,
+      hiddenSubsteps: state.hiddenSubsteps,
+    };
+    persistedStatusMap.value = state.statusMap as Record<string, StepStatus>;
+    persistedDisabledMap.value = state.disabledMap;
+    activeStep.value = state.activeStep;
   }
 
   function onMobileNavigate(stepKey: string) {

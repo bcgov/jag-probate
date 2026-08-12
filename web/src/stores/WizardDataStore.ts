@@ -14,6 +14,7 @@ const WIZARD_MANAGED_KEYS = new Set([
   'showStepFunction',
   'showSurvey2',
   'animationDebounceScript',
+  'hostWizardState',
 ]);
 
 /**

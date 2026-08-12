@@ -59,7 +59,8 @@ services:
       - Chefs__Forms__form-testamentary-docs__Order=${CHEFS_FORM_TESTAMENTARY_DOCS_ORDER:-2}
       - Chefs__Forms__form-testamentary-docs__Title=${CHEFS_FORM_TESTAMENTARY_DOCS_TITLE:-Deceased's Will}
       - Chefs__Forms__form-testamentary-docs__Icon=${CHEFS_FORM_TESTAMENTARY_DOCS_ICON:-book}
-      - Chefs__Forms__form-testamentary-docs__Children__0__Title=${CHEFS_FORM_TESTAMENTARY_DOCS_CHILD_0_TITLE:-Deceased's Will}
+      - Chefs__Forms__form-testamentary-docs__Children__0__Title=${CHEFS_FORM_TESTAMENTARY_DOCS_CHILD_0_TITLE:-Application for Search of Wills Notice}
+      - Chefs__Forms__form-testamentary-docs__Children__1__Title=${CHEFS_FORM_TESTAMENTARY_DOCS_CHILD_1_TITLE:-Deceased's Will}
       - Chefs__Forms__form-related-people__FormId=${CHEFS_FORM_RELATED_PEOPLE_FORMID}
       - Chefs__Forms__form-related-people__ApiKey=${CHEFS_FORM_RELATED_PEOPLE_API_KEY}
       - Chefs__Forms__form-related-people__Order=${CHEFS_FORM_RELATED_PEOPLE_ORDER:-3}

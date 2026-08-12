@@ -46,7 +46,11 @@ public class StepDataControllerTests
 
         _mockService
             .Setup(x =>
-                x.UpsertStepDataAsync(publicId, It.IsAny<UpsertStepDataDto>(), It.IsAny<CancellationToken>())
+                x.UpsertStepDataAsync(
+                    publicId,
+                    It.IsAny<UpsertStepDataDto>(),
+                    It.IsAny<CancellationToken>()
+                )
             )
             .ReturnsAsync(expected);
 
@@ -63,11 +67,7 @@ public class StepDataControllerTests
     public async Task UpsertStepData_SetsFormIdFromRoute()
     {
         var publicId = Guid.NewGuid();
-        var dto = new UpsertStepDataDto
-        {
-            FormId = "will-be-overwritten",
-            Data = "{}",
-        };
+        var dto = new UpsertStepDataDto { FormId = "will-be-overwritten", Data = "{}" };
 
         _mockService
             .Setup(x =>
@@ -100,7 +100,11 @@ public class StepDataControllerTests
 
         _mockService
             .Setup(x =>
-                x.UpsertStepDataAsync(publicId, It.IsAny<UpsertStepDataDto>(), It.IsAny<CancellationToken>())
+                x.UpsertStepDataAsync(
+                    publicId,
+                    It.IsAny<UpsertStepDataDto>(),
+                    It.IsAny<CancellationToken>()
+                )
             )
             .ThrowsAsync(new KeyNotFoundException());
 

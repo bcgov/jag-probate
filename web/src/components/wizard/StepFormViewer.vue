@@ -122,6 +122,37 @@
     return stepKey === getSurveyStepKey();
   }
 
+  /**
+   * The first real wizard step (after the survey) carries the host app's
+   * activeStep/activeSubstep/navState/statusMap/disabledMap as an extra
+   * plain data key (hostWizardState) on its own CHEFS form data - no schema
+   * component needed, and it persists via the same per-step save/load API
+   * as the step's real fields, so it follows the submission across devices.
+   */
+  function getStateCarrierStepKey(): string {
+    return props.stepKeys.find((k) => k !== getSurveyStepKey()) ?? '';
+  }
+
+  /** Writes the current activeStep/activeSubstep/navState/statusMap/disabledMap
+   * onto the carrier step's own data and schedules a normal save for it. */
+  function persistHostWizardState() {
+    const carrierKey = getStateCarrierStepKey();
+    const el = stepEls[carrierKey];
+    if (!el?.formioInstance?.data) return;
+
+    el.formioInstance.data.hostWizardState = JSON.stringify({
+      activeStep: props.activeStep,
+      activeSubstep: wizardActiveSubstep.value,
+      hiddenSteps: { ...navState.hiddenSteps },
+      hiddenSubsteps: { ...navState.hiddenSubsteps },
+      statusMap: { ...statusMap },
+      disabledMap: { ...disabledMap },
+    });
+
+    captureStepData(carrierKey);
+    getRuntime(carrierKey).dirty = true;
+  }
+
   // ── Emits ─────────────────────────────────────────────────────────────────
   const emit = defineEmits<{
     (e: 'submitted', stepKey: string, submissionId: string): void;
@@ -131,6 +162,20 @@
     (e: 'survey-complete'): void;
     /** Fired on first auto-save when no submission exists yet. Parent must create the submission. */
     (e: 'needs-submission', stepKey: string): void;
+    /** Fired after hydration when a saved host wizard state is found on the carrier step. */
+    (
+      e: 'resume-wizard-state',
+      state: {
+        activeStep: string;
+        activeSubstep: string;
+        hiddenSteps: Record<string, boolean>;
+        hiddenSubsteps: Record<string, boolean>;
+        statusMap: Record<string, string>;
+        disabledMap: Record<string, boolean>;
+      }
+    ): void;
+    /** Fired once a step's form finishes loading (or times out) and is shown. */
+    (e: 'step-ready', stepKey: string): void;
   }>();
 
   // ── Services ──────────────────────────────────────────────────────────────
@@ -286,6 +331,27 @@
                 '— keys:',
                 Object.keys(parsed)
               );
+
+              // The carrier step (first real wizard step) may hold the
+              // host app's saved nav/status/disabled state as an extra key.
+              // Match on the key's presence, not getStateCarrierStepKey() -
+              // props.stepKeys isn't populated yet at this point (the parent
+              // sets it in its own onMounted, which runs after this child's).
+              if (parsed.hostWizardState) {
+                try {
+                  const saved = JSON.parse(parsed.hostWizardState);
+                  emit('resume-wizard-state', {
+                    activeStep: saved.activeStep ?? step.formId,
+                    activeSubstep: saved.activeSubstep ?? '',
+                    hiddenSteps: saved.hiddenSteps ?? {},
+                    hiddenSubsteps: saved.hiddenSubsteps ?? {},
+                    statusMap: saved.statusMap ?? {},
+                    disabledMap: saved.disabledMap ?? {},
+                  });
+                } catch {
+                  // Malformed - fall back to the default new-session state.
+                }
+              }
             }
           }
         }
@@ -616,6 +682,27 @@
   }
 
   // ── Initialize a single step's form ───────────────────────────────────────
+  // Serializes chefs-form-viewer asset loading across steps: the vendor's
+  // shared asset cache doesn't dedupe concurrent requests from multiple
+  // instances, causing intermittent net::ERR_ABORTED / failed loads when
+  // several steps initialize close together (e.g. right after resume hydration).
+  let assetLoadChain: Promise<void> = Promise.resolve();
+  function enqueueAssetLoad(task: () => Promise<void>): Promise<void> {
+    const run = assetLoadChain.then(task, task);
+    assetLoadChain = run.then(
+      () => undefined,
+      () => undefined
+    );
+    return run;
+  }
+
+  /** Marks a step as ready to display and notifies the parent (used to gate
+   * sidebar/nav visibility until the resumed step's own form has loaded). */
+  function markStepReady(stepKey: string) {
+    stepStates[stepKey] = 'ready';
+    emit('step-ready', stepKey);
+  }
+
   async function initStep(stepKey: string) {
     teardownStep(stepKey);
     stepStates[stepKey] = 'loading';
@@ -673,7 +760,7 @@
       await customElements.whenDefined('chefs-form-viewer');
 
       rt.readyTimer = setTimeout(() => {
-        stepStates[stepKey] = 'ready';
+        markStepReady(stepKey);
       }, 15000);
 
       el.addEventListener(
@@ -686,7 +773,7 @@
           }
           rt.readyTimer = setTimeout(() => {
             rt.readyTimer = null;
-            stepStates[stepKey] = 'ready';
+            markStepReady(stepKey);
           }, 500);
 
           // Set data.currentStep and data.currentSubstep so CHEFS onChange guards work.
@@ -803,7 +890,24 @@
         { once: true }
       );
 
-      el.load();
+      // Queue this step's actual load behind any earlier step still loading,
+      // and hold the queue until this one finishes (ready, error, or timeout)
+      // before letting the next queued step start its own load.
+      await enqueueAssetLoad(
+        () =>
+          new Promise<void>((resolve) => {
+            let settled = false;
+            const settle = () => {
+              if (settled) return;
+              settled = true;
+              resolve();
+            };
+            el.addEventListener('formio:ready', settle, { once: true });
+            el.addEventListener('formio:error', settle, { once: true });
+            setTimeout(settle, 15000);
+            el.load();
+          })
+      );
 
       // Capture this step's own data into the shared store on every change.
       el.addEventListener('formio:change', (e: CustomEvent) => {
@@ -952,6 +1056,11 @@
       const stop = watch(hydrationDone, (done) => {
         if (done) {
           stop();
+          // The active step may have moved on (e.g. resume state restored
+          // after this stale queued call) - skip, its own activateStep call
+          // will run instead. Prevents two concurrent CHEFS form loads racing
+          // and aborting each other's shared asset requests.
+          if (stepKey !== props.activeStep) return;
           activateStep(stepKey);
         }
       });
@@ -1159,6 +1268,25 @@
     }
   });
 
+  // ── Persist host wizard state (activeStep/substep/nav/status/disabled) ────
+  // onto the carrier step's own data whenever it changes, so it round-trips
+  // through the normal per-step save API instead of localStorage.
+  watch(
+    [
+      () => props.activeStep,
+      wizardActiveSubstep,
+      navState,
+      statusMap,
+      disabledMap,
+    ],
+    () => {
+      if (!autoSaveEnabled.value) return;
+      persistHostWizardState();
+      scheduleAutoSave(getStateCarrierStepKey());
+    },
+    { deep: true }
+  );
+
   // Start/refresh background preloading once the survey step is ready (or if
   // the user is already beyond the survey), and whenever the backend step list changes.
   watch(
@@ -1230,17 +1358,11 @@
       if (Object.keys(data).length === 0) continue;
       saves.push(performAutoSave(stepKey));
     }
-    // Persist the current active substep so resume can restore position.
-    if (props.submissionPublicId && wizardActiveSubstep.value) {
-      try {
-        localStorage.setItem(
-          `wizard_state_${props.submissionPublicId}`,
-          JSON.stringify({ activeSubstep: wizardActiveSubstep.value })
-        );
-      } catch {
-        // Best-effort — localStorage may be unavailable.
-      }
-    }
+    // Ensure the carrier step's host wizard state (activeStep/substep/nav/
+    // status/disabled) is up to date, then force an immediate save for it.
+    persistHostWizardState();
+    const carrierKey = getStateCarrierStepKey();
+    if (stepEls[carrierKey]) saves.push(performAutoSave(carrierKey));
 
     await Promise.allSettled(saves);
   }
