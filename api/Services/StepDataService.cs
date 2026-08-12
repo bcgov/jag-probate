@@ -86,6 +86,23 @@ namespace Probate.Api.Services
             }
 
             submission.LastUpdatedAt = DateTime.UtcNow;
+
+            // Extract deceased name from step data to keep the submission row searchable.
+            if (!string.IsNullOrWhiteSpace(dto.Data))
+            {
+                try
+                {
+                    var parsed = JObject.Parse(dto.Data);
+                    var name = parsed.Value<string>("deceasedName");
+                    if (!string.IsNullOrWhiteSpace(name))
+                        submission.ApplicantName = name;
+                }
+                catch (JsonReaderException)
+                {
+                    // Non-critical — skip name extraction if JSON is malformed.
+                }
+            }
+
             await _db.SaveChangesAsync(cancellationToken);
 
             return existing.Adapt<StepDataResponseDto>();

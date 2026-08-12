@@ -26,6 +26,7 @@
         @survey-complete="onSurveyComplete"
         @saved="onStepSaved"
         @needs-submission="onNeedsSubmission"
+        @resume-substep="onResumeSubstep"
       />
 
       <!-- Dev controls -->
@@ -231,13 +232,14 @@
     persistedDisabledMap.value = { ...disabledMap };
   }
 
-  onMounted(async () => {
-    // Check for resume route param
-    const rawId = route.params.id;
-    if (rawId) {
-      submissionPublicId.value = Array.isArray(rawId) ? rawId[0] : rawId;
-    }
+  // Set submissionPublicId synchronously so child components (StepFormViewer)
+  // see it in their own onMounted, which runs before the parent's onMounted.
+  const rawId = route.params.id;
+  if (rawId) {
+    submissionPublicId.value = Array.isArray(rawId) ? rawId[0] : rawId;
+  }
 
+  onMounted(async () => {
     try {
       const sortedDtos = (await chefsService.getSidebarStructure())
         .slice()
@@ -257,10 +259,22 @@
       firstWizardStepKey.value = wizardStepDtos[0]?.key ?? surveyStepKey.value;
 
       wizardSteps.value = mapSidebarStepsToWizardSteps(wizardStepDtos);
-      initialNavState.value = deriveInitialNavState(wizardStepDtos);
+
+      if (submissionPublicId.value) {
+        // Resuming a saved submission — all steps should be visible and
+        // navigable since the user has already progressed through them.
+        initialNavState.value = { hiddenSteps: {}, hiddenSubsteps: {} };
+      } else {
+        // New application — progressive reveal (only first step visible).
+        initialNavState.value = deriveInitialNavState(wizardStepDtos);
+      }
 
       if (!activeStep.value) {
-        activeStep.value = surveyStepKey.value;
+        // When resuming a saved submission, skip the survey and go to the
+        // first wizard step — the survey was already completed.
+        activeStep.value = submissionPublicId.value
+          ? firstWizardStepKey.value
+          : surveyStepKey.value;
       }
     } catch (error) {
       console.error('Failed to load sidebar structure from backend', error);
@@ -318,6 +332,13 @@
 
   function onSurveyComplete() {
     activeStep.value = firstWizardStepKey.value;
+  }
+
+  function onResumeSubstep(substepKey: string) {
+    // Navigate to the last-active substep saved before the user left.
+    activeStep.value = substepKey;
+    // Also update the sidebar so it highlights the correct item.
+    sidebarRef.value?.updateSidebar?.(substepKey);
   }
 
   function onMobileNavigate(stepKey: string) {

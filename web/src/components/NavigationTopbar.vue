@@ -206,9 +206,16 @@
    * Placeholder only — actual save-progress persistence is not yet
    * implemented and will be wired up once the backend supports it.
    */
-  const handleSaveAndExit = () => {
-    // TODO: implement save-progress persistence once backend support exists.
+  const handleSaveAndExit = async () => {
     layoutStore.closeMobileNav();
+    // Flush all pending auto-saves before navigating away.
+    if (typeof window.wizardFlushAll === 'function') {
+      try {
+        await window.wizardFlushAll();
+      } catch {
+        // Best-effort — navigate regardless.
+      }
+    }
     router.push('/previous-activity');
   };
 

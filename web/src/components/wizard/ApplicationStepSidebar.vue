@@ -232,8 +232,13 @@
   const allSubstepKeys = computed<string[]>(() => {
     const result: string[] = [];
     for (const step of props.steps) {
-      for (const sub of step.substeps) {
-        result.push(sub.key);
+      if (step.substeps.length === 0) {
+        // Single-page step with no children — the step key IS the substep.
+        result.push(step.key);
+      } else {
+        for (const sub of step.substeps) {
+          result.push(sub.key);
+        }
       }
     }
     return result;
@@ -454,10 +459,14 @@
    */
   function attemptNext() {
     const current = activeSubstep.value;
+    console.log('[AttemptNext] current substep:', current);
+    console.log('[AttemptNext] wizardValidateStep exists:', typeof window.wizardValidateStep === 'function');
     const isValid = window.wizardValidateStep
       ? window.wizardValidateStep(current)
       : true;
+    console.log('[AttemptNext] isValid:', isValid);
     const next = getAdjacentVisibleSubstep(current, 1);
+    console.log('[AttemptNext] next substep:', next);
     if (next) setStepClickable(next, true);
     if (!isValid) return;
     navigateNext();
