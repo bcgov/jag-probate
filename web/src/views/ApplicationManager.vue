@@ -26,7 +26,6 @@
         @survey-complete="onSurveyComplete"
         @saved="onStepSaved"
         @needs-submission="onNeedsSubmission"
-        @resume-substep="onResumeSubstep"
       />
 
       <!-- Dev controls -->
@@ -270,11 +269,29 @@
       }
 
       if (!activeStep.value) {
-        // When resuming a saved submission, skip the survey and go to the
-        // first wizard step — the survey was already completed.
-        activeStep.value = submissionPublicId.value
-          ? firstWizardStepKey.value
-          : surveyStepKey.value;
+        if (submissionPublicId.value) {
+          // Resuming — try to restore the last-active substep from localStorage.
+          let resumed = false;
+          try {
+            const saved = localStorage.getItem(
+              `wizard_state_${submissionPublicId.value}`
+            );
+            if (saved) {
+              const { activeSubstep } = JSON.parse(saved);
+              if (activeSubstep) {
+                activeStep.value = activeSubstep;
+                resumed = true;
+              }
+            }
+          } catch {
+            // Best-effort — fall back to first step.
+          }
+          if (!resumed) {
+            activeStep.value = firstWizardStepKey.value;
+          }
+        } else {
+          activeStep.value = surveyStepKey.value;
+        }
       }
     } catch (error) {
       console.error('Failed to load sidebar structure from backend', error);
@@ -332,13 +349,6 @@
 
   function onSurveyComplete() {
     activeStep.value = firstWizardStepKey.value;
-  }
-
-  function onResumeSubstep(substepKey: string) {
-    // Navigate to the last-active substep saved before the user left.
-    activeStep.value = substepKey;
-    // Also update the sidebar so it highlights the correct item.
-    sidebarRef.value?.updateSidebar?.(substepKey);
   }
 
   function onMobileNavigate(stepKey: string) {

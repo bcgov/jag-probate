@@ -131,8 +131,6 @@
     (e: 'survey-complete'): void;
     /** Fired on first auto-save when no submission exists yet. Parent must create the submission. */
     (e: 'needs-submission', stepKey: string): void;
-    /** Fired after hydration when a saved active substep is found. */
-    (e: 'resume-substep', substepKey: string): void;
   }>();
 
   // ── Services ──────────────────────────────────────────────────────────────
@@ -295,24 +293,6 @@
           '[Hydrate] Store accumulatedData keys after hydration:',
           Object.keys(wizardDataStore.accumulatedData)
         );
-        // Restore last-active substep from localStorage.
-        try {
-          const saved = localStorage.getItem(
-            `wizard_state_${props.submissionPublicId}`
-          );
-          if (saved) {
-            const { activeSubstep } = JSON.parse(saved);
-            if (activeSubstep) {
-              console.log(
-                '[Hydrate] Restoring active substep from localStorage:',
-                activeSubstep
-              );
-              emit('resume-substep', activeSubstep);
-            }
-          }
-        } catch {
-          // Best-effort — localStorage may be unavailable.
-        }
         return; // Hydrated from API — skip legacy payload parsing.
       } catch (err) {
         console.warn(
