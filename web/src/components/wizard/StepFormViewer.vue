@@ -261,6 +261,8 @@
       '[Hydrate] START — submissionPublicId:',
       props.submissionPublicId
     );
+    // Clear any leftover data from a previous application session.
+    wizardDataStore.reset();
     // If we have a submission ID, try loading step data from the API first.
     if (props.submissionPublicId) {
       try {
@@ -273,19 +275,12 @@
           'steps:',
           allSteps.map((s) => s.formId)
         );
-        let resumeSubstep: string | null = null;
         for (const step of allSteps) {
+          // Skip wizard metadata rows (legacy — now stored in localStorage).
+          if (step.formId === '__wizard_state__') continue;
           if (step.data) {
             const parsed = JSON.parse(step.data);
             if (parsed && typeof parsed === 'object') {
-              if (step.formId === '__wizard_state__') {
-                resumeSubstep = parsed.activeSubstep ?? null;
-                console.log(
-                  '[Hydrate] Found wizard state — resumeSubstep:',
-                  resumeSubstep
-                );
-                continue; // Don't store wizard metadata in the data store.
-              }
               wizardDataStore.setStepData(step.formId, parsed);
               console.log(
                 '[Hydrate] Stored data for',
@@ -300,8 +295,23 @@
           '[Hydrate] Store accumulatedData keys after hydration:',
           Object.keys(wizardDataStore.accumulatedData)
         );
-        if (resumeSubstep) {
-          emit('resume-substep', resumeSubstep);
+        // Restore last-active substep from localStorage.
+        try {
+          const saved = localStorage.getItem(
+            `wizard_state_${props.submissionPublicId}`
+          );
+          if (saved) {
+            const { activeSubstep } = JSON.parse(saved);
+            if (activeSubstep) {
+              console.log(
+                '[Hydrate] Restoring active substep from localStorage:',
+                activeSubstep
+              );
+              emit('resume-substep', activeSubstep);
+            }
+          }
+        } catch {
+          // Best-effort — localStorage may be unavailable.
         }
         return; // Hydrated from API — skip legacy payload parsing.
       } catch (err) {
@@ -1240,21 +1250,15 @@
       if (Object.keys(data).length === 0) continue;
       saves.push(performAutoSave(stepKey));
     }
-    // Also persist the current active substep so resume can restore position.
+    // Persist the current active substep so resume can restore position.
     if (props.submissionPublicId && wizardActiveSubstep.value) {
       try {
-        await chefsService.upsertStepData(
-          props.submissionPublicId,
-          '__wizard_state__',
-          {
-            formId: '__wizard_state__',
-            data: JSON.stringify({
-              activeSubstep: wizardActiveSubstep.value,
-            }),
-          }
+        localStorage.setItem(
+          `wizard_state_${props.submissionPublicId}`,
+          JSON.stringify({ activeSubstep: wizardActiveSubstep.value })
         );
       } catch {
-        // Best-effort — don't block navigation if this fails.
+        // Best-effort — localStorage may be unavailable.
       }
     }
 
