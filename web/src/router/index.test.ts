@@ -43,10 +43,10 @@ describe('Router', () => {
     expect(resumeRoute?.path).toBe('/resume/:id');
   });
 
-  it('should have NewApplication route at /get-started', () => {
+  it('should have ApplicationManager route at /get-started', () => {
     const newAppRoute = router
       .getRoutes()
-      .find((route) => route.name === 'NewApplication');
+      .find((route) => route.name === 'ApplicationManager');
     expect(newAppRoute).toBeDefined();
     expect(newAppRoute?.path).toBe('/get-started');
   });
