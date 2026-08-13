@@ -103,12 +103,6 @@ const routes: RouteRecordRaw[] = [
     meta: { requiresAuth: true },
   },
   {
-    path: '/get-started',
-    name: 'NewApplication',
-    component: () => import('../views/ApplicationForm.vue'),
-    meta: { requiresAuth: true },
-  },
-  {
     path: '/terms',
     name: 'terms',
     component: () => import('@/views/TermsAndConditions.vue'),
@@ -121,7 +115,7 @@ const routes: RouteRecordRaw[] = [
     meta: { requiresAuth: true },
   },
   {
-    path: '/v2/get-started',
+    path: '/get-started',
     name: 'ApplicationManager',
     component: () => import('@/views/ApplicationManager.vue'),
     meta: { requiresAuth: true },
