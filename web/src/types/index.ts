@@ -33,7 +33,9 @@ export interface SidebarStepDto {
 
 export type {
   PreviousApplication,
+  StepDataResponseDto,
   SubmissionResponseDto,
+  UpsertStepDataDto,
   UpsertSubmissionDto,
 } from './submission';
 

@@ -37,6 +37,23 @@ namespace Probate.Api.Services
         Task DeleteSubmissionAsync(Guid id, CancellationToken cancellationToken = default);
 
         /// <summary>
+        /// Creates a bare draft submission for the step-based wizard flow.
+        /// </summary>
+        Task<SubmissionResponseDto> CreateDraftSubmissionAsync(
+            string username,
+            CancellationToken cancellationToken = default
+        );
+
+        /// <summary>
+        /// Compiles all step data into the submission record and marks it as submitted.
+        /// </summary>
+        Task<SubmissionResponseDto> FinalizeSubmissionAsync(
+            Guid publicId,
+            string compiledData,
+            CancellationToken cancellationToken = default
+        );
+
+        /// <summary>
         /// Returns a single submission including its raw stored form data.
         /// Throws <see cref="KeyNotFoundException"/> if not found or soft-deleted.
         /// </summary>
@@ -161,6 +178,99 @@ namespace Probate.Api.Services
                 throw new KeyNotFoundException($"Submission {id} not found.");
 
             return submission;
+        }
+
+        public async Task<SubmissionResponseDto> CreateDraftSubmissionAsync(
+            string username,
+            CancellationToken cancellationToken = default
+        )
+        {
+            var submission = new Submission
+            {
+                PublicId = Guid.NewGuid(),
+                ChefsSubmissionId = string.Empty,
+                ApplicantName = string.Empty,
+                CreatedBy = username,
+                Status = "draft",
+                LastUpdatedAt = DateTime.UtcNow,
+            };
+
+            _db.Submissions.Add(submission);
+            await _db.SaveChangesAsync(cancellationToken);
+
+            return submission.Adapt<SubmissionResponseDto>();
+        }
+
+        public async Task<SubmissionResponseDto> FinalizeSubmissionAsync(
+            Guid publicId,
+            string compiledData,
+            CancellationToken cancellationToken = default
+        )
+        {
+            var submission =
+                await _db
+                    .Submissions.Include(s => s.StepDataEntries)
+                    .FirstOrDefaultAsync(
+                        s => s.PublicId == publicId && s.DeletedAt == null,
+                        cancellationToken
+                    )
+                ?? throw new KeyNotFoundException($"Submission {publicId} not found.");
+
+            submission.SubmissionData = compiledData;
+            submission.Status = "submitted";
+            submission.LastFiledAt = DateTime.UtcNow;
+            submission.LastUpdatedAt = DateTime.UtcNow;
+
+            await _db.SaveChangesAsync(cancellationToken);
+
+            // Submit each step to CHEFS for platform visibility (best-effort).
+            foreach (
+                var step in submission.StepDataEntries.Where(s =>
+                    !string.IsNullOrWhiteSpace(s.Data)
+                )
+            )
+            {
+                if (
+                    !_options.Forms.TryGetValue(step.FormId, out var formOptions)
+                    || string.IsNullOrWhiteSpace(formOptions?.FormId)
+                )
+                {
+                    _logger.LogWarning(
+                        "No CHEFS form configured for step {FormId}, skipping CHEFS submission",
+                        step.FormId
+                    );
+                    continue;
+                }
+
+                try
+                {
+                    object? parsedData = Newtonsoft.Json.JsonConvert.DeserializeObject(step.Data);
+                    await _chefsApi.CreateSubmissionAsync(
+                        formOptions.FormId,
+                        new Infrastructure.Chefs.ChefsCreateSubmissionRequest
+                        {
+                            Draft = false,
+                            Submission = new Infrastructure.Chefs.ChefsSubmissionPayload
+                            {
+                                Data = parsedData,
+                            },
+                        },
+                        cancellationToken
+                    );
+                }
+                catch (ApiException ex)
+                {
+                    _logger.LogWarning(
+                        ex,
+                        "CHEFS submission failed for step {FormId} on submission {PublicId}: {StatusCode}",
+                        step.FormId,
+                        publicId,
+                        ex.StatusCode
+                    );
+                }
+            }
+
+            return submission.Adapt<SubmissionResponseDto>();
         }
 
         public async Task DeleteSubmissionAsync(

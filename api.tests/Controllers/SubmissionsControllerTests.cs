@@ -17,14 +17,20 @@ namespace Probate.Api.Tests.Controllers;
 public class SubmissionsControllerTests
 {
     private readonly Mock<ISubmissionService> _mockService;
+    private readonly Mock<IStepDataService> _mockStepDataService;
     private readonly Mock<ILogger<SubmissionsController>> _mockLogger;
     private readonly SubmissionsController _controller;
 
     public SubmissionsControllerTests()
     {
         _mockService = new Mock<ISubmissionService>();
+        _mockStepDataService = new Mock<IStepDataService>();
         _mockLogger = new Mock<ILogger<SubmissionsController>>();
-        _controller = new SubmissionsController(_mockService.Object, _mockLogger.Object);
+        _controller = new SubmissionsController(
+            _mockService.Object,
+            _mockStepDataService.Object,
+            _mockLogger.Object
+        );
     }
 
     /// Sets up the controller's User principal with the given preferred_username claim.
@@ -449,5 +455,143 @@ public class SubmissionsControllerTests
 
         // Assert
         _mockService.Verify(x => x.DeleteSubmissionAsync(deleteId, cts.Token), Times.Once);
+    }
+
+    // ── POST /api/Submissions/{id}/submit ────────────────────────────────
+
+    [Fact]
+    public async Task SubmitApplication_CompilesAndFinalizes_ReturnsOk()
+    {
+        // Arrange
+        var publicId = Guid.NewGuid();
+        var compiledData = "{\"name\":\"test\",\"age\":30}";
+        var finalized = new SubmissionResponseDto
+        {
+            PublicId = publicId,
+            ChefsSubmissionId = "chefs-final",
+            ApplicantName = "Jane Doe",
+            CreatedBy = "jdoe",
+            Status = "submitted",
+            CreatedAt = DateTime.UtcNow,
+        };
+
+        _mockStepDataService
+            .Setup(x => x.GetCompiledDataAsync(publicId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(compiledData);
+        _mockService
+            .Setup(x =>
+                x.FinalizeSubmissionAsync(publicId, compiledData, It.IsAny<CancellationToken>())
+            )
+            .ReturnsAsync(finalized);
+
+        // Act
+        var result = await _controller.SubmitApplication(publicId);
+
+        // Assert
+        var actionResult = Assert.IsType<ActionResult<SubmissionResponseDto>>(result);
+        var okResult = Assert.IsType<OkObjectResult>(actionResult.Result);
+        var returned = Assert.IsType<SubmissionResponseDto>(okResult.Value);
+        Assert.Equal("submitted", returned.Status);
+        Assert.Equal(publicId, returned.PublicId);
+    }
+
+    [Fact]
+    public async Task SubmitApplication_WhenNotFound_ReturnsNotFound()
+    {
+        // Arrange
+        var publicId = Guid.NewGuid();
+
+        _mockStepDataService
+            .Setup(x => x.GetCompiledDataAsync(publicId, It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new KeyNotFoundException());
+
+        // Act
+        var result = await _controller.SubmitApplication(publicId);
+
+        // Assert
+        var actionResult = Assert.IsType<ActionResult<SubmissionResponseDto>>(result);
+        Assert.IsType<NotFoundObjectResult>(actionResult.Result);
+    }
+
+    [Fact]
+    public async Task SubmitApplication_PassesCompiledDataToFinalize()
+    {
+        // Arrange
+        var publicId = Guid.NewGuid();
+        var compiledData = "{\"step1\":\"data\",\"step3\":\"data\"}";
+
+        _mockStepDataService
+            .Setup(x => x.GetCompiledDataAsync(publicId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(compiledData);
+        _mockService
+            .Setup(x =>
+                x.FinalizeSubmissionAsync(publicId, compiledData, It.IsAny<CancellationToken>())
+            )
+            .ReturnsAsync(
+                new SubmissionResponseDto
+                {
+                    PublicId = publicId,
+                    ChefsSubmissionId = "chefs-final",
+                    ApplicantName = "Jane Doe",
+                    CreatedBy = "jdoe",
+                    Status = "submitted",
+                }
+            );
+
+        // Act
+        await _controller.SubmitApplication(publicId);
+
+        // Assert
+        _mockService.Verify(
+            x => x.FinalizeSubmissionAsync(publicId, compiledData, It.IsAny<CancellationToken>()),
+            Times.Once
+        );
+    }
+
+    // ── POST /api/Submissions/draft ──────────────────────────────────────
+
+    [Fact]
+    public async Task CreateDraftSubmission_WithAuthenticatedUser_Returns201()
+    {
+        // Arrange
+        SetUser("jdoe");
+        var created = new SubmissionResponseDto
+        {
+            PublicId = Guid.NewGuid(),
+            ChefsSubmissionId = "",
+            ApplicantName = "",
+            CreatedBy = "jdoe",
+            Status = "draft",
+            CreatedAt = DateTime.UtcNow,
+        };
+
+        _mockService
+            .Setup(x => x.CreateDraftSubmissionAsync("jdoe", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(created);
+
+        // Act
+        var result = await _controller.CreateDraftSubmission();
+
+        // Assert
+        var actionResult = Assert.IsType<ActionResult<SubmissionResponseDto>>(result);
+        var createdResult = Assert.IsType<CreatedAtActionResult>(actionResult.Result);
+        Assert.Equal(StatusCodes.Status201Created, createdResult.StatusCode);
+        var returned = Assert.IsType<SubmissionResponseDto>(createdResult.Value);
+        Assert.Equal("draft", returned.Status);
+        Assert.Equal("jdoe", returned.CreatedBy);
+    }
+
+    [Fact]
+    public async Task CreateDraftSubmission_WithNoUsernameClaim_ReturnsUnauthorized()
+    {
+        // Arrange
+        SetUser(null);
+
+        // Act
+        var result = await _controller.CreateDraftSubmission();
+
+        // Assert
+        var actionResult = Assert.IsType<ActionResult<SubmissionResponseDto>>(result);
+        Assert.IsType<UnauthorizedObjectResult>(actionResult.Result);
     }
 }

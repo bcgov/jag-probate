@@ -1,7 +1,10 @@
 <template>
   <div class="wizard-preview-layout">
     <!-- Desktop sidebar -->
-    <div v-if="!isSurveyStep" class="wizard-col d-none d-lg-block">
+    <div
+      v-if="!isSurveyStep && isActiveStepLoaded"
+      class="wizard-col d-none d-lg-block"
+    >
       <ApplicationStepSidebar
         ref="sidebarRef"
         :steps="wizardSteps"
@@ -17,11 +20,17 @@
     <div class="content-col">
       <!-- CHEFS form viewer-->
       <StepFormViewer
+        ref="stepFormViewerRef"
         :active-step="activeStepKey"
         :step-keys="allStepKeys"
         :survey-step-key="surveyStepKey"
         :substep-to-step-map="substepToStepMap"
+        :submission-public-id="submissionPublicId"
         @survey-complete="onSurveyComplete"
+        @saved="onStepSaved"
+        @needs-submission="onNeedsSubmission"
+        @resume-wizard-state="onResumeWizardState"
+        @step-ready="onStepReady"
       />
 
       <!-- Dev controls -->
@@ -76,7 +85,7 @@
 
       <!-- Step Nav buttons -->
       <StepNavButtons
-        v-if="!isSurveyStep"
+        v-if="!isSurveyStep && isActiveStepLoaded"
         :has-prev="sidebarRef?.hasPrev ?? false"
         :has-next="sidebarRef?.hasNext ?? false"
         :is-last-step="sidebarRef?.isLastStep ?? false"
@@ -110,7 +119,10 @@
         </div>
 
         <!-- Step navigation — hidden during the step0 survey -->
-        <div v-if="!isSurveyStep" class="mobile-drawer-steps">
+        <div
+          v-if="!isSurveyStep && isActiveStepLoaded"
+          class="mobile-drawer-steps"
+        >
           <ApplicationStepSidebar
             :steps="wizardSteps"
             :initial-step="activeStep"
@@ -147,7 +159,7 @@
   import ApplicationStepSidebar from '@/components/wizard/ApplicationStepSidebar.vue';
   import StepFormViewer from '@/components/wizard/StepFormViewer.vue';
   import { useAuthStore, useLayoutStore } from '@/stores';
-  import { useRouter } from 'vue-router';
+  import { useRoute, useRouter } from 'vue-router';
   import {
     mapSidebarStepsToWizardSteps,
     deriveInitialNavState,
@@ -162,7 +174,11 @@
   import type ChefsService from '@/services/ChefsService';
 
   const chefsService = inject<ChefsService>('chefsService')!;
+  const route = useRoute();
 
+  const stepFormViewerRef = ref<InstanceType<typeof StepFormViewer> | null>(
+    null
+  );
   const sidebarRef = ref<InstanceType<typeof ApplicationStepSidebar> | null>(
     null
   );
@@ -170,6 +186,7 @@
   const surveyStepKey = ref('');
   const firstWizardStepKey = ref('');
   const showDevControls = ref(false);
+  const submissionPublicId = ref<string | null>(null);
 
   /** All logical form step keys in display order, including step0 (survey), sourced from the backend. */
   const allStepKeys = ref<string[]>([]);
@@ -184,6 +201,8 @@
   const persistedNavState = ref<WizardNavState | null>(null);
   const persistedStatusMap = ref<Record<string, StepStatus>>({});
   const persistedDisabledMap = ref<Record<string, boolean>>({});
+  /** Last-active substep restored from the carrier step's saved host wizard state. */
+  const resumeSubstepKey = ref('');
 
   const { navState, statusMap, disabledMap } = useWizardState();
 
@@ -198,7 +217,10 @@
   );
 
   const firstWizardSubstepKey = computed<string>(
-    () => wizardSteps.value[0]?.defaultSubstep ?? firstWizardStepKey.value
+    () =>
+      resumeSubstepKey.value ||
+      wizardSteps.value[0]?.defaultSubstep ||
+      firstWizardStepKey.value
   );
 
   const substepToStepMap = computed<Record<string, string>>(() => {
@@ -222,6 +244,13 @@
     persistedDisabledMap.value = { ...disabledMap };
   }
 
+  // Set submissionPublicId synchronously so child components (StepFormViewer)
+  // see it in their own onMounted, which runs before the parent's onMounted.
+  const rawId = route.params.id;
+  if (rawId) {
+    submissionPublicId.value = Array.isArray(rawId) ? rawId[0] : rawId;
+  }
+
   onMounted(async () => {
     try {
       const sortedDtos = (await chefsService.getSidebarStructure())
@@ -242,10 +271,14 @@
       firstWizardStepKey.value = wizardStepDtos[0]?.key ?? surveyStepKey.value;
 
       wizardSteps.value = mapSidebarStepsToWizardSteps(wizardStepDtos);
+      // Progressive reveal by default; onResumeWizardState overrides this
+      // with the real saved state if the carrier step has one.
       initialNavState.value = deriveInitialNavState(wizardStepDtos);
 
       if (!activeStep.value) {
-        activeStep.value = surveyStepKey.value;
+        activeStep.value = submissionPublicId.value
+          ? firstWizardStepKey.value
+          : surveyStepKey.value;
       }
     } catch (error) {
       console.error('Failed to load sidebar structure from backend', error);
@@ -254,12 +287,26 @@
 
   const isSurveyStep = computed(() => activeStep.value === surveyStepKey.value);
 
+  /** Top-level step keys whose form has finished loading (or timed out). */
+  const readyStepKeys = ref(new Set<string>());
+  function onStepReady(stepKey: string) {
+    readyStepKeys.value.add(stepKey);
+    // Trigger reactivity - Set mutation alone isn't tracked by refs.
+    readyStepKeys.value = new Set(readyStepKeys.value);
+  }
+  /** Don't show the sidebar/nav until the currently active step's own form is ready. */
+  const isActiveStepLoaded = computed(() =>
+    readyStepKeys.value.has(activeStepKey.value)
+  );
+
   const authStore = useAuthStore();
   const layoutStore = useLayoutStore();
   const router = useRouter();
 
   let devToggleArmed = false;
   let devToggleArmedTimer: ReturnType<typeof setTimeout> | undefined;
+  /** Synchronous guard against concurrent auto-save calls racing to create the draft submission. */
+  let isCreatingDraft = false;
 
   function handleDevToggleKeydown(event: KeyboardEvent) {
     const key = event.key.toLowerCase();
@@ -305,6 +352,24 @@
     activeStep.value = firstWizardStepKey.value;
   }
 
+  function onResumeWizardState(state: {
+    activeStep: string;
+    activeSubstep: string;
+    hiddenSteps: Record<string, boolean>;
+    hiddenSubsteps: Record<string, boolean>;
+    statusMap: Record<string, string>;
+    disabledMap: Record<string, boolean>;
+  }) {
+    resumeSubstepKey.value = state.activeSubstep || state.activeStep;
+    persistedNavState.value = {
+      hiddenSteps: state.hiddenSteps,
+      hiddenSubsteps: state.hiddenSubsteps,
+    };
+    persistedStatusMap.value = state.statusMap as Record<string, StepStatus>;
+    persistedDisabledMap.value = state.disabledMap;
+    activeStep.value = state.activeStep;
+  }
+
   function onMobileNavigate(stepKey: string) {
     snapshotWizardState();
     activeStep.value = stepKey;
@@ -344,8 +409,76 @@
     sidebarRef.value?.setStepStatus(activeStep.value, 'error');
   }
 
-  function onSubmit() {
-    alert('Submit triggered (preview only)');
+  async function onNeedsSubmission() {
+    if (submissionPublicId.value || isCreatingDraft) return; // Already created or in flight.
+    isCreatingDraft = true;
+
+    try {
+      const submission = await chefsService.createDraftSubmission();
+      submissionPublicId.value = submission.publicId;
+
+      // Replace URL so refresh reloads the saved submission.
+      if (route.name === 'ApplicationManager') {
+        router.replace({
+          name: 'ResumeApplication',
+          params: { id: submission.publicId },
+        });
+      }
+    } catch (err) {
+      console.error(
+        '[ApplicationManager] Failed to create draft submission:',
+        err
+      );
+    } finally {
+      isCreatingDraft = false;
+    }
+  }
+
+  function onStepSaved(_stepKey: string, publicId: string) {
+    if (!submissionPublicId.value) {
+      submissionPublicId.value = publicId;
+      // Replace URL so refresh reloads the saved submission.
+      if (route.name === 'ApplicationManager') {
+        router.replace({
+          name: 'ResumeApplication',
+          params: { id: publicId },
+        });
+      }
+    }
+  }
+
+  async function onSubmit() {
+    if (!submissionPublicId.value) {
+      console.warn('[ApplicationManager] No submission to submit.');
+      return;
+    }
+
+    // Validate all steps before submitting.
+    const validation = stepFormViewerRef.value?.validateAllSteps();
+    if (validation && !validation.valid) {
+      console.warn(
+        '[ApplicationManager] Validation failed for steps:',
+        validation.failedSteps
+      );
+      // Navigate to the first failed step so the user can fix it.
+      const firstFailed = validation.failedSteps[0];
+      if (firstFailed) {
+        activeStep.value = firstFailed;
+        sidebarRef.value?.updateSidebar?.(firstFailed);
+        sidebarRef.value?.setStepStatus(firstFailed, 'error');
+      }
+      return;
+    }
+
+    try {
+      await chefsService.submitApplication(submissionPublicId.value);
+      router.push({
+        name: 'PreviousActivity',
+        query: { submitted: submissionPublicId.value },
+      });
+    } catch (err) {
+      console.error('[ApplicationManager] Submit failed:', err);
+    }
   }
 </script>
 

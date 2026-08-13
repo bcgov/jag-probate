@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
+using Newtonsoft.Json.Linq;
 using Probate.Api.Models;
 using Probate.Api.Services;
 
@@ -18,14 +19,17 @@ namespace Probate.Api.Controllers
     public class SubmissionsController : ControllerBase
     {
         private readonly ISubmissionService _submissionService;
+        private readonly IStepDataService _stepDataService;
         private readonly ILogger<SubmissionsController> _logger;
 
         public SubmissionsController(
             ISubmissionService submissionService,
+            IStepDataService stepDataService,
             ILogger<SubmissionsController> logger
         )
         {
             _submissionService = submissionService;
+            _stepDataService = stepDataService;
             _logger = logger;
         }
 
@@ -45,6 +49,28 @@ namespace Probate.Api.Controllers
 
             var result = await _submissionService.CreateSubmissionAsync(dto, cancellationToken);
             return CreatedAtAction(nameof(CreateSubmission), new { id = result.PublicId }, result);
+        }
+
+        /// <summary>
+        /// Creates a draft submission record for the step-based wizard flow.
+        /// No CHEFS submission ID is required — CHEFS is only contacted on final submit.
+        /// </summary>
+        [HttpPost("draft")]
+        [ProducesResponseType(typeof(SubmissionResponseDto), StatusCodes.Status201Created)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+        public async Task<ActionResult<SubmissionResponseDto>> CreateDraftSubmission(
+            CancellationToken cancellationToken = default
+        )
+        {
+            var username = User.FindFirstValue("preferred_username");
+            if (string.IsNullOrWhiteSpace(username))
+                return Unauthorized(new { message = "Unable to identify current user." });
+
+            var result = await _submissionService.CreateDraftSubmissionAsync(
+                username,
+                cancellationToken
+            );
+            return CreatedAtAction(nameof(GetSubmission), new { id = result.PublicId }, result);
         }
 
         /// <summary>
@@ -112,6 +138,39 @@ namespace Probate.Api.Controllers
 
             var result = await _submissionService.UpsertSubmissionAsync(dto, cancellationToken);
             return Ok(result);
+        }
+
+        /// <summary>
+        /// Compiles all step data into a full data model, stores it in the
+        /// submission record, and marks the submission as submitted.
+        /// </summary>
+        [HttpPost("{id}/submit")]
+        [ProducesResponseType(typeof(SubmissionResponseDto), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+        public async Task<ActionResult<SubmissionResponseDto>> SubmitApplication(
+            Guid id,
+            CancellationToken cancellationToken = default
+        )
+        {
+            try
+            {
+                var compiledData = await _stepDataService.GetCompiledDataAsync(
+                    id,
+                    cancellationToken
+                );
+
+                var result = await _submissionService.FinalizeSubmissionAsync(
+                    id,
+                    compiledData,
+                    cancellationToken
+                );
+
+                return Ok(result);
+            }
+            catch (KeyNotFoundException)
+            {
+                return NotFound(new { message = $"Submission {id} not found." });
+            }
         }
 
         /// <summary>

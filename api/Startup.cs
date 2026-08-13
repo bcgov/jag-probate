@@ -57,6 +57,7 @@ namespace Probate.Api
             services.AddScoped<MigrationService>();
             services.AddScoped<IChefsApplicationService, ChefsApplicationService>();
             services.AddScoped<ISubmissionService, SubmissionService>();
+            services.AddScoped<IStepDataService, StepDataService>();
             services.AddScoped<ICourtLocationService, CourtLocationService>();
             services.AddScoped<ITemplateService, TemplateService>();
 
@@ -84,7 +85,16 @@ namespace Probate.Api
                             npg.EnableRetryOnFailure(3, TimeSpan.FromSeconds(2), null);
                         }
                     )
-                    .UseSnakeCaseNamingConvention();
+                    .UseSnakeCaseNamingConvention()
+                    .ConfigureWarnings(w =>
+                        w.Ignore(
+                            Microsoft
+                                .EntityFrameworkCore
+                                .Diagnostics
+                                .RelationalEventId
+                                .PendingModelChangesWarning
+                        )
+                    );
 
                 if (CurrentEnvironment.IsDevelopment())
                     options.EnableSensitiveDataLogging();

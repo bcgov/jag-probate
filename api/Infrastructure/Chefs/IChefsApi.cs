@@ -34,6 +34,17 @@ public interface IChefsApi
         CancellationToken cancellationToken = default
     );
 
+    /// <summary>
+    /// Creates a new submission for a form in CHEFS.
+    /// Used during finalization to push step data for platform visibility.
+    /// </summary>
+    [Post("/api/v1/forms/{formId}/submissions")]
+    Task<ChefsCreateSubmissionResponse> CreateSubmissionAsync(
+        string formId,
+        [Body] ChefsCreateSubmissionRequest body,
+        CancellationToken cancellationToken = default
+    );
+
     [Delete("/api/v1/forms/{formId}/submissions/{submissionId}")]
     Task DeleteSubmissionAsync(
         string formId,
@@ -58,6 +69,30 @@ public class ChefsAuthTokenResponse
 {
     [JsonPropertyName("token")]
     public string Token { get; set; } = string.Empty;
+}
+
+public class ChefsCreateSubmissionRequest
+{
+    [JsonPropertyName("draft")]
+    public bool Draft { get; set; } = false;
+
+    [JsonPropertyName("submission")]
+    public ChefsSubmissionPayload Submission { get; set; } = new();
+}
+
+public class ChefsSubmissionPayload
+{
+    [JsonPropertyName("data")]
+    public object? Data { get; set; }
+}
+
+public class ChefsCreateSubmissionResponse
+{
+    [JsonPropertyName("id")]
+    public string Id { get; set; } = string.Empty;
+
+    [JsonPropertyName("confirmationId")]
+    public string ConfirmationId { get; set; } = string.Empty;
 }
 
 public class ChefsSubmissionSummary

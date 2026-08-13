@@ -65,6 +65,8 @@ declare global {
     wizardGoToField?: (substepKey: string, fieldKey: string) => void;
     // Immediate save on navigation (bypasses the auto-save debounce)
     wizardSaveStep?: (substepKey: string) => void;
+    // Flush all pending auto-saves immediately (used by Save and Exit).
+    wizardFlushAll?: () => Promise<void>;
     // Returns a save-ready payload (business data + wizard state metadata).
     wizardGetPersistedPayload?: () => unknown;
     // Callback registration (added in Step 4)

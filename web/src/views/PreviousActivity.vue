@@ -344,7 +344,7 @@
   }
 
   const createCase = () => {
-    router.push('/get-started');
+    router.push({ name: 'ApplicationManager' });
   };
 
   async function loadApplications() {
