@@ -258,6 +258,13 @@
    */
   const autoSaveEnabled = ref(false);
 
+  /** Set on unmount — prevents stale callbacks (timers, deferred formio events)
+   *  from writing to the shared Pinia store after the component is destroyed. */
+  let unmounted = false;
+
+  /** Handle for the autoSaveEnabled setTimeout so it can be cancelled on unmount. */
+  let autoSaveEnableTimer: ReturnType<typeof setTimeout> | null = null;
+
   /** Per-step async plumbing (timers, save locks). */
   interface StepRuntime {
     readyTimer: ReturnType<typeof setTimeout> | null;
@@ -729,6 +736,7 @@
   }
 
   async function initStep(stepKey: string) {
+    if (unmounted) return;
     teardownStep(stepKey);
     stepStates[stepKey] = 'loading';
     stepErrors[stepKey] = '';
@@ -740,6 +748,9 @@
       // Fetch the short-lived gateway JWT + resolved form GUID from the backend.
       const { token, formId, baseUrl } =
         await chefsService.getAuthToken(stepKey);
+
+      // Bail if the component was destroyed while awaiting the token.
+      if (unmounted) return;
 
       await loadWebComponentScript(baseUrl);
 
@@ -998,6 +1009,7 @@
 
   // ── Capture a step's own data into the store ───────────────────────────────
   function captureStepData(stepKey: string, detail?: any) {
+    if (unmounted) return;
     const el = stepEls[stepKey];
     if (!el?.formioInstance?.data) return;
 
@@ -1128,6 +1140,7 @@
       await nextTick();
 
       for (const stepKey of props.stepKeys) {
+        if (unmounted) break;
         if (isSurveyStep(stepKey)) continue;
         if (stepKey === props.activeStep) continue;
         if (initializedSteps.has(stepKey)) continue;
@@ -1170,6 +1183,7 @@
   // flush. Called once both gates are open for a step to capture+save
   // whatever was entered during the grace period.
   function catchUpAutoSave(stepKey: string) {
+    if (unmounted) return;
     const rt = getRuntime(stepKey);
     if (!rt.formReady || !autoSaveEnabled.value) return;
     captureStepData(stepKey);
@@ -1212,6 +1226,7 @@
   }
 
   async function performAutoSave(stepKey: string) {
+    if (unmounted) return; // component destroyed — don't touch the shared store
     if (!visitedSteps.has(stepKey)) return; // never persist background-preloaded, unvisited steps
     const rt = getRuntime(stepKey);
     // Only save steps the user has actually modified.
@@ -1456,7 +1471,9 @@
     // Allow forms to settle after hydration before enabling auto-save.
     // This prevents preloaded forms from overwriting persisted data
     // with empty/default values during their initial formio:change events.
-    setTimeout(() => {
+    autoSaveEnableTimer = setTimeout(() => {
+      autoSaveEnableTimer = null;
+      if (unmounted) return;
       autoSaveEnabled.value = true;
       // Only the active step - background-preloaded steps the user never
       // touched shouldn't be force-captured/saved this early.
@@ -1552,6 +1569,13 @@
   });
 
   onUnmounted(() => {
+    unmounted = true;
+
+    if (autoSaveEnableTimer) {
+      clearTimeout(autoSaveEnableTimer);
+      autoSaveEnableTimer = null;
+    }
+
     pendingFocus.value = null;
 
     delete window.wizardGoToField;
