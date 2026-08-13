@@ -305,6 +305,8 @@
 
   let devToggleArmed = false;
   let devToggleArmedTimer: ReturnType<typeof setTimeout> | undefined;
+  /** Synchronous guard against concurrent auto-save calls racing to create the draft submission. */
+  let isCreatingDraft = false;
 
   function handleDevToggleKeydown(event: KeyboardEvent) {
     const key = event.key.toLowerCase();
@@ -408,7 +410,8 @@
   }
 
   async function onNeedsSubmission() {
-    if (submissionPublicId.value) return; // Already created.
+    if (submissionPublicId.value || isCreatingDraft) return; // Already created or in flight.
+    isCreatingDraft = true;
 
     try {
       const submission = await chefsService.createDraftSubmission();
@@ -426,6 +429,8 @@
         '[ApplicationManager] Failed to create draft submission:',
         err
       );
+    } finally {
+      isCreatingDraft = false;
     }
   }
 

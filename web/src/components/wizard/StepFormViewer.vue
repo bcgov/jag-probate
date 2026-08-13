@@ -123,14 +123,21 @@
   }
 
   /**
-   * The first real wizard step (after the survey) carries the host app's
-   * activeStep/activeSubstep/navState/statusMap/disabledMap as an extra
-   * plain data key (hostWizardState) on its own CHEFS form data - no schema
-   * component needed, and it persists via the same per-step save/load API
-   * as the step's real fields, so it follows the submission across devices.
+   * The currently active step carries the host app's activeStep/activeSubstep/
+   * navState/statusMap/disabledMap as an extra plain data key (hostWizardState)
+   * on its own CHEFS form data - no schema component needed, and it persists
+   * via the same per-step save/load API as the step's real fields, so it
+   * follows the submission across devices.
+   *
+   * Uses whichever step actually has a live element: the active step is
+   * always live (it's what's rendered), unlike a fixed step - the survey is
+   * excluded from background preload, so on a resumed session that lands
+   * directly on a later step, the survey is never initialized and would
+   * silently never receive writes.
    */
   function getStateCarrierStepKey(): string {
-    return props.stepKeys.find((k) => k !== getSurveyStepKey()) ?? '';
+    if (stepEls[props.activeStep]) return props.activeStep;
+    return props.stepKeys.find((k) => stepEls[k]) ?? '';
   }
 
   /** Writes the current activeStep/activeSubstep/navState/statusMap/disabledMap
@@ -193,6 +200,9 @@
 
   /** Steps whose container div has been added to the DOM and init started. */
   const initializedSteps = reactive(new Set<string>());
+
+  /** Steps the user actually navigated to — as opposed to silently background-preloaded. Only these autosave. */
+  const visitedSteps = new Set<string>();
 
   /** Loading/ready/error state per step. */
   const stepStates = reactive<Record<string, ViewState>>({});
@@ -318,6 +328,12 @@
           'steps:',
           allSteps.map((s) => s.formId)
         );
+
+        let latestWizardState: {
+          updatedAt: string;
+          parsed: Record<string, any>;
+        } | null = null;
+
         for (const step of allSteps) {
           // Skip wizard metadata rows (legacy — now stored in localStorage).
           if (step.formId === '__wizard_state__') continue;
@@ -332,27 +348,36 @@
                 Object.keys(parsed)
               );
 
-              // The carrier step (first real wizard step) may hold the
-              // host app's saved nav/status/disabled state as an extra key.
-              // Match on the key's presence, not getStateCarrierStepKey() -
-              // props.stepKeys isn't populated yet at this point (the parent
-              // sets it in its own onMounted, which runs after this child's).
+              // Any step's data may carry the host app's saved nav/status/
+              // disabled/position state as an extra key - it moves between
+              // steps as the carrier step changes, so multiple (stale) copies
+              // can exist. Only the most-recently-updated one is trustworthy.
               if (parsed.hostWizardState) {
-                try {
-                  const saved = JSON.parse(parsed.hostWizardState);
-                  emit('resume-wizard-state', {
-                    activeStep: saved.activeStep ?? step.formId,
-                    activeSubstep: saved.activeSubstep ?? '',
-                    hiddenSteps: saved.hiddenSteps ?? {},
-                    hiddenSubsteps: saved.hiddenSubsteps ?? {},
-                    statusMap: saved.statusMap ?? {},
-                    disabledMap: saved.disabledMap ?? {},
-                  });
-                } catch {
-                  // Malformed - fall back to the default new-session state.
+                const updatedAt = step.updatedAt ?? step.createdAt;
+                if (
+                  !latestWizardState ||
+                  updatedAt > latestWizardState.updatedAt
+                ) {
+                  latestWizardState = { updatedAt, parsed };
                 }
               }
             }
+          }
+        }
+
+        if (latestWizardState) {
+          try {
+            const saved = JSON.parse(latestWizardState.parsed.hostWizardState);
+            emit('resume-wizard-state', {
+              activeStep: saved.activeStep ?? '',
+              activeSubstep: saved.activeSubstep ?? '',
+              hiddenSteps: saved.hiddenSteps ?? {},
+              hiddenSubsteps: saved.hiddenSubsteps ?? {},
+              statusMap: saved.statusMap ?? {},
+              disabledMap: saved.disabledMap ?? {},
+            });
+          } catch {
+            // Malformed - fall back to the default new-session state.
           }
         }
         console.log(
@@ -743,7 +768,6 @@
         el.setAttribute('read-only', props.readOnly ? 'true' : 'false');
       }
 
-      container.appendChild(el);
       stepEls[stepKey] = el;
 
       el.addEventListener('formio:submitDone', (e: CustomEvent) =>
@@ -890,9 +914,12 @@
         { once: true }
       );
 
-      // Queue this step's actual load behind any earlier step still loading,
-      // and hold the queue until this one finishes (ready, error, or timeout)
-      // before letting the next queued step start its own load.
+      // Queue this step's DOM attachment + load behind any earlier step still
+      // loading, and hold the queue until this one finishes (ready, error, or
+      // timeout) before letting the next queued step start its own. The
+      // element must not be appended to the DOM (which connects the custom
+      // element and starts its own internal asset fetching) until its turn -
+      // appending it early defeats the queue entirely.
       await enqueueAssetLoad(
         () =>
           new Promise<void>((resolve) => {
@@ -905,6 +932,7 @@
             el.addEventListener('formio:ready', settle, { once: true });
             el.addEventListener('formio:error', settle, { once: true });
             setTimeout(settle, 15000);
+            container.appendChild(el);
             el.load();
           })
       );
@@ -929,6 +957,13 @@
           }
           rt.dirty = true;
           scheduleAutoSave(stepKey);
+
+          // Refresh the saved position on every real change, not just when
+          // sidebar nav state changes - while on the survey, activeStep/
+          // navState never change (single step, no sidebar), so the position
+          // watcher below never fires unless we also hook it in here.
+          persistHostWizardState();
+          scheduleAutoSave(getStateCarrierStepKey());
         } else {
           console.log(
             '[Change]',
@@ -951,6 +986,7 @@
       if (props.autoSaveThrottle > 0 && !props.readOnly) {
         setTimeout(() => {
           rt.formReady = true;
+          catchUpAutoSave(stepKey);
         }, 2000);
       }
     } catch (err: any) {
@@ -977,6 +1013,15 @@
       const ownData: Record<string, any> = {};
       for (const [key, value] of Object.entries(sourceData)) {
         if (CAPTURE_EXCLUDED_KEYS.has(key) || key.startsWith('_')) continue;
+
+        // hostWizardState can move between steps as the carrier changes -
+        // always capture it as this step's own field, never treat it as
+        // cross-step "injected" just because an older save wrote it elsewhere.
+        if (key === 'hostWizardState') {
+          ownKeys.add(key);
+          ownData[key] = value;
+          continue;
+        }
 
         if (ownKeys.has(key)) {
           ownData[key] = value;
@@ -1038,17 +1083,8 @@
 
   // ── Activate a step (init on first visit, show on subsequent visits) ───────
   async function activateStep(stepKey: string) {
-    console.log(
-      '[ActivateStep]',
-      stepKey,
-      '— stepKeys includes:',
-      props.stepKeys.includes(stepKey),
-      '— hydrationDone:',
-      hydrationDone.value,
-      '— alreadyInitialized:',
-      initializedSteps.has(stepKey)
-    );
     if (!props.stepKeys.includes(stepKey)) return;
+    visitedSteps.add(stepKey);
 
     // Wait for hydration to finish so forms are seeded with persisted data.
     if (!hydrationDone.value) {
@@ -1128,6 +1164,21 @@
   }
 
   // ── Auto-save ─────────────────────────────────────────────────────────────
+  // If the user finishes interacting before rt.formReady/autoSaveEnabled flip
+  // true, no later formio:change event exists to trigger a save - nothing
+  // "catches up" without this, until the user navigates away and forces a
+  // flush. Called once both gates are open for a step to capture+save
+  // whatever was entered during the grace period.
+  function catchUpAutoSave(stepKey: string) {
+    const rt = getRuntime(stepKey);
+    if (!rt.formReady || !autoSaveEnabled.value) return;
+    captureStepData(stepKey);
+    rt.dirty = true;
+    scheduleAutoSave(stepKey);
+    persistHostWizardState();
+    scheduleAutoSave(getStateCarrierStepKey());
+  }
+
   function scheduleAutoSave(stepKey: string) {
     const rt = getRuntime(stepKey);
     if (rt.isSaving) {
@@ -1141,7 +1192,27 @@
     );
   }
 
+  /** Resolves once props.submissionPublicId becomes truthy - used so the very
+   * first autosave (which triggers draft creation) actually completes its own
+   * save instead of assuming a retry that nothing implements. */
+  function waitForSubmissionId(): Promise<string> {
+    if (props.submissionPublicId)
+      return Promise.resolve(props.submissionPublicId);
+    return new Promise((resolve) => {
+      const stop = watch(
+        () => props.submissionPublicId,
+        (id) => {
+          if (id) {
+            stop();
+            resolve(id);
+          }
+        }
+      );
+    });
+  }
+
   async function performAutoSave(stepKey: string) {
+    if (!visitedSteps.has(stepKey)) return; // never persist background-preloaded, unvisited steps
     const rt = getRuntime(stepKey);
     // Only save steps the user has actually modified.
     if (!rt.dirty) {
@@ -1160,19 +1231,20 @@
     try {
       captureStepData(stepKey);
 
-      if (!props.submissionPublicId) {
-        // No submission yet — ask the parent to create one.
-        // The parent will set submissionPublicId, triggering a re-save.
+      let submissionId = props.submissionPublicId;
+      if (!submissionId) {
+        // No submission yet — ask the parent to create one, then wait for it
+        // and complete this save ourselves (nothing else retries it).
         emit('needs-submission', stepKey);
-      } else {
-        // Persist to DB via step data endpoint.
-        const stepPayload = wizardDataStore.getStepData(stepKey);
-        await chefsService.upsertStepData(props.submissionPublicId, stepKey, {
-          formId: stepKey,
-          data: JSON.stringify(stepPayload),
-        });
-        emit('saved', stepKey, props.submissionPublicId);
+        submissionId = await waitForSubmissionId();
       }
+
+      const stepPayload = wizardDataStore.getStepData(stepKey);
+      await chefsService.upsertStepData(submissionId, stepKey, {
+        formId: stepKey,
+        data: JSON.stringify(stepPayload),
+      });
+      emit('saved', stepKey, submissionId);
     } catch (err) {
       console.warn('[StepFormViewer] autosave failed:', err);
     } finally {
@@ -1386,6 +1458,11 @@
     // with empty/default values during their initial formio:change events.
     setTimeout(() => {
       autoSaveEnabled.value = true;
+      // Only the active step - background-preloaded steps the user never
+      // touched shouldn't be force-captured/saved this early.
+      if (initializedSteps.has(props.activeStep)) {
+        catchUpAutoSave(props.activeStep);
+      }
     }, 5000);
     window.wizardGoToField = goToField;
     window.wizardValidateStep = validateSubstep;
