@@ -310,10 +310,10 @@
   }
 
   async function hydrateFromPersistedPayload() {
-    console.log(
-      '[Hydrate] START — submissionPublicId:',
-      props.submissionPublicId
-    );
+    // console.log(
+    //   '[Hydrate] START — submissionPublicId:',
+    //   props.submissionPublicId
+    // );
     // Clear any leftover data from a previous application session.
     wizardDataStore.reset();
     // If we have a submission ID, try loading step data from the API first.
@@ -322,12 +322,12 @@
         const allSteps = await chefsService.getAllStepData(
           props.submissionPublicId
         );
-        console.log(
-          '[Hydrate] API returned',
-          allSteps.length,
-          'steps:',
-          allSteps.map((s) => s.formId)
-        );
+        // console.log(
+        //   '[Hydrate] API returned',
+        //   allSteps.length,
+        //   'steps:',
+        //   allSteps.map((s) => s.formId)
+        // );
 
         let latestWizardState: {
           updatedAt: string;
@@ -341,12 +341,12 @@
             const parsed = JSON.parse(step.data);
             if (parsed && typeof parsed === 'object') {
               wizardDataStore.setStepData(step.formId, parsed);
-              console.log(
-                '[Hydrate] Stored data for',
-                step.formId,
-                '— keys:',
-                Object.keys(parsed)
-              );
+              // console.log(
+              //   '[Hydrate] Stored data for',
+              //   step.formId,
+              //   '— keys:',
+              //   Object.keys(parsed)
+              // );
 
               // Any step's data may carry the host app's saved nav/status/
               // disabled/position state as an extra key - it moves between
@@ -380,10 +380,10 @@
             // Malformed - fall back to the default new-session state.
           }
         }
-        console.log(
-          '[Hydrate] Store accumulatedData keys after hydration:',
-          Object.keys(wizardDataStore.accumulatedData)
-        );
+        // console.log(
+        //   '[Hydrate] Store accumulatedData keys after hydration:',
+        //   Object.keys(wizardDataStore.accumulatedData)
+        // );
         return; // Hydrated from API — skip legacy payload parsing.
       } catch (err) {
         console.warn(
@@ -549,32 +549,32 @@
   // substep validation — exposed as window.wizardValidateStep
   function validateSubstep(substepKey: string): boolean {
     const parentStep = resolveParentStepKey(substepKey);
-    console.log(
-      '[Validate]',
-      substepKey,
-      '— parentStep:',
-      parentStep,
-      '— activeStep:',
-      props.activeStep
-    );
+    // console.log(
+    //   '[Validate]',
+    //   substepKey,
+    //   '— parentStep:',
+    //   parentStep,
+    //   '— activeStep:',
+    //   props.activeStep
+    // );
     if (!parentStep || parentStep !== props.activeStep) return true;
 
     const el = stepEls[parentStep];
     const formio = el?.formioInstance;
-    console.log(
-      '[Validate]',
-      substepKey,
-      '— formio exists:',
-      !!formio,
-      '— checkValidity exists:',
-      typeof formio?.checkValidity === 'function'
-    );
+    // console.log(
+    //   '[Validate]',
+    //   substepKey,
+    //   '— formio exists:',
+    //   !!formio,
+    //   '— checkValidity exists:',
+    //   typeof formio?.checkValidity === 'function'
+    // );
     if (!formio || typeof formio.checkValidity !== 'function') return true;
 
     try {
       const data = formio.submission?.data ?? formio.data ?? {};
       const isValid = !!formio.checkValidity(data, true);
-      console.log('[Validate]', substepKey, '— isValid:', isValid);
+      // console.log('[Validate]', substepKey, '— isValid:', isValid);
       window.wizardSetStepStatus?.(substepKey, isValid ? 'completed' : 'error');
       if (!isValid) {
         formio.once?.('change', () => {
@@ -809,18 +809,18 @@
               // component tree has built its default data object.  In that
               // case we defer injection until the data object is populated.
               const injectData = () => {
-                console.log(
-                  '[InjectData]',
-                  stepKey,
-                  '— formio.data keys:',
-                  Object.keys(el.formioInstance.data)
-                );
-                console.log(
-                  '[InjectData]',
-                  stepKey,
-                  '— accumulated keys:',
-                  Object.keys(accumulated)
-                );
+                // console.log(
+                //   '[InjectData]',
+                //   stepKey,
+                //   '— formio.data keys:',
+                //   Object.keys(el.formioInstance.data)
+                // );
+                // console.log(
+                //   '[InjectData]',
+                //   stepKey,
+                //   '— accumulated keys:',
+                //   Object.keys(accumulated)
+                // );
 
                 stepCaptureShapes[stepKey] = deriveCaptureShape(
                   el.formioInstance
@@ -845,12 +845,12 @@
                   }
                 }
                 stepInjectedKeys[stepKey] = otherStepKeys;
-                console.log(
-                  '[InjectData]',
-                  stepKey,
-                  '— injectedKeys (other-step only):',
-                  [...otherStepKeys]
-                );
+                // console.log(
+                //   '[InjectData]',
+                //   stepKey,
+                //   '— injectedKeys (other-step only):',
+                //   [...otherStepKeys]
+                // );
 
                 if (Object.keys(accumulated).length > 0) {
                   Object.assign(el.formioInstance.data, accumulated);
@@ -859,12 +859,12 @@
                 el.formioInstance.data.currentSubstep =
                   wizardActiveSubstep.value;
 
-                console.log(
-                  '[InjectData]',
-                  stepKey,
-                  '— formio.data AFTER inject:',
-                  JSON.stringify(el.formioInstance.data).substring(0, 500)
-                );
+                // console.log(
+                //   '[InjectData]',
+                //   stepKey,
+                //   '— formio.data AFTER inject:',
+                //   JSON.stringify(el.formioInstance.data).substring(0, 500)
+                // );
 
                 el.formioInstance.triggerChange?.();
                 el.formioInstance.redraw?.();
@@ -873,18 +873,18 @@
               if (Object.keys(el.formioInstance.data).length === 0) {
                 // Form component tree not ready yet — wait for the first
                 // change event which signals that default data is populated.
-                console.log(
-                  '[FormReady]',
-                  stepKey,
-                  '— formio.data is EMPTY, deferring injection'
-                );
+                // console.log(
+                //   '[FormReady]',
+                //   stepKey,
+                //   '— formio.data is EMPTY, deferring injection'
+                // );
                 const onceChange = () => {
                   el.formioInstance?.off?.('change', onceChange);
-                  console.log(
-                    '[FormReady]',
-                    stepKey,
-                    '— deferred injection firing (change event received)'
-                  );
+                  // console.log(
+                  //   '[FormReady]',
+                  //   stepKey,
+                  //   '— deferred injection firing (change event received)'
+                  // );
                   injectData();
                 };
                 el.formioInstance.on?.('change', onceChange);
@@ -945,11 +945,11 @@
         // wizardDataStore would overwrite the correctly hydrated values
         // that were loaded from the API.
         if (rt.formReady && autoSaveEnabled.value) {
-          console.log(
-            '[Change]',
-            stepKey,
-            '— CAPTURING + scheduling auto-save (formReady + autoSaveEnabled)'
-          );
+          // console.log(
+          //   '[Change]',
+          //   stepKey,
+          //   '— CAPTURING + scheduling auto-save (formReady + autoSaveEnabled)'
+          // );
           try {
             captureStepData(stepKey, e.detail);
           } catch {
@@ -965,15 +965,15 @@
           persistHostWizardState();
           scheduleAutoSave(getStateCarrierStepKey());
         } else {
-          console.log(
-            '[Change]',
-            stepKey,
-            '— SKIPPED capture (formReady:',
-            rt.formReady,
-            'autoSaveEnabled:',
-            autoSaveEnabled.value,
-            ')'
-          );
+          // console.log(
+          //   '[Change]',
+          //   stepKey,
+          //   '— SKIPPED capture (formReady:',
+          //   rt.formReady,
+          //   'autoSaveEnabled:',
+          //   autoSaveEnabled.value,
+          //   ')'
+          // );
         }
         if (
           isSurveyStep(stepKey) &&
@@ -1088,7 +1088,7 @@
 
     // Wait for hydration to finish so forms are seeded with persisted data.
     if (!hydrationDone.value) {
-      console.log('[ActivateStep]', stepKey, '— WAITING for hydrationDone');
+      // console.log('[ActivateStep]', stepKey, '— WAITING for hydrationDone');
       const stop = watch(hydrationDone, (done) => {
         if (done) {
           stop();
@@ -1216,10 +1216,10 @@
     const rt = getRuntime(stepKey);
     // Only save steps the user has actually modified.
     if (!rt.dirty) {
-      console.log('[AutoSave]', stepKey, '— SKIPPED (not dirty)');
+      // console.log('[AutoSave]', stepKey, '— SKIPPED (not dirty)');
       return;
     }
-    console.log('[AutoSave]', stepKey, '— SAVING (dirty=true)');
+    // console.log('[AutoSave]', stepKey, '— SAVING (dirty=true)');
     if (rt.isSaving) {
       rt.pendingSave = true;
       return;
@@ -1408,7 +1408,7 @@
 
   /** Immediately persist every step that has user-entered data. */
   async function flushAllSteps() {
-    console.log('[FlushAll] START — runtime keys:', Object.keys(stepRuntime));
+    // console.log('[FlushAll] START — runtime keys:', Object.keys(stepRuntime));
     const saves: Promise<void>[] = [];
     for (const stepKey of Object.keys(stepRuntime)) {
       const rt = stepRuntime[stepKey];
@@ -1419,14 +1419,14 @@
       }
       // Only save steps that have meaningful data in the store.
       const data = wizardDataStore.getStepData(stepKey);
-      console.log(
-        '[FlushAll]',
-        stepKey,
-        '— dirty:',
-        rt.dirty,
-        '— storeDataKeys:',
-        Object.keys(data).length
-      );
+      // console.log(
+      //   '[FlushAll]',
+      //   stepKey,
+      //   '— dirty:',
+      //   rt.dirty,
+      //   '— storeDataKeys:',
+      //   Object.keys(data).length
+      // );
       if (Object.keys(data).length === 0) continue;
       saves.push(performAutoSave(stepKey));
     }
@@ -1443,14 +1443,14 @@
 
   // ── Lifecycle ───────────────────────────────────────────────────────────────
   onMounted(async () => {
-    console.log(
-      '[Mount] StepFormViewer onMounted — submissionPublicId:',
-      props.submissionPublicId,
-      '— activeStep:',
-      props.activeStep,
-      '— stepKeys:',
-      props.stepKeys
-    );
+    // console.log(
+    //   '[Mount] StepFormViewer onMounted — submissionPublicId:',
+    //   props.submissionPublicId,
+    //   '— activeStep:',
+    //   props.activeStep,
+    //   '— stepKeys:',
+    //   props.stepKeys
+    // );
     await hydrateFromPersistedPayload();
     hydrationDone.value = true;
     // Allow forms to settle after hydration before enabling auto-save.
