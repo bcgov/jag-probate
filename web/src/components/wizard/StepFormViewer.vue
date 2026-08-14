@@ -1209,7 +1209,10 @@
       });
       emit('saved', stepKey, submissionId);
     } catch (err) {
-      console.warn(`[StepFormViewer] auto-save failed for step "${stepKey}":`, err);
+      console.warn(
+        `[StepFormViewer] auto-save failed for step "${stepKey}":`,
+        err
+      );
     } finally {
       rt.isSaving = false;
       if (rt.pendingSave) {
