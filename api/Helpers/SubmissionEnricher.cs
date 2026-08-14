@@ -116,6 +116,8 @@ public static class SubmissionEnricher
             src.Value<string>($"{p}Street"),
             src.Value<string>($"{p}City"),
             src.Value<string>($"{p}Province"),
+            src.Value<string>($"{p}State"),
+            src.Value<string>($"{p}ProvinceText"),
             src.Value<string>($"{p}Postal"),
             src.Value<string>($"{p}Country")
         );
@@ -126,6 +128,8 @@ public static class SubmissionEnricher
                     src.Value<string>($"{p}MailStreet"),
                     src.Value<string>($"{p}MailCity"),
                     src.Value<string>($"{p}MailProvince"),
+                    src.Value<string>($"{p}MailState"),
+                    src.Value<string>($"{p}MailProvinceText"),
                     src.Value<string>($"{p}MailPostal"),
                     src.Value<string>($"{p}MailCountry")
                 )
@@ -135,6 +139,8 @@ public static class SubmissionEnricher
             src.Value<string>($"{g}Street"),
             src.Value<string>($"{g}City"),
             src.Value<string>($"{g}Province"),
+            src.Value<string>($"{g}State"),
+            src.Value<string>($"{g}ProvinceText"),
             src.Value<string>($"{g}Postal"),
             src.Value<string>($"{g}Country")
         );
@@ -145,6 +151,8 @@ public static class SubmissionEnricher
                     src.Value<string>($"{g}MailStreet"),
                     src.Value<string>($"{g}MailCity"),
                     src.Value<string>($"{g}MailProvince"),
+                    src.Value<string>($"{g}MailState"),
+                    src.Value<string>($"{g}MailProvinceText"),
                     src.Value<string>($"{g}MailPostal"),
                     src.Value<string>($"{g}MailCountry")
                 )
@@ -198,6 +206,8 @@ public static class SubmissionEnricher
             src.Value<string>($"{p}Street"),
             src.Value<string>($"{p}City"),
             src.Value<string>($"{p}Province"),
+            src.Value<string>($"{p}State"),
+            src.Value<string>($"{p}ProvinceText"),
             src.Value<string>($"{p}Postal"),
             src.Value<string>($"{p}Country")
         );
@@ -208,6 +218,8 @@ public static class SubmissionEnricher
                     src.Value<string>($"{p}MailStreet"),
                     src.Value<string>($"{p}MailCity"),
                     src.Value<string>($"{p}MailProvince"),
+                    src.Value<string>($"{p}MailState"),
+                    src.Value<string>($"{p}MailProvinceText"),
                     src.Value<string>($"{p}MailPostal"),
                     src.Value<string>($"{p}MailCountry")
                 )
@@ -217,6 +229,8 @@ public static class SubmissionEnricher
             src.Value<string>($"{n}Street"),
             src.Value<string>($"{n}City"),
             src.Value<string>($"{n}Province"),
+            src.Value<string>($"{n}State"),
+            src.Value<string>($"{n}ProvinceText"),
             src.Value<string>($"{n}Postal"),
             src.Value<string>($"{n}Country")
         );
@@ -227,6 +241,8 @@ public static class SubmissionEnricher
                     src.Value<string>($"{n}MailStreet"),
                     src.Value<string>($"{n}MailCity"),
                     src.Value<string>($"{n}MailProvince"),
+                    src.Value<string>($"{n}MailState"),
+                    src.Value<string>($"{n}MailProvinceText"),
                     src.Value<string>($"{n}MailPostal"),
                     src.Value<string>($"{n}MailCountry")
                 )
@@ -330,14 +346,28 @@ public static class SubmissionEnricher
         string? street,
         string? city,
         string? province,
+        string? state,
+        string? provinceText,
         string? postal,
         string? country
     )
     {
-        var parts = new[] { street, city, province, postal, country }
+        var region = BuildRegion(province, state, provinceText);
+        var parts = new[] { street, city, region, postal, country }
             .Where(p => !string.IsNullOrWhiteSpace(p))
             .ToArray();
         return parts.Length > 0 ? string.Join(", ", parts) : "None";
+    }
+
+    private static string BuildRegion(string? province, string? state, string? provinceText)
+    {
+        if (!string.IsNullOrWhiteSpace(province))
+            return province.Trim();
+        if (!string.IsNullOrWhiteSpace(state))
+            return state.Trim();
+        if (!string.IsNullOrWhiteSpace(provinceText))
+            return provinceText.Trim();
+        return string.Empty;
     }
 
     private static string FormatDate(string? isoDate)
