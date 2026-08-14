@@ -1208,7 +1208,8 @@
         data: JSON.stringify(stepPayload),
       });
       emit('saved', stepKey, submissionId);
-    } catch {
+    } catch (err) {
+      console.warn(`[StepFormViewer] auto-save failed for step "${stepKey}":`, err);
     } finally {
       rt.isSaving = false;
       if (rt.pendingSave) {
