@@ -59,6 +59,12 @@
     ref,
     watch,
   } from 'vue';
+  import {
+    getPreferredWizardStateCarrierKey,
+    resolveLatestResumeState,
+    sanitizeStepDataForSave,
+    type ResumeWizardState,
+  } from '@/components/wizard/resumeWizardState';
 
   const {
     activeSubstep: wizardActiveSubstep,
@@ -135,29 +141,52 @@
    * directly on a later step, the survey is never initialized and would
    * silently never receive writes.
    */
+  const latestHostWizardState = ref<ResumeWizardState | null>(null);
+
   function getStateCarrierStepKey(): string {
-    if (stepEls[props.activeStep]) return props.activeStep;
-    return props.stepKeys.find((k) => stepEls[k]) ?? '';
+    return getPreferredWizardStateCarrierKey(
+      props.stepKeys,
+      getSurveyStepKey(),
+      props.activeStep,
+      stepEls
+    );
   }
 
   /** Writes the current activeStep/activeSubstep/navState/statusMap/disabledMap
-   * onto the carrier step's own data and schedules a normal save for it. */
+   * onto the survey step's own data and schedules a normal save for it. */
   function persistHostWizardState() {
-    const carrierKey = getStateCarrierStepKey();
-    const el = stepEls[carrierKey];
-    if (!el?.formioInstance?.data) return;
-
-    el.formioInstance.data.hostWizardState = JSON.stringify({
+    const surveyKey = getSurveyStepKey();
+    const snapshot: ResumeWizardState = {
       activeStep: props.activeStep,
       activeSubstep: wizardActiveSubstep.value,
       hiddenSteps: { ...navState.hiddenSteps },
       hiddenSubsteps: { ...navState.hiddenSubsteps },
       statusMap: { ...statusMap },
       disabledMap: { ...disabledMap },
-    });
+    };
 
-    captureStepData(carrierKey);
-    getRuntime(carrierKey).dirty = true;
+    latestHostWizardState.value = snapshot;
+
+    if (!surveyKey) return;
+    const carrierKey = getStateCarrierStepKey();
+    if (carrierKey !== surveyKey) return;
+
+    visitedSteps.add(surveyKey);
+
+    const surveyData = {
+      ...wizardDataStore.getStepData(surveyKey),
+      hostWizardState: JSON.stringify(snapshot),
+    };
+    wizardDataStore.setStepData(surveyKey, surveyData);
+
+    const rt = getRuntime(surveyKey);
+    rt.dirty = true;
+
+    const el = stepEls[surveyKey];
+    if (el?.formioInstance?.data) {
+      el.formioInstance.data.hostWizardState = JSON.stringify(snapshot);
+      captureStepData(surveyKey);
+    }
   }
 
   // ── Emits ─────────────────────────────────────────────────────────────────
@@ -326,50 +355,31 @@
           props.submissionPublicId
         );
 
-        let latestWizardState: {
-          updatedAt: string;
-          parsed: Record<string, any>;
-        } | null = null;
-
         for (const step of allSteps) {
-          // Skip wizard metadata rows (legacy — now stored in localStorage).
           if (step.formId === '__wizard_state__') continue;
           if (step.data) {
-            const parsed = JSON.parse(step.data);
-            if (parsed && typeof parsed === 'object') {
-              wizardDataStore.setStepData(step.formId, parsed);
-
-              // Any step's data may carry the host app's saved nav/status/
-              // disabled/position state as an extra key - it moves between
-              // steps as the carrier step changes, so multiple (stale) copies
-              // can exist. Only the most-recently-updated one is trustworthy.
-              if (parsed.hostWizardState) {
-                const updatedAt = step.updatedAt ?? step.createdAt;
-                if (
-                  !latestWizardState ||
-                  updatedAt > latestWizardState.updatedAt
-                ) {
-                  latestWizardState = { updatedAt, parsed };
-                }
+            try {
+              const parsed = JSON.parse(step.data);
+              if (parsed && typeof parsed === 'object') {
+                const cleaned = sanitizeStepDataForSave(
+                  step.formId,
+                  getSurveyStepKey(),
+                  parsed
+                );
+                wizardDataStore.setStepData(step.formId, cleaned);
               }
+            } catch {
+              // Ignore malformed per-step payloads.
             }
           }
         }
 
-        if (latestWizardState) {
-          try {
-            const saved = JSON.parse(latestWizardState.parsed.hostWizardState);
-            emit('resume-wizard-state', {
-              activeStep: saved.activeStep ?? '',
-              activeSubstep: saved.activeSubstep ?? '',
-              hiddenSteps: saved.hiddenSteps ?? {},
-              hiddenSubsteps: saved.hiddenSubsteps ?? {},
-              statusMap: saved.statusMap ?? {},
-              disabledMap: saved.disabledMap ?? {},
-            });
-          } catch {
-            // Malformed - fall back to the default new-session state.
-          }
+        const savedResumeState = resolveLatestResumeState(
+          allSteps,
+          getSurveyStepKey()
+        );
+        if (savedResumeState) {
+          emit('resume-wizard-state', savedResumeState);
         }
         return; // Hydrated from API — skip legacy payload parsing.
       } catch {
@@ -931,26 +941,26 @@
     if (!el?.formioInstance?.data) return;
 
     // Prefer Form.io canonical change payload when present.
-    const sourceData =
+    const sourceData = sanitizeStepDataForSave(
+      stepKey,
+      getSurveyStepKey(),
       detail?.data && typeof detail.data === 'object'
         ? (detail.data as Record<string, any>)
-        : (el.formioInstance.data as Record<string, any>);
+        : (el.formioInstance.data as Record<string, any>)
+    );
+
+    const sanitizedSourceData = sanitizeStepDataForSave(
+      stepKey,
+      getSurveyStepKey(),
+      sourceData
+    );
 
     const ownKeys = stepOwnedKeys[stepKey];
     const injectedKeys = stepInjectedKeys[stepKey] ?? new Set<string>();
     if (ownKeys) {
       const ownData: Record<string, any> = {};
-      for (const [key, value] of Object.entries(sourceData)) {
+      for (const [key, value] of Object.entries(sanitizedSourceData)) {
         if (CAPTURE_EXCLUDED_KEYS.has(key) || key.startsWith('_')) continue;
-
-        // hostWizardState can move between steps as the carrier changes -
-        // always capture it as this step's own field, never treat it as
-        // cross-step "injected" just because an older save wrote it elsewhere.
-        if (key === 'hostWizardState') {
-          ownKeys.add(key);
-          ownData[key] = value;
-          continue;
-        }
 
         if (ownKeys.has(key)) {
           ownData[key] = value;
@@ -969,7 +979,7 @@
       wizardDataStore.setStepData(stepKey, ownData);
     } else {
       // Snapshot not yet available (change fired before ready — unlikely).
-      const fallback = { ...sourceData };
+      const fallback = { ...sanitizedSourceData };
       normalizeContainerCapture(stepKey, fallback);
       wizardDataStore.setStepData(stepKey, fallback);
     }
@@ -1198,7 +1208,11 @@
         data: JSON.stringify(stepPayload),
       });
       emit('saved', stepKey, submissionId);
-    } catch {
+    } catch (err) {
+      console.warn(
+        `[StepFormViewer] auto-save failed for step "${stepKey}":`,
+        err
+      );
     } finally {
       rt.isSaving = false;
       if (rt.pendingSave) {
@@ -1311,11 +1325,9 @@
     { deep: true }
   );
 
-  // Start/refresh background preloading only for NEW applications (starting
-  // from the survey step).  On resume the active step loads on-demand via
-  // activateStep, and subsequent steps load lazily when the user navigates to
-  // them — this avoids a burst of 7-8 concurrent CHEFS API calls that would
-  // trigger 429 rate limiting.
+  // Start/refresh background preloading for normal new-app flows. The user
+  // already has a submission on resume, but preloading is still useful in the
+  // initial survey+wizard flow because it avoids a burst of CHEFS API calls.
   watch(
     [
       () => stepStates[getSurveyStepKey()],
@@ -1325,8 +1337,6 @@
     ],
     ([surveyState, stepKeysSig, activeStep]) => {
       if (!stepKeysSig) return;
-      // Skip preloading on resume — the user already has a submission.
-      if (props.submissionPublicId) return;
 
       const hasWizardSteps = props.stepKeys.some((k) => !isSurveyStep(k));
       if (!hasWizardSteps) return;
@@ -1383,7 +1393,10 @@
     // status/disabled) is up to date, then force an immediate save for it.
     persistHostWizardState();
     const carrierKey = getStateCarrierStepKey();
-    if (stepEls[carrierKey]) saves.push(performAutoSave(carrierKey));
+    if (carrierKey) {
+      visitedSteps.add(carrierKey);
+      saves.push(performAutoSave(carrierKey));
+    }
 
     await Promise.allSettled(saves);
   }
