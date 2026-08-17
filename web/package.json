@@ -24,7 +24,7 @@
     "@fullcalendar/vue3": "^6.1.19",
     "@types/luxon": "^3.7.1",
     "@types/underscore": "^1.13.0",
-    "axios": "^1.13.2",
+    "axios": "^1.18.1",
     "base64url": "^3.0.1",
     "bootstrap": "^5.3.3",
     "bootstrap-vue-next": "^0.45.7",
