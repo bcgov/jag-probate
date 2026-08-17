@@ -112,42 +112,18 @@ public static class SubmissionEnricher
         var p = $"{prefix}Minor";
         var g = $"{prefix}Guardian";
 
-        var resAddress = FormatAddress(
-            src.Value<string>($"{p}Street"),
-            src.Value<string>($"{p}City"),
-            src.Value<string>($"{p}Province"),
-            src.Value<string>($"{p}Postal"),
-            src.Value<string>($"{p}Country")
-        );
+        var resAddress = ExtractFormatAddress(src, p);
 
         var postalAddress =
             src.Value<string>($"{p}HasDiffMail") == "yes"
-                ? FormatAddress(
-                    src.Value<string>($"{p}MailStreet"),
-                    src.Value<string>($"{p}MailCity"),
-                    src.Value<string>($"{p}MailProvince"),
-                    src.Value<string>($"{p}MailPostal"),
-                    src.Value<string>($"{p}MailCountry")
-                )
+                ? ExtractFormatAddress(src, p, "Mail")
                 : resAddress;
 
-        var guardianResAddress = FormatAddress(
-            src.Value<string>($"{g}Street"),
-            src.Value<string>($"{g}City"),
-            src.Value<string>($"{g}Province"),
-            src.Value<string>($"{g}Postal"),
-            src.Value<string>($"{g}Country")
-        );
+        var guardianResAddress = ExtractFormatAddress(src, g);
 
         var guardianPostalAddress =
             src.Value<string>($"{g}HasDiffMail") == "yes"
-                ? FormatAddress(
-                    src.Value<string>($"{g}MailStreet"),
-                    src.Value<string>($"{g}MailCity"),
-                    src.Value<string>($"{g}MailProvince"),
-                    src.Value<string>($"{g}MailPostal"),
-                    src.Value<string>($"{g}MailCountry")
-                )
+                ? ExtractFormatAddress(src, g, "Mail")
                 : guardianResAddress;
 
         return new JObject
@@ -194,42 +170,18 @@ public static class SubmissionEnricher
         var p = $"{prefix}Incomp";
         var n = $"{prefix}Nominee";
 
-        var resAddress = FormatAddress(
-            src.Value<string>($"{p}Street"),
-            src.Value<string>($"{p}City"),
-            src.Value<string>($"{p}Province"),
-            src.Value<string>($"{p}Postal"),
-            src.Value<string>($"{p}Country")
-        );
+        var resAddress = ExtractFormatAddress(src, p);
 
         var postalAddress =
             src.Value<string>($"{p}HasDiffMail") == "yes"
-                ? FormatAddress(
-                    src.Value<string>($"{p}MailStreet"),
-                    src.Value<string>($"{p}MailCity"),
-                    src.Value<string>($"{p}MailProvince"),
-                    src.Value<string>($"{p}MailPostal"),
-                    src.Value<string>($"{p}MailCountry")
-                )
+                ? ExtractFormatAddress(src, p, "Mail")
                 : resAddress;
 
-        var nomineeResAddress = FormatAddress(
-            src.Value<string>($"{n}Street"),
-            src.Value<string>($"{n}City"),
-            src.Value<string>($"{n}Province"),
-            src.Value<string>($"{n}Postal"),
-            src.Value<string>($"{n}Country")
-        );
+        var nomineeResAddress = ExtractFormatAddress(src, n);
 
         var nomineePostalAddress =
             src.Value<string>($"{n}HasDiffMail") == "yes"
-                ? FormatAddress(
-                    src.Value<string>($"{n}MailStreet"),
-                    src.Value<string>($"{n}MailCity"),
-                    src.Value<string>($"{n}MailProvince"),
-                    src.Value<string>($"{n}MailPostal"),
-                    src.Value<string>($"{n}MailCountry")
-                )
+                ? ExtractFormatAddress(src, n, "Mail")
                 : nomineeResAddress;
 
         return new JObject
@@ -326,18 +278,49 @@ public static class SubmissionEnricher
         return root;
     }
 
+    private static string ExtractFormatAddress(
+        JObject src,
+        string dataNamePrefix,
+        string fieldPrefix = ""
+    )
+    {
+        return FormatAddress(
+            src.Value<string>($"{dataNamePrefix}{fieldPrefix}Street"),
+            src.Value<string>($"{dataNamePrefix}{fieldPrefix}City"),
+            src.Value<string>($"{dataNamePrefix}{fieldPrefix}Province"),
+            src.Value<string>($"{dataNamePrefix}{fieldPrefix}State"),
+            src.Value<string>($"{dataNamePrefix}{fieldPrefix}ProvinceText"),
+            src.Value<string>($"{dataNamePrefix}{fieldPrefix}Postal"),
+            src.Value<string>($"{dataNamePrefix}{fieldPrefix}Country")
+        );
+    }
+
     private static string FormatAddress(
         string? street,
         string? city,
         string? province,
+        string? state,
+        string? provinceText,
         string? postal,
         string? country
     )
     {
-        var parts = new[] { street, city, province, postal, country }
+        var region = BuildRegion(province, state, provinceText);
+        var parts = new[] { street, city, region, postal, country }
             .Where(p => !string.IsNullOrWhiteSpace(p))
             .ToArray();
         return parts.Length > 0 ? string.Join(", ", parts) : "None";
+    }
+
+    private static string BuildRegion(string? province, string? state, string? provinceText)
+    {
+        if (!string.IsNullOrWhiteSpace(province))
+            return province.Trim();
+        if (!string.IsNullOrWhiteSpace(state))
+            return state.Trim();
+        if (!string.IsNullOrWhiteSpace(provinceText))
+            return provinceText.Trim();
+        return string.Empty;
     }
 
     private static string FormatDate(string? isoDate)
