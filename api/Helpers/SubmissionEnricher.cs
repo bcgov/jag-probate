@@ -36,6 +36,7 @@ public static class SubmissionEnricher
         root["computedMinors"] = new JArray(minors);
         root["hasIncapableAdults"] = incapableAdults.Count > 0;
         root["computedIncapableAdults"] = new JArray(incapableAdults);
+        root["applicantRelationship"] = DeduceApplicantRelationship(root);
 
         return root;
     }
@@ -344,5 +345,52 @@ public static class SubmissionEnricher
         if (hasFlag == "yes" && !string.IsNullOrWhiteSpace(value))
             return value;
         return "None";
+    }
+
+    private static string DeduceApplicantRelationship(JObject root)
+    {
+        var applicantName = root.SelectToken("applicant.applicantName")?.ToString()?.Trim();
+        if (string.IsNullOrEmpty(applicantName))
+            return "";
+
+        if (NameExistsInArray(root, "spouse.spouseData", "spouseName", applicantName))
+            return "Spouse";
+
+        if (NameExistsInArray(root, "child.childData", "childName", applicantName))
+            return "Child";
+
+        if (
+            NameExistsInArray(
+                root,
+                "creditor.creditorPersonData",
+                "creditorPersonName",
+                applicantName
+            )
+        )
+            return "Creditor";
+
+        return "";
+    }
+
+    private static bool NameExistsInArray(
+        JObject root,
+        string arrayPath,
+        string nameField,
+        string applicantName
+    )
+    {
+        var array = root.SelectToken(arrayPath) as JArray;
+        if (array == null)
+            return false;
+
+        return array
+            .OfType<JObject>()
+            .Any(item =>
+                string.Equals(
+                    item.Value<string>(nameField)?.Trim(),
+                    applicantName,
+                    StringComparison.OrdinalIgnoreCase
+                )
+            );
     }
 }
