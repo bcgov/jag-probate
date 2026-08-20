@@ -95,15 +95,18 @@ p {
     box-shadow: 0 0 0 3px rgba(220, 53, 69, 0.18) !important;
 }
 
-.input-group .form-control:not(:last-child) {
+.input-group:has(.input-group-append) .form-control {
     border-right: none !important;
     border-radius: var(--radius-sm) 0 0 var(--radius-sm) !important;
 }
 
-.input-group .input-group-text {
-    border: 1px solid var(--color-border) !important;
+.input-group:has(.input-group-prepend) .form-control {
     border-left: none !important;
     border-radius: 0 var(--radius-sm) var(--radius-sm) 0 !important;
+}
+
+.input-group .input-group-text {
+    border: 1px solid var(--color-border) !important;
     background-color: var(--color-surface-subtle) !important;
     color: var(--color-text-muted) !important;
     padding: 0.5rem 0.65rem !important;
@@ -111,6 +114,18 @@ p {
     align-self: stretch !important;
     display: flex !important;
     align-items: center !important;
+}
+
+/* Prefix addon (e.g. "$" before the input): round the left side, butt against the input on the right. */
+.input-group-prepend .input-group-text {
+    border-right: none !important;
+    border-radius: var(--radius-sm) 0 0 var(--radius-sm) !important;
+}
+
+/* Suffix addon (e.g. the calendar icon after a date input): round the right side, butt against the input on the left. */
+.input-group-append .input-group-text {
+    border-left: none !important;
+    border-radius: 0 var(--radius-sm) var(--radius-sm) 0 !important;
 }
 
 .formio-component-simpledatetimeadvanced .input-group,
