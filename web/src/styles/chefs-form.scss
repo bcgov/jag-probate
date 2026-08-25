@@ -493,6 +493,30 @@ p {
     max-width: 220px !important;
 }
 
+/* Prevent any datagrid cell's form control from forcing the table wider than its column (was causing the secured-debts grids to overflow/scroll). */
+.datagrid-table tbody tr td .formio-component,
+.datagrid-table tbody tr td .form-control,
+.datagrid-table tbody tr td textarea.form-control,
+.datagrid-table tbody tr td .input-group {
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+}
+
+/* Bootstrap's .input-group defaults to flex-wrap: wrap, which drops the "$" addon onto its own line once the column is narrow. */
+.datagrid-table tbody tr td .input-group {
+    flex-wrap: nowrap !important;
+}
+
+.datagrid-table tbody tr td .input-group > .form-control {
+    flex: 1 1 auto !important;
+    min-width: 0 !important;
+}
+
+.datagrid-table tbody tr td textarea.form-control {
+    min-width: 0 !important;
+}
+
 .datagrid-table {
     border-radius: var(--radius-md) !important;
     border-collapse: separate !important;
@@ -630,6 +654,21 @@ td.formio-component-type,
 th.formio-component-type {
     width: 250px !important;
 }
+
+/* Opt into mobile-stacking behaviour by adding customClass "responsive-datagrid" to a datagrid component in its schema - no per-key CSS needed for current or future grids. */
+.responsive-datagrid {
+    container-type: inline-size;
+}
+
+/* The remove-row button only exists as an extra td per body row, never as a matching th in the header, so the generic
+   "thead th:last-child" 48px squeeze above (meant for grids whose action column DOES have a header cell) would otherwise
+   grab the real last data column's header and force the table wider than its container. */
+.responsive-datagrid .datagrid-table thead tr th:last-child {
+    width: auto !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    text-align: left !important;
+}
 .continue-watcher-hidden input {
     height: 0 !important;
     min-height: 0 !important;
@@ -721,6 +760,57 @@ th.formio-component-type {
     {
         animation: none !important;
         transition: none !important;
+    }
+}
+
+/* Any datagrid opted in via customClass "responsive-datagrid": stack as cards once the component itself gets narrow, instead of a horizontally-scrolling table. A container query (not @media) is used because the wizard sidebar can leave this component narrow even in a wide browser window. Labels come from each field's own rendered <label> - no hardcoded per-column text. */
+@container (max-width: 700px) {
+    .responsive-datagrid .datagrid-table {
+        table-layout: auto !important;
+    }
+
+    .responsive-datagrid .datagrid-table thead {
+        position: absolute !important;
+        width: 1px !important;
+        height: 1px !important;
+        overflow: hidden !important;
+        clip: rect(0, 0, 0, 0) !important;
+    }
+
+    .responsive-datagrid .datagrid-table,
+    .responsive-datagrid .datagrid-table tbody,
+    .responsive-datagrid .datagrid-table tbody tr,
+    .responsive-datagrid .datagrid-table tbody tr td {
+        display: block !important;
+        width: 100% !important;
+        max-width: 100% !important;
+    }
+
+    .responsive-datagrid .datagrid-table tbody tr {
+        margin-bottom: var(--space-4) !important;
+        border: 1px solid var(--color-border) !important;
+        border-radius: var(--radius-md) !important;
+        box-shadow: var(--shadow-sm) !important;
+        overflow: hidden !important;
+    }
+
+    .responsive-datagrid .datagrid-table tbody tr td {
+        border-right: none !important;
+        border-top: none !important;
+        border-bottom: 1px solid var(--color-border) !important;
+        padding: var(--space-3) var(--space-4) !important;
+    }
+
+    .responsive-datagrid .datagrid-table tbody tr td:last-child {
+        border-bottom: none !important;
+        text-align: right !important;
+    }
+
+    /* Desktop caps text/email/number inputs to 220px for narrow table columns; let them fill the full-width mobile card instead. */
+    .responsive-datagrid .datagrid-table tbody tr td input[type="text"].form-control,
+    .responsive-datagrid .datagrid-table tbody tr td input[type="email"].form-control,
+    .responsive-datagrid .datagrid-table tbody tr td input[type="number"].form-control {
+        max-width: 100% !important;
     }
 }
 
