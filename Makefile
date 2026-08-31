@@ -10,7 +10,7 @@ help:
 	@echo "  start       Start services in production mode"
 	@echo "  debug       Start services in development mode with hot reload"
 	@echo "  stop        Stop services (non-destructive)"
-	@echo "  down        Stop services and remove volumes (destructive)"
+	@echo "  down        Stop services and remove containers (preserves database volumes)"
 	@echo "  clean       Clean build artifacts"
 	@echo ""
 
