@@ -1,11 +1,8 @@
-import { createApp, nextTick } from 'vue';
-import { describe, expect, it } from 'vitest';
-import ApplicationStepSidebar from './ApplicationStepSidebar.vue';
-import {
-  initWizardState,
-  useWizardState,
-} from '@/composables/useWizardState';
+import { initWizardState, useWizardState } from '@/composables/useWizardState';
 import type { WizardStep } from '@/types/applicationStep';
+import { describe, expect, it } from 'vitest';
+import { createApp, nextTick } from 'vue';
+import ApplicationStepSidebar from './ApplicationStepSidebar.vue';
 
 describe('ApplicationStepSidebar', () => {
   it('shows statuses restored after the primary sidebar has initialized', async () => {
