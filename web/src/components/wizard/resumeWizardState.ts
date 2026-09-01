@@ -7,6 +7,38 @@ export interface ResumeWizardState {
   disabledMap: Record<string, boolean>;
 }
 
+interface ResumeWizardStep {
+  key: string;
+  substeps: Array<{ key: string }>;
+}
+
+export function repairResumeVisibility(
+  state: ResumeWizardState,
+  steps: ResumeWizardStep[]
+): ResumeWizardState {
+  const hiddenSteps = { ...state.hiddenSteps };
+  const hiddenSubsteps = { ...state.hiddenSubsteps };
+
+  for (const step of steps) {
+    const hasVisitedSubstep = step.substeps.some(
+      (substep) => state.statusMap[substep.key] !== undefined
+    );
+    if (step.key === state.activeStep || hasVisitedSubstep) {
+      delete hiddenSteps[step.key];
+    }
+    for (const substep of step.substeps) {
+      if (
+        substep.key === state.activeSubstep ||
+        state.statusMap[substep.key] !== undefined
+      ) {
+        delete hiddenSubsteps[substep.key];
+      }
+    }
+  }
+
+  return { ...state, hiddenSteps, hiddenSubsteps };
+}
+
 export function getPreferredWizardStateCarrierKey(
   stepKeys: string[],
   surveyStepKey: string,

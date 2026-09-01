@@ -65,9 +65,9 @@
         'is-disabled': isSubstepDisabled(substep.key),
         'is-ghost': isSubstepHidden(substep.key),
       }" @click="
-          onSubstepClick(substep.key);
-        hoveredStepKey = null;
-        ">
+        onSubstepClick(substep.key);
+      hoveredStepKey = null;
+      ">
         <span class="wiz-dot" :class="statusDotClass(substep.key)">
           <font-awesome-icon :icon="statusIconName(substep.key)" />
         </span>
@@ -368,7 +368,12 @@ function updateSidebar(stepKey: string, leavingValidity?: boolean) {
     // Save the departing step's data immediately (bypassing the auto-save
     // debounce) — covers Next, Previous, and direct sidebar clicks, since
     // they all funnel through this single navigation choke point.
-    window.wizardSaveStep?.(activeSubstep.value);
+    void window
+      .wizardSaveStep?.(
+        activeSubstep.value,
+        getParentStepKey(activeSubstep.value) ?? activeSubstep.value
+      )
+      .catch(() => undefined);
   }
 
   activeSubstep.value = resolved;
@@ -509,6 +514,18 @@ function setStepClickable(stepKey: string, isClickable: boolean) {
   }
 }
 
+function isActiveBridgeSource(sourceStepKey?: string): boolean {
+  if (!sourceStepKey) return true;
+  const activeRoot =
+    getParentStepKey(activeSubstep.value) ?? activeSubstep.value;
+  const sourceRoot = getParentStepKey(sourceStepKey) ?? sourceStepKey;
+  if (sourceRoot === activeRoot) return true;
+  console.warn(
+    `[ApplicationStepSidebar] Ignored bridge call from inactive step "${sourceRoot}".`
+  );
+  return false;
+}
+
 // ── Computed exposed values ───────────────────────────────────────────────────
 
 const hasPrev = computed(
@@ -534,15 +551,43 @@ const isLastStep = computed(() => {
 // Remove these once CHEFS forms no longer contain wizard/nav JS (Step 3).
 
 function registerWindowFunctions() {
-  window.wizardUpdateSidebar = updateSidebar;
-  window.wizardNavigateNext = navigateNext;
-  window.wizardNavigatePrevious = navigatePrevious;
-  window.wizardSetStepStatus = setStepStatus;
-  window.wizardSetAllStatuses = setAllStatuses;
-  window.wizardSetStepVisibility = setStepVisibility;
-  window.wizardSetSubstepVisibility = setSubstepVisibility;
-  window.wizardSetAllVisibility = setAllVisibility;
-  window.wizardSetStepClickable = setStepClickable;
+  window.wizardUpdateSidebar = (stepKey, sourceStepKey) => {
+    if (isActiveBridgeSource(sourceStepKey)) updateSidebar(stepKey);
+  };
+  window.wizardNavigateNext = (sourceStepKey) => {
+    if (isActiveBridgeSource(sourceStepKey)) navigateNext();
+  };
+  window.wizardNavigatePrevious = (sourceStepKey) => {
+    if (isActiveBridgeSource(sourceStepKey)) navigatePrevious();
+  };
+  window.wizardSetStepStatus = (substepKey, status, sourceStepKey) => {
+    if (isActiveBridgeSource(sourceStepKey)) setStepStatus(substepKey, status);
+  };
+  window.wizardSetAllStatuses = (map, sourceStepKey) => {
+    if (isActiveBridgeSource(sourceStepKey)) setAllStatuses(map);
+  };
+  window.wizardSetStepVisibility = (stepKey, isVisible, sourceStepKey) => {
+    if (isActiveBridgeSource(sourceStepKey)) {
+      setStepVisibility(stepKey, isVisible);
+    }
+  };
+  window.wizardSetSubstepVisibility = (
+    substepKey,
+    isVisible,
+    sourceStepKey
+  ) => {
+    if (isActiveBridgeSource(sourceStepKey)) {
+      setSubstepVisibility(substepKey, isVisible);
+    }
+  };
+  window.wizardSetAllVisibility = (nextState, sourceStepKey) => {
+    if (isActiveBridgeSource(sourceStepKey)) setAllVisibility(nextState);
+  };
+  window.wizardSetStepClickable = (stepKey, isClickable, sourceStepKey) => {
+    if (isActiveBridgeSource(sourceStepKey)) {
+      setStepClickable(stepKey, isClickable);
+    }
+  };
   // Note: window.wizardValidateStep is owned by StepFormViewer (it has direct
   // access to the Form.io instance) — not assigned here.
 }

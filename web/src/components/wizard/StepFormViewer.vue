@@ -161,6 +161,7 @@ function getStateCarrierStepKey(): string {
 /** Writes the current activeStep/activeSubstep/navState/statusMap/disabledMap
  * onto the survey step's own data and schedules a normal save for it. */
 function persistHostWizardState() {
+  if (props.readOnly) return;
   const surveyKey = getSurveyStepKey();
   const snapshot: ResumeWizardState = {
     activeStep: props.activeStep,
@@ -185,8 +186,7 @@ function persistHostWizardState() {
   };
   wizardDataStore.setStepData(surveyKey, surveyData);
 
-  const rt = getRuntime(surveyKey);
-  rt.dirty = true;
+  markStepDirty(surveyKey);
 
   const el = stepEls[surveyKey];
   if (el?.formioInstance?.data) {
@@ -305,11 +305,12 @@ let autoSaveEnableTimer: ReturnType<typeof setTimeout> | null = null;
 interface StepRuntime {
   readyTimer: ReturnType<typeof setTimeout> | null;
   debounceTimer: ReturnType<typeof setTimeout> | null;
-  isSaving: boolean;
-  pendingSave: boolean;
+  saveChain: Promise<void>;
   formReady: boolean;
   /** True once the user has made a real change (after autoSaveEnabled). */
   dirty: boolean;
+  changeVersion: number;
+  savedVersion: number;
   submissionId: string | undefined;
 }
 const stepRuntime: Record<string, StepRuntime> = {};
@@ -441,10 +442,11 @@ function getRuntime(stepKey: string): StepRuntime {
     stepRuntime[stepKey] = {
       readyTimer: null,
       debounceTimer: null,
-      isSaving: false,
-      pendingSave: false,
+      saveChain: Promise.resolve(),
       formReady: false,
       dirty: false,
+      changeVersion: 0,
+      savedVersion: 0,
       submissionId: undefined,
     };
   }
@@ -542,7 +544,7 @@ function requestFocusField(substepKey: string, fieldKey: string) {
 
 function goToField(substepKey: string, fieldKey: string) {
   requestFocusField(substepKey, fieldKey);
-  window.wizardUpdateSidebar?.(substepKey);
+  window.wizardUpdateSidebar?.(substepKey, props.activeStep);
   nextTick(() => applyPendingFocus());
 }
 
@@ -558,7 +560,11 @@ function validateSubstep(substepKey: string): boolean {
   try {
     const data = formio.submission?.data ?? formio.data ?? {};
     const isValid = !!formio.checkValidity(data, true);
-    window.wizardSetStepStatus?.(substepKey, isValid ? 'completed' : 'error');
+    window.wizardSetStepStatus?.(
+      substepKey,
+      isValid ? 'completed' : 'error',
+      parentStep
+    );
     if (!isValid) {
       formio.once?.('change', () => {
         if (wizardActiveSubstep.value !== substepKey) return;
@@ -568,7 +574,8 @@ function validateSubstep(substepKey: string): boolean {
         );
         window.wizardSetStepStatus?.(
           substepKey,
-          stillValid ? 'completed' : 'error'
+          stillValid ? 'completed' : 'error',
+          parentStep
         );
       });
     }
@@ -763,7 +770,7 @@ async function initStep(stepKey: string, _retryCount = 0) {
     el.addEventListener('formio:error', (e: CustomEvent) => {
       const currentSubstep = wizardActiveSubstep.value;
       if (resolveParentStepKey(currentSubstep) === stepKey) {
-        window.wizardSetStepStatus?.(currentSubstep, 'error');
+        window.wizardSetStepStatus?.(currentSubstep, 'error', stepKey);
       }
       emit('form-error', e.detail);
     });
@@ -823,12 +830,7 @@ async function initStep(stepKey: string, _retryCount = 0) {
               if (Object.keys(accumulated).length > 0) {
                 Object.assign(el.formioInstance.data, accumulated);
               }
-              el.formioInstance.data.currentStep = stepKey;
-              el.formioInstance.data.currentSubstep =
-                wizardActiveSubstep.value;
-
-              el.formioInstance.triggerChange?.();
-              el.formioInstance.redraw?.();
+              syncFormNavigationContext();
             };
 
             if (Object.keys(el.formioInstance.data).length === 0) {
@@ -895,13 +897,18 @@ async function initStep(stepKey: string, _retryCount = 0) {
       // events with empty / default data — writing those back into
       // wizardDataStore would overwrite the correctly hydrated values
       // that were loaded from the API.
-      if (rt.formReady && autoSaveEnabled.value) {
+      if (
+        rt.formReady &&
+        autoSaveEnabled.value &&
+        !props.readOnly &&
+        visitedSteps.has(stepKey)
+      ) {
         try {
           captureStepData(stepKey, e.detail);
         } catch {
           /* ignore */
         }
-        rt.dirty = true;
+        markStepDirty(stepKey);
         scheduleAutoSave(stepKey);
 
         // Refresh the saved position on every real change, not just when
@@ -1028,6 +1035,31 @@ function syncCrossStepData(stepKey: string) {
   }
 }
 
+function syncFormNavigationContext() {
+  for (const [stepKey, el] of Object.entries(stepEls)) {
+    if (el?.formioInstance?.data === undefined) continue;
+    const data = el.formioInstance.data;
+    Object.defineProperties(data, {
+      currentStep: {
+        configurable: true,
+        enumerable: true,
+        get: () => props.activeStep,
+        set: () => undefined,
+      },
+      currentSubstep: {
+        configurable: true,
+        enumerable: true,
+        get: () => wizardActiveSubstep.value,
+        set: () => undefined,
+      },
+    });
+    if (stepKey === props.activeStep) {
+      el.formioInstance.triggerChange?.();
+      el.formioInstance.redraw?.();
+    }
+  }
+}
+
 // ── Activate a step (init on first visit, show on subsequent visits) ───────
 async function activateStep(stepKey: string) {
   if (!props.stepKeys.includes(stepKey)) return;
@@ -1059,69 +1091,6 @@ async function activateStep(stepKey: string) {
   }
 }
 
-// ── Background preloading ────────────────────────────────────────────────
-// Warm up forms so first navigation to each step does not wait on bootstrap.
-// This is intentionally reactive: stepKeys can arrive after mount.
-let isBackgroundPreloading = false;
-
-async function preloadStepsInBackground() {
-  if (isBackgroundPreloading) return;
-  // Wait for hydration so forms are seeded with persisted data.
-  if (!hydrationDone.value) return;
-  isBackgroundPreloading = true;
-
-  try {
-    await nextTick();
-
-    // Wait for the active step to finish loading before starting background
-    // preloads — avoids a burst of concurrent CHEFS API requests that
-    // triggers 429 rate limiting.
-    const activeState = stepStates[props.activeStep];
-    if (activeState === 'loading') {
-      await new Promise<void>((resolve) => {
-        const stop = watch(
-          () => stepStates[props.activeStep],
-          (state) => {
-            if (state !== 'loading') {
-              stop();
-              resolve();
-            }
-          }
-        );
-      });
-    }
-
-    // Additional pause to let rate-limit windows cool down.
-    await new Promise((r) => setTimeout(r, 2000));
-
-    for (const stepKey of props.stepKeys) {
-      if (unmounted) break;
-      if (isSurveyStep(stepKey)) continue;
-      if (stepKey === props.activeStep) continue;
-      if (initializedSteps.has(stepKey)) continue;
-
-      initializedSteps.add(stepKey);
-      await initStep(stepKey);
-
-      // Stagger background loads to avoid hammering the CHEFS API.
-      if (!unmounted) {
-        await new Promise((r) => setTimeout(r, 500));
-      }
-    }
-  } finally {
-    isBackgroundPreloading = false;
-
-    // If keys changed while we were preloading, run one more pass.
-    const hasPending = props.stepKeys.some(
-      (k) =>
-        !isSurveyStep(k) && k !== props.activeStep && !initializedSteps.has(k)
-    );
-    if (hasPending) {
-      void preloadStepsInBackground();
-    }
-  }
-}
-
 // ── Submit handler ────────────────────────────────────────────────────────
 function handleSubmitDone(stepKey: string, e: CustomEvent) {
   const submission = e.detail?.submission;
@@ -1143,25 +1112,25 @@ function handleSubmitDone(stepKey: string, e: CustomEvent) {
 // flush. Called once both gates are open for a step to capture+save
 // whatever was entered during the grace period.
 function catchUpAutoSave(stepKey: string) {
-  if (unmounted) return;
+  if (unmounted || props.readOnly || !visitedSteps.has(stepKey)) return;
   const rt = getRuntime(stepKey);
   if (!rt.formReady || !autoSaveEnabled.value) return;
   captureStepData(stepKey);
-  rt.dirty = true;
+  markStepDirty(stepKey);
   scheduleAutoSave(stepKey);
   persistHostWizardState();
   scheduleAutoSave(getStateCarrierStepKey());
 }
 
 function scheduleAutoSave(stepKey: string) {
+  if (unmounted || props.readOnly || !visitedSteps.has(stepKey)) return;
   const rt = getRuntime(stepKey);
-  if (rt.isSaving) {
-    rt.pendingSave = true;
-    return;
-  }
   if (rt.debounceTimer) clearTimeout(rt.debounceTimer);
   rt.debounceTimer = setTimeout(
-    () => performAutoSave(stepKey),
+    () => {
+      rt.debounceTimer = null;
+      void enqueueStepSave(stepKey).catch(() => undefined);
+    },
     props.autoSaveThrottle
   );
 }
@@ -1185,19 +1154,14 @@ function waitForSubmissionId(): Promise<string> {
   });
 }
 
-async function performAutoSave(stepKey: string) {
-  if (unmounted) return; // component destroyed — don't touch the shared store
-  if (!visitedSteps.has(stepKey)) return; // never persist background-preloaded, unvisited steps
+function markStepDirty(stepKey: string) {
   const rt = getRuntime(stepKey);
-  // Only save steps the user has actually modified.
-  if (!rt.dirty) return;
-  if (rt.isSaving) {
-    rt.pendingSave = true;
-    return;
-  }
+  rt.changeVersion += 1;
+  rt.dirty = true;
+}
 
-  rt.isSaving = true;
-  rt.pendingSave = false;
+async function performAutoSave(stepKey: string, targetVersion: number) {
+  const rt = getRuntime(stepKey);
 
   try {
     captureStepData(stepKey);
@@ -1215,32 +1179,55 @@ async function performAutoSave(stepKey: string) {
       formId: stepKey,
       data: JSON.stringify(stepPayload),
     });
+    rt.savedVersion = Math.max(rt.savedVersion, targetVersion);
+    rt.dirty = rt.changeVersion > rt.savedVersion;
     emit('saved', stepKey, submissionId);
   } catch (err) {
+    rt.dirty = true;
     console.warn(
       `[StepFormViewer] auto-save failed for step "${stepKey}":`,
       err
     );
-  } finally {
-    rt.isSaving = false;
-    if (rt.pendingSave) {
-      rt.pendingSave = false;
-      scheduleAutoSave(stepKey);
-    }
+    throw err;
   }
+}
+
+function enqueueStepSave(stepKey: string): Promise<void> {
+  if (unmounted || props.readOnly || !visitedSteps.has(stepKey)) {
+    return Promise.resolve();
+  }
+  const rt = getRuntime(stepKey);
+  if (!rt.dirty) return rt.saveChain;
+  const targetVersion = rt.changeVersion;
+  const save = rt.saveChain.then(
+    () => performAutoSave(stepKey, targetVersion),
+    () => performAutoSave(stepKey, targetVersion)
+  );
+  rt.saveChain = save.catch(() => undefined);
+  return save;
 }
 
 // Immediately save a step's data, bypassing the auto-save debounce — used
 // when navigating away (Next/Previous/direct sidebar click)
-function flushSaveStep(substepKey: string) {
+function flushSaveStep(
+  substepKey: string,
+  sourceStepKey?: string
+): Promise<void> {
   const parentStep = resolveParentStepKey(substepKey);
-  if (!parentStep) return;
-  const rt = stepRuntime[parentStep];
+  if (!parentStep || props.readOnly) return Promise.resolve();
+  const sourceRoot = sourceStepKey
+    ? resolveParentStepKey(sourceStepKey)
+    : parentStep;
+  if (sourceRoot && sourceRoot !== parentStep) return Promise.resolve();
+  visitedSteps.add(parentStep);
+  captureStepData(parentStep);
+  markStepDirty(parentStep);
+  const rt = getRuntime(parentStep);
   if (rt?.debounceTimer) {
     clearTimeout(rt.debounceTimer);
     rt.debounceTimer = null;
   }
-  performAutoSave(parentStep);
+  return enqueueStepSave(parentStep);
 }
 
 // ── Per-step teardown ─────────────────────────────────────────────────────
@@ -1255,8 +1242,6 @@ function teardownStep(stepKey: string) {
     clearTimeout(rt.debounceTimer);
     rt.debounceTimer = null;
   }
-  rt.isSaving = false;
-  rt.pendingSave = false;
 }
 
 // ── Watch active step ─────────────────────────────────────────────────────
@@ -1269,6 +1254,8 @@ watch(
   (newStep, oldStep) => {
     if (oldStep && oldStep !== newStep && autoSaveEnabled.value) {
       captureStepData(oldStep);
+      markStepDirty(oldStep);
+      void enqueueStepSave(oldStep).catch(() => undefined);
     }
     activateStep(newStep);
     if (isSurveyStep(newStep) && oldStep && oldStep !== newStep) {
@@ -1284,6 +1271,7 @@ watch(
         /* ignore — non-critical */
       }
     }
+    syncFormNavigationContext();
 
     if (oldStep && oldStep !== newStep && shouldAutoScrollToTop()) {
       scrollToTop();
@@ -1298,12 +1286,9 @@ watch(
 watch(wizardActiveSubstep, (substep) => {
   const parentStep = resolveParentStepKey(substep);
   if (!parentStep || parentStep !== props.activeStep) return;
-  const el = stepEls[parentStep];
   try {
-    if (el?.formioInstance?.data !== undefined) {
-      // Let Form.io own visibility/state transitions for substep changes.
-      el.formioInstance.data.currentSubstep = substep;
-      el.formioInstance.triggerChange?.();
+    if (stepEls[parentStep]?.formioInstance?.data !== undefined) {
+      syncFormNavigationContext();
       if (shouldAutoScrollToTop()) {
         scrollToTop();
       }
@@ -1326,35 +1311,11 @@ watch(
     disabledMap,
   ],
   () => {
-    if (!autoSaveEnabled.value) return;
+    if (!autoSaveEnabled.value || props.readOnly) return;
     persistHostWizardState();
     scheduleAutoSave(getStateCarrierStepKey());
   },
   { deep: true }
-);
-
-// Start/refresh background preloading for normal new-app flows. The user
-// already has a submission on resume, but preloading is still useful in the
-// initial survey+wizard flow because it avoids a burst of CHEFS API calls.
-watch(
-  [
-    () => stepStates[getSurveyStepKey()],
-    () => props.stepKeys.join('|'),
-    () => props.activeStep,
-    hydrationDone,
-  ],
-  ([surveyState, stepKeysSig, activeStep]) => {
-    if (!stepKeysSig) return;
-
-    const hasWizardSteps = props.stepKeys.some((k) => !isSurveyStep(k));
-    if (!hasWizardSteps) return;
-
-    const canPreload = !isSurveyStep(activeStep) || surveyState === 'ready';
-    if (!canPreload) return;
-
-    void preloadStepsInBackground();
-  },
-  { immediate: true }
 );
 
 // ── Validate all steps ─────────────────────────────────────────────────────
@@ -1384,6 +1345,15 @@ function validateAllSteps(): { valid: boolean; failedSteps: string[] } {
 
 /** Immediately persist every step that has user-entered data. */
 async function flushAllSteps() {
+  if (props.readOnly) return;
+  const activeStep = props.activeStep;
+  if (activeStep && initializedSteps.has(activeStep)) {
+    visitedSteps.add(activeStep);
+    captureStepData(activeStep);
+    markStepDirty(activeStep);
+  }
+  persistHostWizardState();
+
   const saves: Promise<void>[] = [];
   for (const stepKey of Object.keys(stepRuntime)) {
     const rt = stepRuntime[stepKey];
@@ -1392,21 +1362,19 @@ async function flushAllSteps() {
       clearTimeout(rt.debounceTimer);
       rt.debounceTimer = null;
     }
-    // Only save steps that have meaningful data in the store.
-    const data = wizardDataStore.getStepData(stepKey);
-    if (Object.keys(data).length === 0) continue;
-    saves.push(performAutoSave(stepKey));
+    if (rt.dirty) saves.push(enqueueStepSave(stepKey));
   }
-  // Ensure the carrier step's host wizard state (activeStep/substep/nav/
-  // status/disabled) is up to date, then force an immediate save for it.
-  persistHostWizardState();
-  const carrierKey = getStateCarrierStepKey();
-  if (carrierKey) {
-    visitedSteps.add(carrierKey);
-    saves.push(performAutoSave(carrierKey));
+  const results = await Promise.allSettled(saves);
+  const failures = results
+    .filter((result): result is PromiseRejectedResult =>
+      result.status === 'rejected'
+    )
+    .map((result) => result.reason);
+  if (failures.length) {
+    const error = new Error('Unable to save') as Error & { errors: unknown[] };
+    error.errors = failures;
+    throw error;
   }
-
-  await Promise.allSettled(saves);
 }
 
 defineExpose({ validateAllSteps, flushAllSteps });

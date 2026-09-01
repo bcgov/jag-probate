@@ -44,27 +44,53 @@ export interface WizardState {
 declare global {
   interface Window {
     // Navigation
-    wizardUpdateSidebar?: (stepKey: string) => void;
-    wizardNavigateNext?: () => void;
-    wizardNavigatePrevious?: () => void;
+    wizardUpdateSidebar?: (stepKey: string, sourceStepKey?: string) => void;
+    wizardNavigateNext?: (sourceStepKey?: string) => void;
+    wizardNavigatePrevious?: (sourceStepKey?: string) => void;
     // Validation (returns true/false; stub until Step 4)
-    wizardValidateStep?: (substep: string) => boolean;
+    wizardValidateStep?: (substep: string, sourceStepKey?: string) => boolean;
     // Status
-    wizardSetStepStatus?: (substep: string, status: StepStatus | null) => void;
-    wizardSetAllStatuses?: (statusMap: Record<string, StepStatus>) => void;
+    wizardSetStepStatus?: (
+      substep: string,
+      status: StepStatus | null,
+      sourceStepKey?: string
+    ) => void;
+    wizardSetAllStatuses?: (
+      statusMap: Record<string, StepStatus>,
+      sourceStepKey?: string
+    ) => void;
     // Visibility
-    wizardSetStepVisibility?: (stepKey: string, isVisible: boolean) => void;
+    wizardSetStepVisibility?: (
+      stepKey: string,
+      isVisible: boolean,
+      sourceStepKey?: string
+    ) => void;
     wizardSetSubstepVisibility?: (
       substepKey: string,
-      isVisible: boolean
+      isVisible: boolean,
+      sourceStepKey?: string
     ) => void;
-    wizardSetAllVisibility?: (nextState: WizardNavState) => void;
+    wizardSetAllVisibility?: (
+      nextState: WizardNavState,
+      sourceStepKey?: string
+    ) => void;
     // Disabled
-    wizardSetStepClickable?: (stepKey: string, isClickable: boolean) => void;
+    wizardSetStepClickable?: (
+      stepKey: string,
+      isClickable: boolean,
+      sourceStepKey?: string
+    ) => void;
     // Review edit navigation
-    wizardGoToField?: (substepKey: string, fieldKey: string) => void;
+    wizardGoToField?: (
+      substepKey: string,
+      fieldKey: string,
+      sourceStepKey?: string
+    ) => void;
     // Immediate save on navigation (bypasses the auto-save debounce)
-    wizardSaveStep?: (substepKey: string) => void;
+    wizardSaveStep?: (
+      substepKey: string,
+      sourceStepKey?: string
+    ) => Promise<void>;
     // Flush all pending auto-saves immediately (used by Save and Exit).
     wizardFlushAll?: () => Promise<void>;
     // Returns a save-ready payload (business data + wizard state metadata).

@@ -1,7 +1,11 @@
 <template>
   <div class="wizard-preview-layout">
     <!-- Desktop sidebar -->
-    <div v-show="!isSurveyStep && isActiveStepLoaded" class="wizard-col d-none d-lg-block">
+    <div
+      v-if="activeStep && !isSurveyStep"
+      v-show="isActiveStepLoaded"
+      class="wizard-col d-none d-lg-block"
+    >
       <ApplicationStepSidebar ref="sidebarRef" :steps="wizardSteps" :initial-step="firstWizardSubstepKey"
         :survey-step-key="surveyStepKey" :initial-nav-state="sidebarInitialNavState"
         :initial-status-map="sidebarInitialStatusMap" :initial-disabled-map="sidebarInitialDisabledMap"
@@ -100,6 +104,7 @@
 import ApplicationStepSidebar from '@/components/wizard/ApplicationStepSidebar.vue';
 import StepFormViewer from '@/components/wizard/StepFormViewer.vue';
 import StepNavButtons from '@/components/wizard/StepNavButton.vue';
+import { repairResumeVisibility } from '@/components/wizard/resumeWizardState';
 import {
   initWizardState,
   useWizardState,
@@ -311,20 +316,25 @@ function onResumeWizardState(state: {
   statusMap: Record<string, string>;
   disabledMap: Record<string, boolean>;
 }) {
-  resumeSubstepKey.value = state.activeSubstep || state.activeStep;
+  const repairedState = repairResumeVisibility(state, wizardSteps.value);
+  resumeSubstepKey.value =
+    repairedState.activeSubstep || repairedState.activeStep;
   persistedNavState.value = {
-    hiddenSteps: state.hiddenSteps,
-    hiddenSubsteps: state.hiddenSubsteps,
+    hiddenSteps: repairedState.hiddenSteps,
+    hiddenSubsteps: repairedState.hiddenSubsteps,
   };
-  persistedStatusMap.value = state.statusMap as Record<string, StepStatus>;
-  persistedDisabledMap.value = state.disabledMap;
+  persistedStatusMap.value = repairedState.statusMap as Record<
+    string,
+    StepStatus
+  >;
+  persistedDisabledMap.value = repairedState.disabledMap;
   initWizardState(
     resumeSubstepKey.value,
     persistedNavState.value,
     persistedStatusMap.value,
     persistedDisabledMap.value
   );
-  activeStep.value = state.activeStep;
+  activeStep.value = repairedState.activeStep;
 }
 
 function onMobileNavigate(stepKey: string) {

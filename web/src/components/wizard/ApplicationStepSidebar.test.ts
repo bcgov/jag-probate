@@ -1,6 +1,6 @@
 import { initWizardState, useWizardState } from '@/composables/useWizardState';
 import type { WizardStep } from '@/types/applicationStep';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { createApp, nextTick } from 'vue';
 import ApplicationStepSidebar from './ApplicationStepSidebar.vue';
 
@@ -84,5 +84,50 @@ describe('ApplicationStepSidebar', () => {
 
     app.unmount();
     host.remove();
+  });
+
+  it('accepts active and legacy bridge calls but rejects inactive sources', async () => {
+    const steps: WizardStep[] = [
+      {
+        key: 'step1',
+        number: 1,
+        title: 'First',
+        defaultSubstep: 'step1-a',
+        substeps: [{ key: 'step1-a', label: 'First A' }],
+      },
+      {
+        key: 'step4',
+        number: 4,
+        title: 'Fourth',
+        defaultSubstep: 'step4-a',
+        substeps: [{ key: 'step4-a', label: 'Fourth A' }],
+      },
+    ];
+    initWizardState('step4-a', { hiddenSteps: {}, hiddenSubsteps: {} }, {}, {});
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const app = createApp(ApplicationStepSidebar, {
+      steps,
+      initialStep: 'step4',
+    });
+    app.config.warnHandler = () => {};
+    app.mount(host);
+    await nextTick();
+
+    window.wizardSetStepStatus?.('step4-a', 'completed', 'step4-a');
+    window.wizardSetStepVisibility?.('step4', false, 'step1-a');
+    window.wizardSetStepClickable?.('step1', false);
+
+    const state = useWizardState();
+    expect(state.statusMap['step4-a']).toBe('completed');
+    expect(state.navState.hiddenSteps['step4']).toBeUndefined();
+    expect(state.activeSubstep.value).toBe('step4-a');
+    expect(state.disabledMap['step1']).toBe(true);
+    expect(warn).toHaveBeenCalledOnce();
+
+    app.unmount();
+    host.remove();
+    warn.mockRestore();
   });
 });

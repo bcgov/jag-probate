@@ -1,11 +1,33 @@
 import { describe, expect, it } from 'vitest';
 import {
   getPreferredWizardStateCarrierKey,
+  repairResumeVisibility,
   resolveLatestResumeState,
   sanitizeStepDataForSave,
 } from './resumeWizardState';
 
 describe('resume wizard state helpers', () => {
+  it('restores visibility for active and previously visited steps', () => {
+    const state = repairResumeVisibility(
+      {
+        activeStep: 'step4',
+        activeSubstep: 'step4-a',
+        hiddenSteps: { step2: true, step3: true, step4: true },
+        hiddenSubsteps: { 'step2-a': true, 'step3-a': true, 'step4-a': true },
+        statusMap: { 'step3-a': 'completed' },
+        disabledMap: {},
+      },
+      [
+        { key: 'step2', substeps: [{ key: 'step2-a' }] },
+        { key: 'step3', substeps: [{ key: 'step3-a' }] },
+        { key: 'step4', substeps: [{ key: 'step4-a' }] },
+      ]
+    );
+
+    expect(state.hiddenSteps).toEqual({ step2: true });
+    expect(state.hiddenSubsteps).toEqual({ 'step2-a': true });
+  });
+
   it('prefers the survey step as the carrier even when another step is active', () => {
     const carrierKey = getPreferredWizardStateCarrierKey(
       ['survey', 'step1', 'step2'],
