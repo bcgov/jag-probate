@@ -1069,9 +1069,7 @@
       .filter(([sub, parent]) => parent === stepKey && sub !== stepKey)
       .map(([sub]) => sub);
     if (substeps.length === 0) return false;
-    return substeps.every(
-      (s) => s.includes('preview') || s.includes('print')
-    );
+    return substeps.every((s) => s.includes('preview') || s.includes('print'));
   }
 
   let isBackgroundPreloading = false;
