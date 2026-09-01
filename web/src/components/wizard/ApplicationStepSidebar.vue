@@ -610,6 +610,18 @@
     fns.forEach((fn) => delete window[fn]);
   }
 
+  // Register before mounted hooks run so CHEFS schema scripts can call the
+  // bridge while the first form is initializing.
+  if (props.registerBridge) {
+    initWizardState(
+      props.initialStep,
+      props.initialNavState,
+      props.initialStatusMap,
+      props.initialDisabledMap
+    );
+    registerWindowFunctions();
+  }
+
   let resizeCleanup: (() => void) | null = null;
   let hasAppliedInitialStep = false;
 
@@ -618,18 +630,6 @@
   }
 
   onMounted(() => {
-    // Primary instance seeds the shared state; secondary instances (mobile drawer)
-    // skip this so they don't overwrite what the primary already set.
-    if (props.registerBridge) {
-      initWizardState(
-        props.initialStep,
-        props.initialNavState,
-        props.initialStatusMap,
-        props.initialDisabledMap
-      );
-      registerWindowFunctions();
-    }
-
     // Keep collapsed state in sync with viewport — reset to expanded on small screens
     // so Vue state never contradicts the CSS override.
     function syncCollapsedToViewport() {
@@ -642,9 +642,12 @@
       window.removeEventListener('resize', syncCollapsedToViewport);
     syncCollapsedToViewport();
 
-    // Navigate to first visible substep (or initialStep if already visible).
-    applyInitialStep(props.initialStep);
-    hasAppliedInitialStep = true;
+    // Only the primary instance seeds shared state. The hidden mobile sidebar
+    // mounts when the form becomes ready and must not overwrite resume state.
+    if (props.registerBridge) {
+      applyInitialStep(props.initialStep);
+      hasAppliedInitialStep = true;
+    }
   });
 
   // The parent resolves the resumed step/substep from an independent network

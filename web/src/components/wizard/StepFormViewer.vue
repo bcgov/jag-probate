@@ -118,6 +118,22 @@
     return props.surveyStepKey || props.stepKeys[0] || '';
   }
 
+  function waitForStepConfiguration(): Promise<void> {
+    if (props.stepKeys.length > 0) return Promise.resolve();
+
+    return new Promise((resolve) => {
+      const stop = watch(
+        () => props.stepKeys.length,
+        (length) => {
+          if (length > 0) {
+            stop();
+            resolve();
+          }
+        }
+      );
+    });
+  }
+
   function resolveParentStepKey(key: string): string | null {
     if (!key) return null;
     if (props.stepKeys.includes(key)) return key;
@@ -210,6 +226,7 @@
         disabledMap: Record<string, boolean>;
       }
     ): void;
+    (e: 'hydration-complete'): void;
     /** Fired once a step's form finishes loading (or times out) and is shown. */
     (e: 'step-ready', stepKey: string): void;
   }>();
@@ -351,6 +368,7 @@
     // If we have a submission ID, try loading step data from the API first.
     if (props.submissionPublicId) {
       try {
+        await waitForStepConfiguration();
         const allSteps = await chefsService.getAllStepData(
           props.submissionPublicId
         );
@@ -1407,6 +1425,7 @@
   onMounted(async () => {
     await hydrateFromPersistedPayload();
     hydrationDone.value = true;
+    emit('hydration-complete');
     // Allow forms to settle after hydration before enabling auto-save.
     // This prevents preloaded forms from overwriting persisted data
     // with empty/default values during their initial formio:change events.
