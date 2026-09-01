@@ -1054,6 +1054,24 @@
   // ── Background preloading ────────────────────────────────────────────────
   // Warm up forms so first navigation to each step does not wait on bootstrap.
   // This is intentionally reactive: stepKeys can arrive after mount.
+
+  /**
+   * Returns true if every substep of a step is a preview or print substep.
+   * These steps have no user data entry — their sole purpose is rendering
+   * documents from cross-step data.  Preloading them early causes stale/empty
+   * previews because the CHEFS custom scripts execute before the user has
+   * filled in the steps the preview depends on.  Skipping them during
+   * background preload ensures they always get a fresh initStep with current
+   * accumulated data when the user actually navigates there.
+   */
+  function isPreviewOnlyStep(stepKey: string): boolean {
+    const substeps = Object.entries(props.substepToStepMap)
+      .filter(([sub, parent]) => parent === stepKey && sub !== stepKey)
+      .map(([sub]) => sub);
+    if (substeps.length === 0) return false;
+    return substeps.every((s) => s.includes('preview') || s.includes('print'));
+  }
+
   let isBackgroundPreloading = false;
 
   async function preloadStepsInBackground() {
@@ -1091,6 +1109,7 @@
         if (isSurveyStep(stepKey)) continue;
         if (stepKey === props.activeStep) continue;
         if (initializedSteps.has(stepKey)) continue;
+        if (isPreviewOnlyStep(stepKey)) continue;
 
         initializedSteps.add(stepKey);
         await initStep(stepKey);
@@ -1427,6 +1446,10 @@
     window.wizardGetPersistedPayload = () => buildPersistedPayload();
 
     // Bridge expected by CHEFS schema scripts in preview/print substeps.
+    // Generation counter so concurrent previewPdf calls don't race —
+    // only the most recent call's result is applied to the iframe.
+    let previewGeneration = 0;
+
     window.probate = {
       generatePdf: async (
         templateKey: string,
@@ -1490,16 +1513,43 @@
 
         if (!frame) return;
 
+        // Build complete submission data by reading each step form's own
+        // fields directly — this bypasses the wizard store and is immune
+        // to timing issues with store capture gates.
+        const submissionData: Record<string, any> = {};
+        for (const [sKey, el] of Object.entries(stepEls)) {
+          const formData = el?.formioInstance?.data;
+          if (!formData) continue;
+          const ownKeys = stepOwnedKeys[sKey];
+          if (ownKeys) {
+            for (const key of ownKeys) {
+              if (!key.startsWith('_') && !CAPTURE_EXCLUDED_KEYS.has(key)) {
+                submissionData[key] = formData[key];
+              }
+            }
+          }
+        }
+
+        const generation = ++previewGeneration;
+
+        const { url } = await reportService.generateReport({
+          templateKey,
+          submissionData,
+        });
+
+        // A newer previewPdf call was made while we were awaiting —
+        // discard this stale result so it doesn't overwrite the latest.
+        if (generation !== previewGeneration) {
+          URL.revokeObjectURL(url);
+          return;
+        }
+
         const oldSrc = frame.getAttribute('src') ?? '';
         if (oldSrc.startsWith('blob:')) {
           URL.revokeObjectURL(oldSrc);
           activeBlobUrls.delete(oldSrc);
         }
 
-        const { url } = await reportService.generateReport({
-          templateKey,
-          submissionData: data,
-        });
         activeBlobUrls.add(url);
         frame.setAttribute('src', url);
         frame.setAttribute('data-pdf-loaded', 'true');
