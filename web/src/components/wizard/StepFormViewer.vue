@@ -1433,10 +1433,15 @@
       autoSaveEnableTimer = null;
       if (unmounted) return;
       autoSaveEnabled.value = true;
-      // Only the active step - background-preloaded steps the user never
-      // touched shouldn't be force-captured/saved this early.
-      if (initializedSteps.has(props.activeStep)) {
-        catchUpAutoSave(props.activeStep);
+      // Catch up ALL steps the user has visited — not just the active one.
+      // Steps the user navigated past before autoSaveEnabled was set still
+      // have their data in the hidden form instance but never got captured
+      // into the store.  Background-preloaded (but never visited) steps are
+      // excluded to avoid overwriting hydrated data with form defaults.
+      for (const stepKey of visitedSteps) {
+        if (initializedSteps.has(stepKey)) {
+          catchUpAutoSave(stepKey);
+        }
       }
     }, 5000);
     window.wizardGoToField = goToField;
