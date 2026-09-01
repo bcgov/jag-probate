@@ -882,22 +882,17 @@
 
       // Capture this step's own data into the shared store on every change.
       el.addEventListener('formio:change', (e: CustomEvent) => {
-        // Capture to the in-memory store once the form's initial default-data
-        // burst has settled (rt.formReady, ~2 s after init).  This is safe
-        // before autoSaveEnabled because it only writes to the Pinia store,
-        // not the backend — ensuring cross-step accumulated data is always
-        // available for preview/print substeps.
-        if (rt.formReady) {
+        // Only capture and auto-save once the hydration grace period has
+        // elapsed.  During form initialisation the component fires change
+        // events with empty / default data — writing those back into
+        // wizardDataStore would overwrite the correctly hydrated values
+        // that were loaded from the API.
+        if (rt.formReady && autoSaveEnabled.value) {
           try {
             captureStepData(stepKey, e.detail);
           } catch {
             /* ignore */
           }
-        }
-        // Backend persistence waits for the full hydration grace period
-        // (autoSaveEnabled, ~5 s) so preloaded forms don't overwrite
-        // API-hydrated data with defaults.
-        if (rt.formReady && autoSaveEnabled.value) {
           rt.dirty = true;
           scheduleAutoSave(stepKey);
 
@@ -1283,7 +1278,7 @@
   watch(
     () => props.activeStep,
     (newStep, oldStep) => {
-      if (oldStep && oldStep !== newStep) {
+      if (oldStep && oldStep !== newStep && autoSaveEnabled.value) {
         captureStepData(oldStep);
       }
       activateStep(newStep);
@@ -1518,11 +1513,28 @@
 
         if (!frame) return;
 
+        // Build complete submission data by reading each step form's own
+        // fields directly — this bypasses the wizard store and is immune
+        // to timing issues with store capture gates.
+        const submissionData: Record<string, any> = {};
+        for (const [sKey, el] of Object.entries(stepEls)) {
+          const formData = el?.formioInstance?.data;
+          if (!formData) continue;
+          const ownKeys = stepOwnedKeys[sKey];
+          if (ownKeys) {
+            for (const key of ownKeys) {
+              if (!key.startsWith('_') && !CAPTURE_EXCLUDED_KEYS.has(key)) {
+                submissionData[key] = formData[key];
+              }
+            }
+          }
+        }
+
         const generation = ++previewGeneration;
 
         const { url } = await reportService.generateReport({
           templateKey,
-          submissionData: data,
+          submissionData,
         });
 
         // A newer previewPdf call was made while we were awaiting —
