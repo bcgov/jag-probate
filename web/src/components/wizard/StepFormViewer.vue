@@ -882,17 +882,22 @@
 
       // Capture this step's own data into the shared store on every change.
       el.addEventListener('formio:change', (e: CustomEvent) => {
-        // Only capture and auto-save once the hydration grace period has
-        // elapsed.  During form initialisation the component fires change
-        // events with empty / default data — writing those back into
-        // wizardDataStore would overwrite the correctly hydrated values
-        // that were loaded from the API.
-        if (rt.formReady && autoSaveEnabled.value) {
+        // Capture to the in-memory store once the form's initial default-data
+        // burst has settled (rt.formReady, ~2 s after init).  This is safe
+        // before autoSaveEnabled because it only writes to the Pinia store,
+        // not the backend — ensuring cross-step accumulated data is always
+        // available for preview/print substeps.
+        if (rt.formReady) {
           try {
             captureStepData(stepKey, e.detail);
           } catch {
             /* ignore */
           }
+        }
+        // Backend persistence waits for the full hydration grace period
+        // (autoSaveEnabled, ~5 s) so preloaded forms don't overwrite
+        // API-hydrated data with defaults.
+        if (rt.formReady && autoSaveEnabled.value) {
           rt.dirty = true;
           scheduleAutoSave(stepKey);
 
@@ -1278,7 +1283,7 @@
   watch(
     () => props.activeStep,
     (newStep, oldStep) => {
-      if (oldStep && oldStep !== newStep && autoSaveEnabled.value) {
+      if (oldStep && oldStep !== newStep) {
         captureStepData(oldStep);
       }
       activateStep(newStep);
@@ -1433,15 +1438,10 @@
       autoSaveEnableTimer = null;
       if (unmounted) return;
       autoSaveEnabled.value = true;
-      // Catch up ALL steps the user has visited — not just the active one.
-      // Steps the user navigated past before autoSaveEnabled was set still
-      // have their data in the hidden form instance but never got captured
-      // into the store.  Background-preloaded (but never visited) steps are
-      // excluded to avoid overwriting hydrated data with form defaults.
-      for (const stepKey of visitedSteps) {
-        if (initializedSteps.has(stepKey)) {
-          catchUpAutoSave(stepKey);
-        }
+      // Only the active step - background-preloaded steps the user never
+      // touched shouldn't be force-captured/saved this early.
+      if (initializedSteps.has(props.activeStep)) {
+        catchUpAutoSave(props.activeStep);
       }
     }, 5000);
     window.wizardGoToField = goToField;
