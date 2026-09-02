@@ -891,3 +891,8 @@ chefs-form-viewer {
     --shadow-lg: 0 8px 24px rgba(35, 64, 117, 0.14);
     --transition: 0.2s ease;
 }
+
+.probate-example-block {
+    color: var(--color-text-muted) !important;
+    font-style: italic !important;
+}
