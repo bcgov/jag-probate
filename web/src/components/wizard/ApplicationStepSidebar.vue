@@ -126,15 +126,15 @@
 </template>
 
 <script setup lang="ts">
-  import type {
-    WizardNavState,
-    WizardStep,
-    StepStatus,
-  } from '@/types/applicationStep';
   import {
     initWizardState,
     useWizardState,
   } from '@/composables/useWizardState';
+  import type {
+    StepStatus,
+    WizardNavState,
+    WizardStep,
+  } from '@/types/applicationStep';
   import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 
   // ── Props ────────────────────────────────────────────────────────────────────
@@ -416,7 +416,12 @@
       // Save the departing step's data immediately (bypassing the auto-save
       // debounce) — covers Next, Previous, and direct sidebar clicks, since
       // they all funnel through this single navigation choke point.
-      window.wizardSaveStep?.(activeSubstep.value);
+      void window
+        .wizardSaveStep?.(
+          activeSubstep.value,
+          getParentStepKey(activeSubstep.value) ?? activeSubstep.value
+        )
+        .catch(() => undefined);
     }
 
     activeSubstep.value = resolved;
@@ -557,6 +562,18 @@
     }
   }
 
+  function isActiveBridgeSource(sourceStepKey?: string): boolean {
+    if (!sourceStepKey) return true;
+    const activeRoot =
+      getParentStepKey(activeSubstep.value) ?? activeSubstep.value;
+    const sourceRoot = getParentStepKey(sourceStepKey) ?? sourceStepKey;
+    if (sourceRoot === activeRoot) return true;
+    console.warn(
+      `[ApplicationStepSidebar] Ignored bridge call from inactive step "${sourceRoot}".`
+    );
+    return false;
+  }
+
   // ── Computed exposed values ───────────────────────────────────────────────────
 
   const hasPrev = computed(
@@ -582,15 +599,44 @@
   // Remove these once CHEFS forms no longer contain wizard/nav JS (Step 3).
 
   function registerWindowFunctions() {
-    window.wizardUpdateSidebar = updateSidebar;
-    window.wizardNavigateNext = navigateNext;
-    window.wizardNavigatePrevious = navigatePrevious;
-    window.wizardSetStepStatus = setStepStatus;
-    window.wizardSetAllStatuses = setAllStatuses;
-    window.wizardSetStepVisibility = setStepVisibility;
-    window.wizardSetSubstepVisibility = setSubstepVisibility;
-    window.wizardSetAllVisibility = setAllVisibility;
-    window.wizardSetStepClickable = setStepClickable;
+    window.wizardUpdateSidebar = (stepKey, sourceStepKey) => {
+      if (isActiveBridgeSource(sourceStepKey)) updateSidebar(stepKey);
+    };
+    window.wizardNavigateNext = (sourceStepKey) => {
+      if (isActiveBridgeSource(sourceStepKey)) navigateNext();
+    };
+    window.wizardNavigatePrevious = (sourceStepKey) => {
+      if (isActiveBridgeSource(sourceStepKey)) navigatePrevious();
+    };
+    window.wizardSetStepStatus = (substepKey, status, sourceStepKey) => {
+      if (isActiveBridgeSource(sourceStepKey))
+        setStepStatus(substepKey, status);
+    };
+    window.wizardSetAllStatuses = (map, sourceStepKey) => {
+      if (isActiveBridgeSource(sourceStepKey)) setAllStatuses(map);
+    };
+    window.wizardSetStepVisibility = (stepKey, isVisible, sourceStepKey) => {
+      if (isActiveBridgeSource(sourceStepKey)) {
+        setStepVisibility(stepKey, isVisible);
+      }
+    };
+    window.wizardSetSubstepVisibility = (
+      substepKey,
+      isVisible,
+      sourceStepKey
+    ) => {
+      if (isActiveBridgeSource(sourceStepKey)) {
+        setSubstepVisibility(substepKey, isVisible);
+      }
+    };
+    window.wizardSetAllVisibility = (nextState, sourceStepKey) => {
+      if (isActiveBridgeSource(sourceStepKey)) setAllVisibility(nextState);
+    };
+    window.wizardSetStepClickable = (stepKey, isClickable, sourceStepKey) => {
+      if (isActiveBridgeSource(sourceStepKey)) {
+        setStepClickable(stepKey, isClickable);
+      }
+    };
     // Note: window.wizardValidateStep is owned by StepFormViewer (it has direct
     // access to the Form.io instance) — not assigned here.
   }
@@ -610,6 +656,18 @@
     fns.forEach((fn) => delete window[fn]);
   }
 
+  // Register before mounted hooks run so CHEFS schema scripts can call the
+  // bridge while the first form is initializing.
+  if (props.registerBridge) {
+    initWizardState(
+      props.initialStep,
+      props.initialNavState,
+      props.initialStatusMap,
+      props.initialDisabledMap
+    );
+    registerWindowFunctions();
+  }
+
   let resizeCleanup: (() => void) | null = null;
   let hasAppliedInitialStep = false;
 
@@ -618,18 +676,6 @@
   }
 
   onMounted(() => {
-    // Primary instance seeds the shared state; secondary instances (mobile drawer)
-    // skip this so they don't overwrite what the primary already set.
-    if (props.registerBridge) {
-      initWizardState(
-        props.initialStep,
-        props.initialNavState,
-        props.initialStatusMap,
-        props.initialDisabledMap
-      );
-      registerWindowFunctions();
-    }
-
     // Keep collapsed state in sync with viewport — reset to expanded on small screens
     // so Vue state never contradicts the CSS override.
     function syncCollapsedToViewport() {
@@ -642,9 +688,12 @@
       window.removeEventListener('resize', syncCollapsedToViewport);
     syncCollapsedToViewport();
 
-    // Navigate to first visible substep (or initialStep if already visible).
-    applyInitialStep(props.initialStep);
-    hasAppliedInitialStep = true;
+    // Only the primary instance seeds shared state. The hidden mobile sidebar
+    // mounts when the form becomes ready and must not overwrite resume state.
+    if (props.registerBridge) {
+      applyInitialStep(props.initialStep);
+      hasAppliedInitialStep = true;
+    }
   });
 
   // The parent resolves the resumed step/substep from an independent network

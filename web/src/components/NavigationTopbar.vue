@@ -42,6 +42,7 @@
           v-if="authStore.isAuthenticated && isApplicationInProgress"
           class="btn btn-link text-white text-decoration-none btn-save-exit d-lg-none me-3"
           aria-label="Save and exit"
+          :disabled="isSavingAndExiting"
           @click="handleSaveAndExit"
         >
           <font-awesome-icon icon="floppy-disk" class="me-1" />
@@ -66,6 +67,7 @@
           <button
             v-if="isApplicationInProgress"
             class="btn btn-link text-white text-decoration-none btn-save-exit me-3"
+            :disabled="isSavingAndExiting"
             @click="handleSaveAndExit"
           >
             <font-awesome-icon icon="floppy-disk" class="me-1" />
@@ -105,6 +107,14 @@
       </div>
     </nav>
 
+    <div
+      v-if="saveAndExitError"
+      class="alert alert-danger m-0 rounded-0 text-center"
+      role="alert"
+    >
+      We could not save your application. Please try again.
+    </div>
+
     <!-- Mobile drawer for non-wizard pages (wizard pages use their own drawer) -->
     <Teleport to="body">
       <div
@@ -131,6 +141,7 @@
             <button
               v-if="isApplicationInProgress"
               class="topbar-mobile-action"
+              :disabled="isSavingAndExiting"
               @click="handleSaveAndExit"
             >
               <font-awesome-icon icon="floppy-disk" class="me-2" />
@@ -156,13 +167,13 @@
 </template>
 
 <script setup lang="ts">
-  import { BDropdown, BDropdownItem } from 'bootstrap-vue-next';
   import {
     useAuthStore,
     useLayoutStore,
     useRuntimeConfigStore,
   } from '@/stores';
-  import { computed } from 'vue';
+  import { BDropdown, BDropdownItem } from 'bootstrap-vue-next';
+  import { computed, ref } from 'vue';
   import { useRoute, useRouter } from 'vue-router';
 
   const layoutStore = useLayoutStore();
@@ -170,6 +181,8 @@
   const runtimeConfigStore = useRuntimeConfigStore();
   const router = useRouter();
   const route = useRoute();
+  const isSavingAndExiting = ref(false);
+  const saveAndExitError = ref(false);
 
   const isOnPreviousActivity = computed(
     () => route.path === '/previous-activity'
@@ -207,16 +220,20 @@
    * implemented and will be wired up once the backend supports it.
    */
   const handleSaveAndExit = async () => {
+    if (isSavingAndExiting.value) return;
+    isSavingAndExiting.value = true;
+    saveAndExitError.value = false;
     layoutStore.closeMobileNav();
-    // Flush all pending auto-saves before navigating away.
-    if (typeof window.wizardFlushAll === 'function') {
-      try {
+    try {
+      if (typeof window.wizardFlushAll === 'function') {
         await window.wizardFlushAll();
-      } catch {
-        // Best-effort — navigate regardless.
       }
+      await router.push('/previous-activity');
+    } catch {
+      saveAndExitError.value = true;
+    } finally {
+      isSavingAndExiting.value = false;
     }
-    router.push('/previous-activity');
   };
 
   const environment = computed(() => runtimeConfigStore.environmentLabel);

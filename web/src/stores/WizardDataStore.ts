@@ -35,13 +35,23 @@ export const useWizardDataStore = defineStore('wizardData', () => {
    * - Keys starting with `_` (transient form-controller objects) are excluded.
    * - Wizard-managed keys are excluded.
    * - Later steps overwrite earlier steps for the same key (last-write wins).
+   * - Container fields (e.g. `applicant.applicantCourthouseName`) are also
+   *   exposed flat, since normalizeContainerCapture() strips their flat
+   *   alias before saving, and other steps expect the flat key on inject.
    */
   const accumulatedData = computed<Record<string, any>>(() => {
     const result: Record<string, any> = {};
     for (const data of Object.values(stepData.value)) {
       for (const [key, value] of Object.entries(data)) {
-        if (!key.startsWith('_') && !WIZARD_MANAGED_KEYS.has(key)) {
-          result[key] = value;
+        if (key.startsWith('_') || WIZARD_MANAGED_KEYS.has(key)) continue;
+        result[key] = value;
+
+        if (value && typeof value === 'object' && !Array.isArray(value)) {
+          for (const [childKey, childValue] of Object.entries(value)) {
+            if (childKey.startsWith('_') || WIZARD_MANAGED_KEYS.has(childKey))
+              continue;
+            result[childKey] = childValue;
+          }
         }
       }
     }

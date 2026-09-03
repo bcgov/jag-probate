@@ -55,7 +55,9 @@ usage() {
   stop - Stops the services.  This is a non-destructive process.  The containers
          are not deleted so they will be reused the next time you run start.
 
-  down | rm - Brings down the services and removes the volumes (storage) and containers. Destructive.
+  down - Brings down the services and removes containers and networks. Volumes are preserved.
+
+  rm - Brings down the services and removes volumes (storage) and containers. Destructive.
 EOF
 exit 1
 }
@@ -229,12 +231,16 @@ case "$COMMAND" in
     export DEBUG_MODE=1
     _startupParams=$(getStartupParams $@)
     configureEnvironment $@
-    docker-compose up ${_startupParams}
+    docker-compose up --menu ${_startupParams}
     ;;
   stop)
     docker-compose stop
     ;;
-  rm|down)
+  down)
+    configureEnvironment
+    docker-compose down
+    ;;
+  rm)
     configureEnvironment
     deleteVolumes
     ;;

@@ -1,0 +1,137 @@
+import { initWizardState, useWizardState } from '@/composables/useWizardState';
+import type { WizardStep } from '@/types/applicationStep';
+import { describe, expect, it, vi } from 'vitest';
+import { createApp, nextTick } from 'vue';
+import ApplicationStepSidebar from './ApplicationStepSidebar.vue';
+
+describe('ApplicationStepSidebar', () => {
+  it('shows statuses restored after the primary sidebar has initialized', async () => {
+    const steps: WizardStep[] = [
+      {
+        key: 'step1',
+        number: 1,
+        title: 'First',
+        defaultSubstep: 'step1-a',
+        substeps: [{ key: 'step1-a', label: 'First A' }],
+      },
+      {
+        key: 'step4',
+        number: 4,
+        title: 'Fourth',
+        defaultSubstep: 'step4-a',
+        substeps: [{ key: 'step4-a', label: 'Fourth A' }],
+      },
+    ];
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const app = createApp(ApplicationStepSidebar, {
+      steps,
+      initialStep: 'step1-a',
+    });
+    app.config.warnHandler = () => {};
+    app.mount(host);
+
+    initWizardState(
+      'step4-a',
+      { hiddenSteps: {}, hiddenSubsteps: {} },
+      { 'step1-a': 'completed', 'step4-a': 'incomplete' },
+      {}
+    );
+    await nextTick();
+
+    expect(useWizardState().statusMap['step1-a']).toBe('completed');
+    expect(useWizardState().statusMap['step4-a']).toBe('incomplete');
+
+    app.unmount();
+    host.remove();
+  });
+
+  it('does not reset shared resume state when a secondary sidebar mounts', async () => {
+    const steps: WizardStep[] = [
+      {
+        key: 'step1',
+        number: 1,
+        title: 'First',
+        defaultSubstep: 'step1-a',
+        substeps: [{ key: 'step1-a', label: 'First A' }],
+      },
+      {
+        key: 'step4',
+        number: 4,
+        title: 'Fourth',
+        defaultSubstep: 'step4-a',
+        substeps: [
+          { key: 'step4-a', label: 'Fourth A' },
+          { key: 'step4-b', label: 'Fourth B' },
+        ],
+      },
+    ];
+    initWizardState('step4-b', { hiddenSteps: {}, hiddenSubsteps: {} }, {}, {});
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const app = createApp(ApplicationStepSidebar, {
+      steps,
+      initialStep: 'step4',
+      registerBridge: false,
+    });
+    app.config.warnHandler = () => {};
+
+    app.mount(host);
+    await nextTick();
+
+    expect(useWizardState().activeSubstep.value).toBe('step4-b');
+
+    app.unmount();
+    host.remove();
+  });
+
+  it('accepts active and legacy bridge calls but rejects inactive sources', async () => {
+    const steps: WizardStep[] = [
+      {
+        key: 'step1',
+        number: 1,
+        title: 'First',
+        defaultSubstep: 'step1-a',
+        substeps: [{ key: 'step1-a', label: 'First A' }],
+      },
+      {
+        key: 'step4',
+        number: 4,
+        title: 'Fourth',
+        defaultSubstep: 'step4-a',
+        substeps: [{ key: 'step4-a', label: 'Fourth A' }],
+      },
+    ];
+    initWizardState('step4-a', { hiddenSteps: {}, hiddenSubsteps: {} }, {}, {});
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const app = createApp(ApplicationStepSidebar, {
+      steps,
+      // Primary (registerBridge: true) sidebars are always seeded with a
+      // substep key in production (see ApplicationManager's
+      // firstWizardSubstepKey) — a bare step key here isn't resolvable by
+      // getFallbackSubstep and would seed the wrong active substep.
+      initialStep: 'step4-a',
+    });
+    app.config.warnHandler = () => {};
+    app.mount(host);
+    await nextTick();
+
+    window.wizardSetStepStatus?.('step4-a', 'completed', 'step4-a');
+    window.wizardSetStepVisibility?.('step4', false, 'step1-a');
+    window.wizardSetStepClickable?.('step1', false);
+
+    const state = useWizardState();
+    expect(state.statusMap['step4-a']).toBe('completed');
+    expect(state.navState.hiddenSteps['step4']).toBeUndefined();
+    expect(state.activeSubstep.value).toBe('step4-a');
+    expect(state.disabledMap['step1']).toBe(true);
+    expect(warn).toHaveBeenCalledOnce();
+
+    app.unmount();
+    host.remove();
+    warn.mockRestore();
+  });
+});

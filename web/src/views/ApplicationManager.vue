@@ -2,7 +2,8 @@
   <div class="wizard-preview-layout">
     <!-- Desktop sidebar -->
     <div
-      v-if="!isSurveyStep && isActiveStepLoaded"
+      v-if="activeStep && !isSurveyStep"
+      v-show="isActiveStepLoaded"
       class="wizard-col d-none d-lg-block"
     >
       <ApplicationStepSidebar
@@ -30,6 +31,7 @@
         @saved="onStepSaved"
         @needs-submission="onNeedsSubmission"
         @resume-wizard-state="onResumeWizardState"
+        @hydration-complete="onHydrationComplete"
         @step-ready="onStepReady"
       />
 
@@ -155,23 +157,27 @@
 </template>
 
 <script setup lang="ts">
-  import StepNavButtons from '@/components/wizard/StepNavButton.vue';
   import ApplicationStepSidebar from '@/components/wizard/ApplicationStepSidebar.vue';
   import StepFormViewer from '@/components/wizard/StepFormViewer.vue';
-  import { useAuthStore, useLayoutStore } from '@/stores';
-  import { useRoute, useRouter } from 'vue-router';
+  import StepNavButtons from '@/components/wizard/StepNavButton.vue';
+  import { repairResumeVisibility } from '@/components/wizard/resumeWizardState';
   import {
-    mapSidebarStepsToWizardSteps,
+    initWizardState,
+    useWizardState,
+  } from '@/composables/useWizardState';
+  import {
     deriveInitialNavState,
+    mapSidebarStepsToWizardSteps,
   } from '@/config/wizardSteps';
+  import type ChefsService from '@/services/ChefsService';
+  import { useAuthStore, useLayoutStore } from '@/stores';
   import type {
     StepStatus,
     WizardNavState,
     WizardStep,
   } from '@/types/applicationStep';
-  import { useWizardState } from '@/composables/useWizardState';
   import { computed, inject, onMounted, onUnmounted, ref } from 'vue';
-  import type ChefsService from '@/services/ChefsService';
+  import { useRoute, useRouter } from 'vue-router';
 
   const chefsService = inject<ChefsService>('chefsService')!;
   const route = useRoute();
@@ -275,10 +281,8 @@
       // with the real saved state if the carrier step has one.
       initialNavState.value = deriveInitialNavState(wizardStepDtos);
 
-      if (!activeStep.value) {
-        activeStep.value = submissionPublicId.value
-          ? firstWizardStepKey.value
-          : surveyStepKey.value;
+      if (!activeStep.value && !submissionPublicId.value) {
+        activeStep.value = surveyStepKey.value;
       }
     } catch (error) {
       console.error('Failed to load sidebar structure from backend', error);
@@ -349,7 +353,15 @@
   }
 
   function onSurveyComplete() {
+    if (activeStep.value !== surveyStepKey.value) return;
     activeStep.value = firstWizardStepKey.value;
+  }
+
+  function onHydrationComplete() {
+    if (activeStep.value) return;
+    activeStep.value = submissionPublicId.value
+      ? firstWizardStepKey.value
+      : surveyStepKey.value;
   }
 
   function onResumeWizardState(state: {
@@ -360,14 +372,25 @@
     statusMap: Record<string, string>;
     disabledMap: Record<string, boolean>;
   }) {
-    resumeSubstepKey.value = state.activeSubstep || state.activeStep;
+    const repairedState = repairResumeVisibility(state, wizardSteps.value);
+    resumeSubstepKey.value =
+      repairedState.activeSubstep || repairedState.activeStep;
     persistedNavState.value = {
-      hiddenSteps: state.hiddenSteps,
-      hiddenSubsteps: state.hiddenSubsteps,
+      hiddenSteps: repairedState.hiddenSteps,
+      hiddenSubsteps: repairedState.hiddenSubsteps,
     };
-    persistedStatusMap.value = state.statusMap as Record<string, StepStatus>;
-    persistedDisabledMap.value = state.disabledMap;
-    activeStep.value = state.activeStep;
+    persistedStatusMap.value = repairedState.statusMap as Record<
+      string,
+      StepStatus
+    >;
+    persistedDisabledMap.value = repairedState.disabledMap;
+    initWizardState(
+      resumeSubstepKey.value,
+      persistedNavState.value,
+      persistedStatusMap.value,
+      persistedDisabledMap.value
+    );
+    activeStep.value = repairedState.activeStep;
   }
 
   function onMobileNavigate(stepKey: string) {
