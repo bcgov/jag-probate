@@ -1493,10 +1493,16 @@
 
         if (!frame) return;
 
-        // Build complete submission data by reading each step form's own
-        // fields directly — this bypasses the wizard store and is immune
-        // to timing issues with store capture gates.
-        const submissionData: Record<string, any> = {};
+        // Start from the hydrated store, which covers every step ever
+        // persisted for this submission — not just ones mounted this
+        // session (background preloading was removed, so on resume only
+        // the step(s) actually visited have a live formio instance).
+        // Then overlay each currently-mounted step's own live fields so
+        // just-typed edits aren't missed while waiting on the store's
+        // autosave capture gates.
+        const submissionData: Record<string, any> = {
+          ...wizardDataStore.accumulatedData,
+        };
         for (const [sKey, el] of Object.entries(stepEls)) {
           const formData = el?.formioInstance?.data;
           if (!formData) continue;
