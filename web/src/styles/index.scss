@@ -1,8 +1,8 @@
+/* === CHEFS overrides === */
+@use './chefs-form.scss';
+
 /* === Import BC Gov Bootstrap v5 Theme === */
 @import '@bcgov/bootstrap-v5-theme/css/bootstrap-theme.min.css';
-
-/* === CHEFS overrides === */
-@import './chefs-form.scss';
 
 /* Remove max-width caps only inside CHEFS hosts to avoid global Vuetify impact */
 .chefs-form-viewer .v-container,

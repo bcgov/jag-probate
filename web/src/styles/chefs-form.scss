@@ -929,8 +929,19 @@ chefs-form-viewer {
   --transition: 0.2s ease;
 }
 
-.probate-example-block
+.probate-example-block {
   *:not([data-tooltip]):not([data-tippy-root]):not([data-tippy-root] *) {
-  color: var(--color-text-muted) !important;
-  font-style: italic !important;
+    color: var(--color-text-muted) !important;
+    font-style: italic !important;
+  }
+
+  [data-tippy-root],
+  [data-tippy-root] * {
+    font-style: normal !important;
+  }
+
+  [data-tippy-root] a,
+  [data-tippy-root] * a {
+    color: #4da3ff !important;
+  }
 }
