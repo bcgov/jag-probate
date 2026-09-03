@@ -109,7 +109,11 @@ describe('ApplicationStepSidebar', () => {
     document.body.appendChild(host);
     const app = createApp(ApplicationStepSidebar, {
       steps,
-      initialStep: 'step4',
+      // Primary (registerBridge: true) sidebars are always seeded with a
+      // substep key in production (see ApplicationManager's
+      // firstWizardSubstepKey) — a bare step key here isn't resolvable by
+      // getFallbackSubstep and would seed the wrong active substep.
+      initialStep: 'step4-a',
     });
     app.config.warnHandler = () => {};
     app.mount(host);
