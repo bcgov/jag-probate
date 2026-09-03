@@ -797,8 +797,6 @@ async function initStep(stepKey: string, _retryCount = 0) {
         // Set data.currentStep and data.currentSubstep so CHEFS onChange guards work.
         try {
           if (el.formioInstance?.data !== undefined) {
-            const accumulated = wizardDataStore.accumulatedData;
-
             // On cached form loads, formio:ready can fire before the
             // component tree has built its default data object.  In that
             // case we defer injection until the data object is populated.
@@ -827,6 +825,10 @@ async function initStep(stepKey: string, _retryCount = 0) {
               }
               stepInjectedKeys[stepKey] = otherStepKeys;
 
+              // Read fresh here (not captured before the deferred wait above)
+              // so a hydration fetch that finishes while we waited for the
+              // change event isn't missed.
+              const accumulated = wizardDataStore.accumulatedData;
               if (Object.keys(accumulated).length > 0) {
                 Object.assign(el.formioInstance.data, accumulated);
               }
@@ -836,11 +838,21 @@ async function initStep(stepKey: string, _retryCount = 0) {
             if (Object.keys(el.formioInstance.data).length === 0) {
               // Form component tree not ready yet — wait for the first
               // change event which signals that default data is populated.
-              const onceChange = () => {
+              // Schemas with no input components (e.g. static/instructional
+              // steps like Filing Instructions) never fire that change
+              // event at all, so also fall back to injecting unconditionally
+              // after a short bounded wait — otherwise injection never runs.
+              let injected = false;
+              const runInjectOnce = () => {
+                if (injected || unmounted) return;
+                injected = true;
                 el.formioInstance?.off?.('change', onceChange);
+                clearTimeout(injectFallbackTimer);
                 injectData();
               };
+              const onceChange = () => runInjectOnce();
               el.formioInstance.on?.('change', onceChange);
+              const injectFallbackTimer = setTimeout(runInjectOnce, 500);
             } else {
               injectData();
             }
