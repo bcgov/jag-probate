@@ -35,7 +35,7 @@
         <PackageReference Include="Swashbuckle.AspNetCore.Newtonsoft" Version="7.2.0" />
         <PackageReference Include="Swashbuckle.AspNetCore.Annotations" Version="7.2.0" />
         <PackageReference Include="EFCore.NamingConventions" Version="10.0.1" />
-        <PackageReference Include="Refit" Version="10.0.1" />
+        <PackageReference Include="Refit" Version="15.2.0" />
         <PackageReference Include="Refit.HttpClientFactory" Version="10.0.1" />
         <PackageReference Include="Refit.Newtonsoft.Json" Version="10.0.1" />
     </ItemGroup>
