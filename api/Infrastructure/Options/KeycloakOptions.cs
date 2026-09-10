@@ -13,6 +13,8 @@ namespace Probate.Api.Infrastructure.Options
 
         public static readonly TimeSpan DefaultRefreshThreshold = TimeSpan.FromMinutes(5);
 
+        public static readonly TimeSpan DefaultIdleTimeout = TimeSpan.FromMinutes(30);
+
         /// <summary>
         /// Keycloak authority URL (e.g., https://keycloak.example.com/auth/realms/your-realm).
         /// This is used as the OpenID Connect provider endpoint.
@@ -41,5 +43,12 @@ namespace Probate.Api.Infrastructure.Options
         /// (Optional) Refresh threshold (TimeSpan format) for refreshing access tokens.
         /// </summary>
         public string? RefreshThreshold { get; set; }
+
+        /// <summary>
+        /// (Optional) Idle timeout (TimeSpan format) for the authentication cookie.
+        /// If the user makes no request within this window, the session expires and
+        /// they must sign in again. Defaults to <see cref="DefaultIdleTimeout"/> (30 minutes).
+        /// </summary>
+        public string? IdleTimeout { get; set; }
     }
 }

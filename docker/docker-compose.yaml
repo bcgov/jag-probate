@@ -38,6 +38,7 @@ services:
       - Keycloak__Secret=${OIDC_RP_CLIENT_SECRET}
       - Keycloak__KcIdpHint=${OIDC_RP_KC_IDP_HINT}
       - Keycloak__RefreshThreshold=${OIDC_RP_REFRESH_THRESHOLD:-00:05:00}
+      - Keycloak__IdleTimeout=${OIDC_RP_IDLE_TIMEOUT:-00:01:00}
       - TokenRefreshThreshold=${TOKEN_REFRESH_THRESHOLD}
       - Chefs__Forms__legal__FormId=${CHEFS_FORM_LEGAL_FORMID}
       - Chefs__Forms__legal__ApiKey=${CHEFS_FORM_LEGAL_API_KEY}
