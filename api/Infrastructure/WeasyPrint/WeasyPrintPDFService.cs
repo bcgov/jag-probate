@@ -81,12 +81,22 @@ public class WeasyPrintPDFService : IPDFGenerationService
             };
             return result;
         }
-        catch (Exception ex)
+        catch (HttpRequestException ex)
         {
-            _logger.LogError(ex, "Exception generating PDF using WeasyPrint");
+            _logger.LogError(ex, "HTTP error generating PDF using WeasyPrint");
             result.ResultError = new ReportRequestResultError
             {
-                ReportResultMessage = $"Exception generating PDF using WeasyPrint: {ex.Message}",
+                ReportResultMessage = $"HTTP error generating PDF using WeasyPrint: {ex.Message}",
+                ErrorCode = "CommunicationInternal_PDFGeneration",
+            };
+            return result;
+        }
+        catch (IOException ex)
+        {
+            _logger.LogError(ex, "I/O error generating PDF using WeasyPrint");
+            result.ResultError = new ReportRequestResultError
+            {
+                ReportResultMessage = $"I/O error generating PDF using WeasyPrint: {ex.Message}",
                 ErrorCode = "CommunicationInternal_PDFGeneration",
             };
             return result;
