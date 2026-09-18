@@ -8,8 +8,8 @@ using Newtonsoft.Json.Linq;
 namespace Probate.Api.Helpers;
 
 /// <summary>
-/// Enriches raw CHEFS submission data with computed fields before passing to CDOGS.
-/// Only fields that cannot be expressed in a Carbone template are computed here.
+/// Enriches raw CHEFS submission data with computed fields before PDF rendering.
+/// Only fields that must be computed before template rendering are added here.
 /// </summary>
 public static class SubmissionEnricher
 {

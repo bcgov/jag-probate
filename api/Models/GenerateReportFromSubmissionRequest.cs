@@ -3,7 +3,7 @@ namespace Probate.Api.Models;
 public class GenerateReportFromSubmissionRequest
 {
     /// <summary>
-    /// Logical template key, e.g. "P1". Resolved server-side to a .docx file.
+    /// Logical template key, e.g. "P1". Resolved server-side to an HTML template group.
     /// </summary>
     public string TemplateKey { get; set; } = string.Empty;
 
