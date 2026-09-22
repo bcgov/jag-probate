@@ -75,7 +75,7 @@ public class TemplateService : ITemplateService
                 );
 
             var context = new TemplateContext();
-            context.SetValue("submission", submissionData);
+            context.SetValue("Model", submissionData);
             documents.Add(template.Render(context));
         }
 

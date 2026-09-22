@@ -218,67 +218,6 @@ public static class SubmissionEnricher
         };
     }
 
-    /// <summary>
-    /// Enriches P9 submission data with delivery groups:
-    /// - hasInPerson / deliveredInPerson
-    /// - hasByMail / deliveredByMail
-    /// - hasElectronic / deliveredElectronic
-    /// </summary>
-    public static object EnrichP9(object submissionData)
-    {
-        var root = submissionData is JObject jo
-            ? jo
-            : JObject.Parse(JsonSerializer.Serialize(submissionData));
-
-        var notifyData = root.SelectToken("notifyPeople.notifyPeopleData") as JArray;
-
-        var inPerson = new List<JObject>();
-        var byMail = new List<JObject>();
-        var electronic = new List<JObject>();
-
-        if (notifyData != null)
-        {
-            foreach (
-                var item in notifyData
-                    .OfType<JObject>()
-                    .Where(item => item.Value<string>("p1Delivered") == "yes")
-            )
-            {
-                var name = item.Value<string>("recipientName") ?? "";
-                var role = item.Value<string>("recipientRole") ?? "";
-                var displayName = !string.IsNullOrWhiteSpace(role) ? $"{name} ({role})" : name;
-
-                var entry = new JObject
-                {
-                    ["recipientName"] = displayName,
-                    ["deliveryDate"] = FormatDate(item.Value<string>("deliveryDate")),
-                };
-
-                switch (item.Value<string>("deliveryMethod"))
-                {
-                    case "inperson":
-                        inPerson.Add(entry);
-                        break;
-                    case "mail":
-                        byMail.Add(entry);
-                        break;
-                    case "electronic":
-                        electronic.Add(entry);
-                        break;
-                }
-            }
-        }
-
-        root["hasInPerson"] = inPerson.Count > 0;
-        root["deliveredInPerson"] = new JArray(inPerson);
-        root["hasByMail"] = byMail.Count > 0;
-        root["deliveredByMail"] = new JArray(byMail);
-        root["hasElectronic"] = electronic.Count > 0;
-        root["deliveredElectronic"] = new JArray(electronic);
-
-        return root;
-    }
-
     private static string ExtractFormatAddress(
         JObject src,
         string dataNamePrefix,

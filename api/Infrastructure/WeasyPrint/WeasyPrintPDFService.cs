@@ -35,7 +35,7 @@ public class WeasyPrintPDFService : IPDFGenerationService
 
         try
         {
-            var response = await _weasyPrintApi.GeneratePdfAsync(
+            using var response = await _weasyPrintApi.GeneratePdfAsync(
                 request.Documents,
                 request.FileName,
                 ct
