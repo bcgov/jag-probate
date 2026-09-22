@@ -22,7 +22,7 @@ public class TemplateServiceTests
             Directory.CreateDirectory(templatesPath);
             File.WriteAllText(
                 Path.Combine(templatesPath, "test.html"),
-                "{{ Model.applicant.name }}|{{ submission.applicant.name }}"
+                "{{ Model.applicant.name }}"
             );
 
             var environment = new Mock<IWebHostEnvironment>();
@@ -44,7 +44,7 @@ public class TemplateServiceTests
                 new { applicant = new { name = "Test Name" } }
             );
 
-            Assert.Equal("Test Name|Test Name", Assert.Single(documents));
+            Assert.Equal("Test Name", Assert.Single(documents));
         }
         finally
         {

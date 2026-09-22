@@ -18,7 +18,7 @@ public class WeasyPrintPDFServiceTests
     public async Task GeneratePdfAsync_ReturnsEncodedPdfAndDisposesResponse()
     {
         var content = new TrackingContent("pdf bytes");
-        var response = new HttpResponseMessage(HttpStatusCode.OK) { Content = content };
+        using var response = new HttpResponseMessage(HttpStatusCode.OK) { Content = content };
         var api = new Mock<IWeasyPrintApi>();
         api.Setup(value =>
                 value.GeneratePdfAsync(
@@ -50,7 +50,10 @@ public class WeasyPrintPDFServiceTests
     public async Task GeneratePdfAsync_ReturnsProviderErrorAndDisposesResponse()
     {
         var content = new TrackingContent("Bad request");
-        var response = new HttpResponseMessage(HttpStatusCode.BadRequest) { Content = content };
+        using var response = new HttpResponseMessage(HttpStatusCode.BadRequest)
+        {
+            Content = content,
+        };
         var api = new Mock<IWeasyPrintApi>();
         api.Setup(value =>
                 value.GeneratePdfAsync(
