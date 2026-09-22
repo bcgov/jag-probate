@@ -29,7 +29,7 @@
     "bootstrap": "^5.3.3",
     "bootstrap-vue-next": "^0.45.7",
     "luxon": "^3.7.2",
-    "moment-timezone": "^0.6.2",
+    "moment-timezone": "^0.6.3",
     "pinia": "^3.0.4",
     "underscore": "^1.13.7",
     "uuid": "^13.0.0",
