@@ -12,10 +12,18 @@
     </main>
 
     <NavigationFooter />
+
+    <IdleWarningModal
+      :visible="idleTimeout.showWarning.value"
+      :remaining-seconds="idleTimeout.remainingSeconds.value"
+      @continue-working="idleTimeout.continueWorking"
+      @sign-out="idleTimeout.signOut"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
+  import IdleWarningModal from './components/IdleWarningModal.vue';
   import NavigationFooter from './components/NavigationFooter.vue';
   import NavigationTopbar from './components/NavigationTopbar.vue';
   import { useIdleTimeout } from './composables/useIdleTimeout';
