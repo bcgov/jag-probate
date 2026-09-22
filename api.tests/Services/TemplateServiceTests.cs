@@ -15,15 +15,13 @@ public class TemplateServiceTests
     [Fact]
     public void RenderTemplates_BindsSubmissionDataToModel()
     {
-        var contentRootPath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
+        var temporaryDirectory = Directory.CreateTempSubdirectory();
+        var contentRootPath = temporaryDirectory.FullName;
         try
         {
-            var templatesPath = Path.Combine(contentRootPath, "Templates");
+            var templatesPath = Path.Join(contentRootPath, "Templates");
             Directory.CreateDirectory(templatesPath);
-            File.WriteAllText(
-                Path.Combine(templatesPath, "test.html"),
-                "{{ Model.applicant.name }}"
-            );
+            File.WriteAllText(Path.Join(templatesPath, "test.html"), "{{ Model.applicant.name }}");
 
             var environment = new Mock<IWebHostEnvironment>();
             environment.SetupGet(value => value.ContentRootPath).Returns(contentRootPath);
@@ -48,8 +46,7 @@ public class TemplateServiceTests
         }
         finally
         {
-            if (Directory.Exists(contentRootPath))
-                Directory.Delete(contentRootPath, recursive: true);
+            temporaryDirectory.Delete(recursive: true);
         }
     }
 }
