@@ -1,6 +1,6 @@
 services:
   web:
-    image: "${COMPOSE_PROJECT_NAME}-web"
+    image: '${COMPOSE_PROJECT_NAME}-web'
     environment:
       - API_URL=${API_URL:-http://api:5000}
       - WEB_BASE_HREF=${WEB_BASE_HREF:-/probate/}
@@ -12,9 +12,9 @@ services:
       - CHOKIDAR_USEPOLLING=true
       - VITE_CHEFS_BASE_URL=${CHEFS_BASE_URL}
     ports:
-      - "8080:8080"
+      - '8080:8080'
     volumes:
-      - "${LOCAL_WORKSPACE_FOLDER-..}/web/src:/opt/app-root/src/src"
+      - '${LOCAL_WORKSPACE_FOLDER-..}/web/src:/opt/app-root/src/src'
       - "${LOCAL_WORKSPACE_FOLDER-..}/web/package.json:/opt/app-root/src/packag\
         e.json"
       - "${LOCAL_WORKSPACE_FOLDER-..}/web/vite.config.js:/opt/app-root/src/vite\
@@ -27,7 +27,7 @@ services:
       - api
 
   api:
-    image: "${COMPOSE_PROJECT_NAME}-api"
+    image: '${COMPOSE_PROJECT_NAME}-api'
     environment:
       - ASPNETCORE_URLS=${ASPNETCORE_URLS}
       - ASPNETCORE_ENVIRONMENT=${ASPNETCORE_ENVIRONMENT:-Development}
@@ -110,10 +110,7 @@ services:
       - Chefs__Forms__form-filing__Icon=${CHEFS_FORM_FILING_ICON:-file-arrow-up}
       - Chefs__Forms__form-filing__Children__0__Title=${CHEFS_FORM_FILING_CHILD_0_TITLE:-Filing Instructions}
       - Chefs__BaseUrl=${CHEFS_BASE_URL}
-      - CDogs__BaseUrl=${CDOGS_BASE_URL}
-      - CDogs__TokenUrl=${CDOGS_TOKEN_URL}
-      - CDogs__ClientId=${CDOGS_CLIENT_ID}
-      - CDogs__ClientSecret=${CDOGS_CLIENT_SECRET}
+      - WeasyPrint__BaseUrl=${WEASYPRINT_BASE_URL:-http://weasyprint:5001}
       - EFiling__BaseUrl=${EFiling__BaseUrl}
       - EFiling__KeycloakBaseUrl=${EFiling__KeycloakBaseUrl}
       - EFiling__KeycloakRealm=${EFiling__KeycloakRealm}
@@ -128,11 +125,18 @@ services:
       - api-dev-obj:/opt/app-root/src/api/obj
     depends_on:
       - db
+      - weasyprint
     command: >
       /bin/bash -c "
         echo Waiting for the database service to start up ...;
         sleep 5;
         dotnet watch run --project /opt/app-root/src/api/api.csproj --urls='http://+:5000';"
+
+  weasyprint:
+    image: ghcr.io/bcgov/weasyprint:63.1.0
+    ports:
+      - '8061:5001'
+    restart: unless-stopped
 
   db:
     image: postgres:16
