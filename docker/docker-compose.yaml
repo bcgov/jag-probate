@@ -69,7 +69,8 @@ services:
       - Chefs__Forms__form-related-people__Icon=${CHEFS_FORM_RELATED_PEOPLE_ICON:-users}
       - Chefs__Forms__form-related-people__Children__0__Title=${CHEFS_FORM_RELATED_PEOPLE_CHILD_0_TITLE:-Spouse}
       - Chefs__Forms__form-related-people__Children__1__Title=${CHEFS_FORM_RELATED_PEOPLE_CHILD_1_TITLE:-Children}
-      - Chefs__Forms__form-related-people__Children__2__Title=${CHEFS_FORM_RELATED_PEOPLE_CHILD_2_TITLE:-Creditors}
+      - Chefs__Forms__form-related-people__Children__2__Title=${CHEFS_FORM_RELATED_PEOPLE_CHILD_2_TITLE:-Parent}
+      - Chefs__Forms__form-related-people__Children__3__Title=${CHEFS_FORM_RELATED_PEOPLE_CHILD_3_TITLE:-Creditors}
       - Chefs__Forms__form-applicant__FormId=${CHEFS_FORM_APPLICANT_FORMID}
       - Chefs__Forms__form-applicant__ApiKey=${CHEFS_FORM_APPLICANT_API_KEY}
       - Chefs__Forms__form-applicant__Order=${CHEFS_FORM_APPLICANT_ORDER:-4}
