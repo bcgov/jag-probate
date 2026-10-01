@@ -22,11 +22,13 @@ class AuthService {
 
   /**
    * Checks authentication status without triggering a redirect.
-   * Used for non-protected pages (e.g., landing page) to show/hide UI elements.
+   * Used for non-protected pages (e.g., landing page) to show/hide UI elements,
+   * and by the idle-timeout composable to learn the configured idle timeout.
    */
   async getAuthStatus(): Promise<{
     isAuthenticated: boolean;
     name: string | null;
+    idleTimeoutSeconds?: number;
   }> {
     return await this.httpService.get('api/auth/status');
   }

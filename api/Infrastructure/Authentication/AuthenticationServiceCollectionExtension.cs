@@ -39,6 +39,12 @@ namespace Probate.Api.Infrastructure.Authentication
                 TimeSpan.TryParse(keycloakOptions.RefreshThreshold, out refreshThreshold);
             }
 
+            var idleTimeout = KeycloakOptions.DefaultIdleTimeout;
+            if (!string.IsNullOrWhiteSpace(keycloakOptions.IdleTimeout))
+            {
+                TimeSpan.TryParse(keycloakOptions.IdleTimeout, out idleTimeout);
+            }
+
             services
                 .AddAuthentication(options =>
                 {
@@ -56,6 +62,10 @@ namespace Probate.Api.Infrastructure.Authentication
                     options.Cookie.HttpOnly = true;
                     options.Cookie.SameSite = SameSiteMode.None;
                     options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+
+                    // If no request arrives within idleTimeout, the cookie expires.
+                    options.ExpireTimeSpan = idleTimeout;
+                    options.SlidingExpiration = true;
 
                     options.Events = new CookieAuthenticationEvents
                     {

@@ -7,9 +7,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using Probate.Api.Helpers;
-using Probate.Api.Infrastructure.CDogs;
 using Probate.Api.Models;
-using Probate.Api.Models.CDogs;
 using Probate.Api.Services;
 
 namespace Probate.Api.Controllers;
@@ -21,19 +19,16 @@ public class ReportController : ControllerBase
 {
     private static readonly Regex SafeKeyPattern = new(@"^[a-zA-Z0-9\-]+$", RegexOptions.Compiled);
 
-    private readonly ICDogsDelegate _cdogsDelegate;
+    private readonly IPDFGenerationService _pdfGenerationService;
     private readonly ITemplateService _templateService;
-    private readonly ILogger<ReportController> _logger;
 
     public ReportController(
-        ICDogsDelegate cdogsDelegate,
-        ITemplateService templateService,
-        ILogger<ReportController> logger
+        IPDFGenerationService pdfGenerationService,
+        ITemplateService templateService
     )
     {
-        _cdogsDelegate = cdogsDelegate;
+        _pdfGenerationService = pdfGenerationService;
         _templateService = templateService;
-        _logger = logger;
     }
 
     /// <summary>
@@ -54,56 +49,25 @@ public class ReportController : ControllerBase
         if (!SafeKeyPattern.IsMatch(request.TemplateKey))
             return BadRequest(new { message = "templateKey contains invalid characters." });
 
-        var templateBase64 = _templateService.GetTemplateBase64(request.TemplateKey);
-
         var data = request.TemplateKey.ToUpperInvariant() switch
         {
             "PGT" => SubmissionEnricher.EnrichPGT(request.SubmissionData),
-            "P9" => SubmissionEnricher.EnrichP9(request.SubmissionData),
             _ => request.SubmissionData,
         };
 
-        var cdogsRequest = new CDogsRequestModel
-        {
-            Data = data,
-            Options = new CDogsOptionsModel
+        var result = await _pdfGenerationService.GeneratePdfAsync(
+            new PdfGenerationRequest
             {
-                ReportName = request.TemplateKey,
-                ConvertTo = "pdf",
-                Overwrite = true,
+                Documents = _templateService.RenderTemplates(request.TemplateKey, data),
+                FileName = $"{request.TemplateKey}.pdf",
             },
-            Template = new CDogsTemplateModel
-            {
-                Content = templateBase64,
-                EncodingType = "base64",
-                FileType = "docx",
-            },
-        };
-
-        var result = await _cdogsDelegate.GenerateReportAsync(cdogsRequest, ct);
+            ct
+        );
 
         if (result.ResultStatus == ReportResultType.Error)
             return BadRequest(result.ResultError);
 
         var bytes = Convert.FromBase64String(result.ResourcePayload!.Data);
         return File(bytes, "application/pdf", result.ResourcePayload.FileName);
-    }
-
-    /// <summary>
-    /// Low-level endpoint: caller provides the full CDogs request (template + data).
-    /// Used for testing and Swagger exploration.
-    /// </summary>
-    [HttpPost("generate")]
-    public async Task<IActionResult> Generate(
-        [FromBody] CDogsRequestModel request,
-        CancellationToken ct
-    )
-    {
-        var result = await _cdogsDelegate.GenerateReportAsync(request, ct);
-
-        if (result.ResultStatus == ReportResultType.Error)
-            return BadRequest(result.ResultError);
-
-        return Ok(result.ResourcePayload);
     }
 }

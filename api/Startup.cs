@@ -12,10 +12,10 @@ using Newtonsoft.Json.Converters;
 using Newtonsoft.Json.Serialization;
 using Probate.Api.Helpers;
 using Probate.Api.Infrastructure.Authentication;
-using Probate.Api.Infrastructure.CDogs;
 using Probate.Api.Infrastructure.Chefs;
 using Probate.Api.Infrastructure.EFiling;
 using Probate.Api.Infrastructure.Options;
+using Probate.Api.Infrastructure.WeasyPrint;
 using Probate.Api.Services;
 using Probate.Db.Models;
 
@@ -65,7 +65,7 @@ namespace Probate.Api
             services.AddMemoryCache();
 
             services.AddChefsApi(Configuration);
-            services.AddCDogsApi(Configuration);
+            services.AddWeasyPrint(Configuration);
             services.AddEFilingApi(Configuration);
 
             services.AddDbContext<ProbateDbContext>(options =>

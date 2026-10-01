@@ -10,6 +10,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Primitives;
 using Probate.Api.Helpers;
+using Probate.Api.Infrastructure.Options;
 
 namespace Probate.Api.Controllers
 {
@@ -125,11 +126,19 @@ namespace Probate.Api.Controllers
         [AllowAnonymous]
         public IActionResult GetAuthStatus()
         {
+            var idleTimeout = KeycloakOptions.DefaultIdleTimeout;
+            var idleTimeoutSetting = _configuration.GetValue<string>("Keycloak:IdleTimeout");
+            if (!string.IsNullOrWhiteSpace(idleTimeoutSetting))
+            {
+                TimeSpan.TryParse(idleTimeoutSetting, out idleTimeout);
+            }
+
             return Ok(
                 new
                 {
                     IsAuthenticated = User.Identity?.IsAuthenticated ?? false,
                     Name = User.Identity?.Name,
+                    IdleTimeoutSeconds = (int)idleTimeout.TotalSeconds,
                 }
             );
         }

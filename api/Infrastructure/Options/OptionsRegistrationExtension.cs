@@ -50,6 +50,17 @@ namespace Probate.Api.Infrastructure.Options
                 .ValidateDataAnnotations()
                 .ValidateOnStart();
 
+            services
+                .AddOptions<WeasyPrintOptions>()
+                .Bind(configuration.GetSection(WeasyPrintOptions.SectionName))
+                .ValidateDataAnnotations()
+                .ValidateOnStart();
+
+            services
+                .AddOptions<TemplateOptions>()
+                .Bind(configuration.GetSection(TemplateOptions.SectionName))
+                .ValidateOnStart();
+
             return services;
         }
     }
