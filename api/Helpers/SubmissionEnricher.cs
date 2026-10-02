@@ -15,8 +15,14 @@ public static class SubmissionEnricher
 {
     /// <summary>
     /// Enriches PGT submission data with computed fields:
-    /// - hasMinors / computedMinors: alive minors from spouseData + childData
-    /// - hasIncapableAdults / computedIncapableAdults: alive incapable adults from spouseData + childData
+    /// - hasMinors / computedMinors: alive minors from spouseData + childData + gchildData
+    /// - hasIncapableAdults / computedIncapableAdults: alive incapable adults from
+    ///   spouseData + childData + parentData + siblingData + gchildData
+    /// Parent/sibling have no isAdult/minor concept (always adults) - only the
+    /// incapable-adult branch applies to them. Grandchildren (nested under each
+    /// child row) are only collected when their parent child was bypassed as a
+    /// successor (child died BEFORE the 5-day survivorship cutoff) - a surviving
+    /// child's own children are not in scope.
     /// </summary>
     public static object EnrichPGT(object submissionData)
     {
@@ -31,6 +37,8 @@ public static class SubmissionEnricher
 
         CollectFromSpouseData(root, deceasedName, minors, incapableAdults);
         CollectFromChildData(root, deceasedName, minors, incapableAdults);
+        CollectFromParentData(root, deceasedName, minors, incapableAdults);
+        CollectFromSiblingData(root, deceasedName, minors, incapableAdults);
 
         root["hasMinors"] = minors.Count > 0;
         root["computedMinors"] = new JArray(minors);
@@ -90,19 +98,119 @@ public static class SubmissionEnricher
             var c = childData[i] as JObject;
             if (c == null)
                 continue;
-            if (c.Value<string>("childIsAlive") != "yes")
+
+            if (c.Value<string>("childIsAlive") == "yes")
+            {
+                if (c.Value<string>("childIsAdult") == "no")
+                {
+                    minors.Add(BuildMinor(c, "child", deceasedName, "child"));
+                }
+                else if (
+                    c.Value<string>("childIsAdult") == "yes"
+                    && c.Value<string>("childIsCompetent") == "no"
+                )
+                {
+                    incapableAdults.Add(BuildIncapableAdult(c, "child", deceasedName, "child"));
+                }
+            }
+
+            // Grandchildren only matter when their parent child was bypassed
+            // (died BEFORE the 5-day survivorship cutoff).
+            var childBypassed =
+                c.Value<string>("childIsAlive") == "no"
+                && c.Value<string>("childDied5DaysAfter") == "no";
+            if (childBypassed)
+            {
+                CollectFromGrandchildData(c, deceasedName, minors, incapableAdults);
+            }
+        }
+    }
+
+    private static void CollectFromGrandchildData(
+        JObject childRow,
+        string deceasedName,
+        List<JObject> minors,
+        List<JObject> incapableAdults
+    )
+    {
+        var gchildData = childRow.SelectToken("gchildData") as JArray;
+        if (gchildData == null)
+            return;
+
+        for (int i = 1; i < gchildData.Count; i++)
+        {
+            var g = gchildData[i] as JObject;
+            if (g == null)
+                continue;
+            if (g.Value<string>("grandchildIsAlive") != "yes")
                 continue;
 
-            if (c.Value<string>("childIsAdult") == "no")
+            if (g.Value<string>("grandchildIsAdult") == "no")
             {
-                minors.Add(BuildMinor(c, "child", deceasedName, "child"));
+                minors.Add(BuildMinor(g, "grandchild", deceasedName, "grandchild"));
             }
             else if (
-                c.Value<string>("childIsAdult") == "yes"
-                && c.Value<string>("childIsCompetent") == "no"
+                g.Value<string>("grandchildIsAdult") == "yes"
+                && g.Value<string>("grandchildIsCompetent") == "no"
             )
             {
-                incapableAdults.Add(BuildIncapableAdult(c, "child", deceasedName, "child"));
+                incapableAdults.Add(
+                    BuildIncapableAdult(g, "grandchild", deceasedName, "grandchild")
+                );
+            }
+        }
+    }
+
+    // Parent/sibling have no isAdult/guardian concept at all (always treated
+    // as adults) - only the incapable-adult (competent/nominee) branch applies.
+    private static void CollectFromParentData(
+        JObject root,
+        string deceasedName,
+        List<JObject> minors,
+        List<JObject> incapableAdults
+    )
+    {
+        var parentData = root.SelectToken("parent.parentData") as JArray;
+        if (parentData == null)
+            return;
+
+        for (int i = 1; i < parentData.Count; i++)
+        {
+            var p = parentData[i] as JObject;
+            if (p == null)
+                continue;
+            if (p.Value<string>("parentIsAlive") != "yes")
+                continue;
+
+            if (p.Value<string>("parentIsCompetent") == "no")
+            {
+                incapableAdults.Add(BuildIncapableAdult(p, "parent", deceasedName, "parent"));
+            }
+        }
+    }
+
+    private static void CollectFromSiblingData(
+        JObject root,
+        string deceasedName,
+        List<JObject> minors,
+        List<JObject> incapableAdults
+    )
+    {
+        var siblingData = root.SelectToken("sibling.siblingData") as JArray;
+        if (siblingData == null)
+            return;
+
+        for (int i = 1; i < siblingData.Count; i++)
+        {
+            var s = siblingData[i] as JObject;
+            if (s == null)
+                continue;
+            if (s.Value<string>("siblingIsAlive") != "yes")
+                continue;
+
+            if (s.Value<string>("siblingIsCompetent") == "no")
+            {
+                incapableAdults.Add(BuildIncapableAdult(s, "sibling", deceasedName, "sibling"));
             }
         }
     }
@@ -298,6 +406,12 @@ public static class SubmissionEnricher
         if (NameExistsInArray(root, "child.childData", "childName", applicantName))
             return "Child";
 
+        if (NameExistsInArray(root, "parent.parentData", "parentName", applicantName))
+            return "Parent";
+
+        if (NameExistsInArray(root, "sibling.siblingData", "siblingName", applicantName))
+            return "Sibling";
+
         if (
             NameExistsInArray(
                 root,
@@ -308,7 +422,39 @@ public static class SubmissionEnricher
         )
             return "Creditor";
 
+        if (NameExistsInGrandchildData(root, applicantName))
+            return "Grandchild";
+
         return "";
+    }
+
+    private static bool NameExistsInGrandchildData(JObject root, string applicantName)
+    {
+        var childData = root.SelectToken("child.childData") as JArray;
+        if (childData == null)
+            return false;
+
+        foreach (var child in childData.OfType<JObject>())
+        {
+            var gchildData = child.SelectToken("gchildData") as JArray;
+            if (gchildData == null)
+                continue;
+
+            if (
+                gchildData
+                    .OfType<JObject>()
+                    .Any(g =>
+                        string.Equals(
+                            g.Value<string>("grandchildName")?.Trim(),
+                            applicantName,
+                            StringComparison.OrdinalIgnoreCase
+                        )
+                    )
+            )
+                return true;
+        }
+
+        return false;
     }
 
     private static bool NameExistsInArray(
