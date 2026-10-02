@@ -215,8 +215,7 @@ export function forEachRelatedPerson(
     const containerKey = config.dataPath[0];
     const arrayKey = config.dataPath[1];
     const container = data?.[containerKey] as
-      | Record<string, unknown>
-      | undefined;
+      Record<string, unknown> | undefined;
     visit(container?.[arrayKey], config, null);
   }
 }
