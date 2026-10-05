@@ -562,6 +562,31 @@
     }
   }
 
+  /**
+   * Disables (isBanned true) or re-enables (false) every step/substep that
+   * comes after stepKey in config order, by reusing setStepClickable per key.
+   * Unlike attemptNext()'s one-step-at-a-time progressive unlock, this can
+   * re-lock substeps that were already unlocked, so a substep's own watcher
+   * can retroactively ban the pathway once it discovers it's invalid (e.g.
+   * after the user edits a prior answer) and un-ban it once fixed.
+   */
+  function banPathwayAfter(stepKey: string, isBanned: boolean) {
+    const ordered = allSubstepKeys.value;
+    const parentKey = getParentStepKey(stepKey) ?? stepKey;
+    let lastIdx = -1;
+    ordered.forEach((key, i) => {
+      if (key === parentKey || getParentStepKey(key) === parentKey) lastIdx = i;
+    });
+    if (lastIdx === -1) return;
+
+    const laterKeys = ordered.slice(lastIdx + 1);
+    const laterStepKeys = new Set(
+      laterKeys.map((key) => getParentStepKey(key) ?? key)
+    );
+    for (const key of laterKeys) setStepClickable(key, !isBanned);
+    for (const key of laterStepKeys) setStepClickable(key, !isBanned);
+  }
+
   function isActiveBridgeSource(sourceStepKey?: string): boolean {
     if (!sourceStepKey) return true;
     const activeRoot =
@@ -637,6 +662,11 @@
         setStepClickable(stepKey, isClickable);
       }
     };
+    window.wizardBanPathway = (stepKey, isBanned, sourceStepKey) => {
+      if (isActiveBridgeSource(sourceStepKey)) {
+        banPathwayAfter(stepKey, isBanned);
+      }
+    };
     // Note: window.wizardValidateStep is owned by StepFormViewer (it has direct
     // access to the Form.io instance) — not assigned here.
   }
@@ -652,6 +682,7 @@
       'wizardSetSubstepVisibility',
       'wizardSetAllVisibility',
       'wizardSetStepClickable',
+      'wizardBanPathway',
     ];
     fns.forEach((fn) => delete window[fn]);
   }

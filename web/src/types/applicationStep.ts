@@ -80,6 +80,15 @@ declare global {
       isClickable: boolean,
       sourceStepKey?: string
     ) => void;
+    // Disables (or re-enables) every step/substep that comes after stepKey in
+    // config order — used to block the pathway forward when a substep that
+    // was already marked "valid" is later found to be in an invalid state
+    // (e.g. a "have you identified everyone?" question answered "no").
+    wizardBanPathway?: (
+      stepKey: string,
+      isBanned: boolean,
+      sourceStepKey?: string
+    ) => void;
     // Review edit navigation
     wizardGoToField?: (
       substepKey: string,
