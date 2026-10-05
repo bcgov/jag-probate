@@ -52,7 +52,7 @@ export interface FlatRelatedPeopleTypeConfig {
   parentKey?: undefined;
   /** Organizations have no alive/adult/competent concept (e.g. creditorOrg). */
   orgOnly?: boolean;
-  /** False when the type has no isAdult/guardian question at all (e.g. parent, sibling - always treated as adult). Defaults to true. */
+  /** False when the type has no isAdult/guardian question at all (e.g. parent - always treated as adult). Defaults to true. */
   hasMinorConcept?: boolean;
 }
 
@@ -65,7 +65,7 @@ export interface NestedRelatedPeopleTypeConfig {
   /** Property name on the parent's RAW record holding this type's array. */
   nestedArrayKey: string;
   orgOnly?: boolean;
-  /** False when the type has no isAdult/guardian question at all (e.g. parent, sibling - always treated as adult). Defaults to true. */
+  /** False when the type has no isAdult/guardian question at all (e.g. parent - always treated as adult). Defaults to true. */
   hasMinorConcept?: boolean;
 }
 

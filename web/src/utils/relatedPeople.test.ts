@@ -40,11 +40,12 @@ describe('hasMinorConcept', () => {
     expect(hasMinorConcept(getConfig('spouse'))).toBe(true);
     expect(hasMinorConcept(getConfig('child'))).toBe(true);
     expect(hasMinorConcept(getConfig('grandchild'))).toBe(true);
+
+    expect(hasMinorConcept(getConfig('sibling'))).toBe(true);
   });
 
-  it('is false for parent/sibling - they have no isAdult/guardian question', () => {
+  it('is false for parent - it has no isAdult/guardian question', () => {
     expect(hasMinorConcept(getConfig('parent'))).toBe(false);
-    expect(hasMinorConcept(getConfig('sibling'))).toBe(false);
   });
 });
 
@@ -65,20 +66,17 @@ describe('classify', () => {
     expect(classify({ ...alive, isAdult: false }, getConfig('child'))).toBe(
       'minor'
     );
+    expect(classify({ ...alive, isAdult: false }, getConfig('sibling'))).toBe(
+      'minor'
+    );
   });
 
-  it('never returns "minor" for parent/sibling - skips straight to competence', () => {
-    // parent/sibling records never really have isAdult=false, but even if
+  it('never returns "minor" for parent - skips straight to competence', () => {
+    // parent records never really have isAdult=false, but even if
     // normalizeRecord somehow produced one, classify must not treat it as minor.
     expect(classify({ ...alive, isAdult: false }, getConfig('parent'))).toBe(
       'adult-competent'
     );
-    expect(
-      classify(
-        { ...alive, isAdult: false, isCompetent: false },
-        getConfig('sibling')
-      )
-    ).toBe('incompetent-adult');
   });
 
   it('returns "incompetent-adult" for an adult who is not competent', () => {
@@ -350,7 +348,7 @@ describe('forEachRelatedPerson / collectAllRelatedPeople', () => {
     expect(seen).toEqual(['spouse:Sam Spouse']);
   });
 
-  it('normalizes parent/sibling without an isAdult question as adult-competent', () => {
+  it('normalizes parent without an isAdult question as adult-competent', () => {
     const data = {
       parent: {
         parentData: [
@@ -361,11 +359,23 @@ describe('forEachRelatedPerson / collectAllRelatedPeople', () => {
           },
         ],
       },
+    };
+
+    const people = collectAllRelatedPeople(data);
+    const parent = people.find((p) => p.type === 'parent')!;
+
+    expect(parent.status).toBe('adult-competent');
+    expect(parent.isAdult).toBe(true);
+  });
+
+  it('normalizes an adult sibling using its isAdult/isCompetent questions', () => {
+    const data = {
       sibling: {
         siblingData: [
           {
             siblingName: 'Sid Sibling',
             siblingIsAlive: 'yes',
+            siblingIsAdult: 'yes',
             siblingIsCompetent: 'no',
             siblingHasNominee: 'yes',
             siblingNomineeName: 'Nina Nominee',
@@ -375,17 +385,38 @@ describe('forEachRelatedPerson / collectAllRelatedPeople', () => {
     };
 
     const people = collectAllRelatedPeople(data);
-    const parent = people.find((p) => p.type === 'parent')!;
     const sibling = people.find((p) => p.type === 'sibling')!;
-
-    expect(parent.status).toBe('adult-competent');
-    expect(parent.isAdult).toBe(true);
 
     expect(sibling.status).toBe('incompetent-adult');
     expect(sibling.representative).toEqual({
       role: 'nominee',
       name: 'Nina Nominee',
       formal: false,
+    });
+  });
+
+  it('normalizes a minor sibling using its guardian fields', () => {
+    const data = {
+      sibling: {
+        siblingData: [
+          {
+            siblingName: 'Sid Sibling',
+            siblingIsAlive: 'yes',
+            siblingIsAdult: 'no',
+            siblingHasGuardian: 'yes',
+            siblingGuardianName: 'Gary Guardian',
+          },
+        ],
+      },
+    };
+
+    const people = collectAllRelatedPeople(data);
+    const sibling = people.find((p) => p.type === 'sibling')!;
+
+    expect(sibling.status).toBe('minor');
+    expect(sibling.representative).toEqual({
+      role: 'guardian',
+      name: 'Gary Guardian',
     });
   });
 });

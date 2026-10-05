@@ -22,12 +22,7 @@ export const RELATED_PEOPLE_TYPES: RelatedPeopleTypeConfig[] = [
     dataPath: ['parent', 'parentData'],
     hasMinorConcept: false,
   },
-  {
-    key: 'sibling',
-    prefix: 'sibling',
-    dataPath: ['sibling', 'siblingData'],
-    hasMinorConcept: false,
-  },
+  { key: 'sibling', prefix: 'sibling', dataPath: ['sibling', 'siblingData'] },
   {
     key: 'creditorPerson',
     prefix: 'creditorPerson',
@@ -59,7 +54,7 @@ export function isYes(value: unknown): boolean {
   return s === 'y' || s === 'yes';
 }
 
-/** True unless the type config explicitly opts out (parent, sibling - no isAdult/guardian question exists for them). */
+/** True unless the type config explicitly opts out (parent - no isAdult/guardian question exists for it). */
 export function hasMinorConcept(config: RelatedPeopleTypeConfig): boolean {
   return config.hasMinorConcept !== false;
 }

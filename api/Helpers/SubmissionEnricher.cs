@@ -15,11 +15,11 @@ public static class SubmissionEnricher
 {
     /// <summary>
     /// Enriches PGT submission data with computed fields:
-    /// - hasMinors / computedMinors: alive minors from spouseData + childData + gchildData
+    /// - hasMinors / computedMinors: alive minors from spouseData + childData + siblingData + gchildData
     /// - hasIncapableAdults / computedIncapableAdults: alive incapable adults from
     ///   spouseData + childData + parentData + siblingData + gchildData
-    /// Parent/sibling have no isAdult/minor concept (always adults) - only the
-    /// incapable-adult branch applies to them. Grandchildren (nested under each
+    /// Parent has no isAdult/minor concept (always adult) - only the
+    /// incapable-adult branch applies to it. Grandchildren (nested under each
     /// child row) are only collected when their parent child was bypassed as a
     /// successor (child died BEFORE the 5-day survivorship cutoff) - a surviving
     /// child's own children are not in scope.
@@ -161,8 +161,8 @@ public static class SubmissionEnricher
         }
     }
 
-    // Parent/sibling have no isAdult/guardian concept at all (always treated
-    // as adults) - only the incapable-adult (competent/nominee) branch applies.
+    // Parent has no isAdult/guardian concept at all (always treated as an
+    // adult) - only the incapable-adult (competent/nominee) branch applies.
     private static void CollectFromParentData(
         JObject root,
         string deceasedName,
@@ -208,7 +208,14 @@ public static class SubmissionEnricher
             if (s.Value<string>("siblingIsAlive") != "yes")
                 continue;
 
-            if (s.Value<string>("siblingIsCompetent") == "no")
+            if (s.Value<string>("siblingIsAdult") == "no")
+            {
+                minors.Add(BuildMinor(s, "sibling", deceasedName, "sibling"));
+            }
+            else if (
+                s.Value<string>("siblingIsAdult") == "yes"
+                && s.Value<string>("siblingIsCompetent") == "no"
+            )
             {
                 incapableAdults.Add(BuildIncapableAdult(s, "sibling", deceasedName, "sibling"));
             }
