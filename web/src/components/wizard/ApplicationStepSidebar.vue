@@ -565,23 +565,34 @@
   /**
    * Disables (isBanned true) or re-enables (false) every step/substep that
    * comes after stepKey in config order, by reusing setStepClickable per key.
-   * Unlike attemptNext()'s one-step-at-a-time progressive unlock, this can
-   * re-lock substeps that were already unlocked, so a substep's own watcher
-   * can retroactively ban the pathway once it discovers it's invalid (e.g.
-   * after the user edits a prior answer) and un-ban it once fixed.
+   * A substep key bans everything after that exact substep (including its own
+   * later siblings); a top-level step key bans everything after that step's
+   * final substep. Unlike attemptNext()'s one-step-at-a-time progressive
+   * unlock, this can re-lock substeps that were already unlocked, so a
+   * substep's own watcher can retroactively ban the pathway once it discovers
+   * it's invalid (e.g. after the user edits a prior answer) and un-ban it once
+   * fixed.
    */
   function banPathwayAfter(stepKey: string, isBanned: boolean) {
     const ordered = allSubstepKeys.value;
-    const parentKey = getParentStepKey(stepKey) ?? stepKey;
-    let lastIdx = -1;
-    ordered.forEach((key, i) => {
-      if (key === parentKey || getParentStepKey(key) === parentKey) lastIdx = i;
-    });
+    // A substep key bans from its own position; a top-level step key falls
+    // back to its final child so the whole step stays usable.
+    let lastIdx = ordered.indexOf(stepKey);
+    if (lastIdx === -1) {
+      ordered.forEach((key, i) => {
+        if (getParentStepKey(key) === stepKey) lastIdx = i;
+      });
+    }
     if (lastIdx === -1) return;
 
     const laterKeys = ordered.slice(lastIdx + 1);
+    // Later siblings share the cutoff's parent — banning that parent would
+    // disable the step the caller is still on.
+    const cutoffParentKey = getParentStepKey(stepKey) ?? stepKey;
     const laterStepKeys = new Set(
-      laterKeys.map((key) => getParentStepKey(key) ?? key)
+      laterKeys
+        .map((key) => getParentStepKey(key) ?? key)
+        .filter((key) => key !== cutoffParentKey)
     );
     for (const key of laterKeys) setStepClickable(key, !isBanned);
     for (const key of laterStepKeys) setStepClickable(key, !isBanned);
