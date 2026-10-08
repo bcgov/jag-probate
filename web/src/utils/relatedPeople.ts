@@ -223,6 +223,71 @@ export function collectAllRelatedPeople(
   return out;
 }
 
+/** Generic field-name reset shared by every type's add/edit scratch object: booleans -> false, arrays -> [] (e.g. child's nested gchildData), everything else -> "", then control flags re-asserted (matches the existing per-type clear*Form() scripts' own convention). */
+function resetScratch(scratch: Record<string, unknown>, prefix: string): void {
+  Object.keys(scratch).forEach((key) => {
+    const current = scratch[key];
+    scratch[key] = Array.isArray(current)
+      ? []
+      : typeof current === 'boolean'
+        ? false
+        : '';
+  });
+  scratch[`${prefix}FormOpen`] = false;
+  scratch[`${prefix}FormShowErrors`] = false;
+  scratch[`${prefix}EditIndex`] = '-1';
+}
+
+/**
+ * Clears a flat related-people type's committed array (e.g. data.spouse.spouseData)
+ * and its add/edit scratch object (data.spouse._spouseAddEdit) — driven entirely by
+ * the registry, no per-type hardcoding. Called from a CHEFS gate-question watcher
+ * when the user flips "Did the deceased have a spouse?" etc. from yes to no.
+ */
+export function clearRelatedPeopleType(
+  data: Record<string, unknown>,
+  typeKey: string
+): void {
+  const config = RELATED_PEOPLE_TYPES.find((c) => c.key === typeKey);
+  if (!config || !isFlatRelatedPeopleType(config)) return;
+
+  const [containerKey, arrayKey] = config.dataPath;
+  const container = (data[containerKey] ??= {}) as Record<string, unknown>;
+  container[arrayKey] = [];
+
+  const scratchKey = `_${config.prefix}AddEdit`;
+  const scratch = (container[scratchKey] ??= {}) as Record<string, unknown>;
+  resetScratch(scratch, config.prefix);
+}
+
+/**
+ * Clears a nested type's in-progress array on its parent's currently-open
+ * scratch object — e.g. grandchild's `gchildData` on `data.child._childAddEdit`
+ * when a per-child gate ("Did this child have any children?") flips to no.
+ * Driven by the registry's parentKey/nestedArrayKey, no hardcoded field names.
+ * No-op for flat/unknown types or when the parent's scratch isn't open.
+ */
+export function clearNestedRelatedPeopleType(
+  data: Record<string, unknown>,
+  typeKey: string
+): void {
+  const config = RELATED_PEOPLE_TYPES.find((c) => c.key === typeKey);
+  if (!config || isFlatRelatedPeopleType(config)) return;
+
+  const parentConfig = RELATED_PEOPLE_TYPES.find(
+    (c) => c.key === config.parentKey
+  );
+  if (!parentConfig || !isFlatRelatedPeopleType(parentConfig)) return;
+
+  const [containerKey] = parentConfig.dataPath;
+  const container = data[containerKey] as Record<string, unknown> | undefined;
+  const scratch = container?.[`_${parentConfig.prefix}AddEdit`] as
+    Record<string, unknown> | undefined;
+  if (!scratch) return;
+
+  scratch[config.nestedArrayKey] = [];
+}
+
 export function isApplicant(
   data: Record<string, unknown>,
   name: string
@@ -253,6 +318,8 @@ export function registerRelatedPeopleGlobal(): void {
     forEach: forEachRelatedPerson,
     collectAll: collectAllRelatedPeople,
     isApplicant,
+    clear: clearRelatedPeopleType,
+    clearNested: clearNestedRelatedPeopleType,
   };
   window.RelatedPeople = api;
 }

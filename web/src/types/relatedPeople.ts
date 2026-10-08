@@ -112,6 +112,10 @@ export interface RelatedPeopleApi {
   ) => void;
   collectAll: (data: Record<string, unknown>) => NormalizedPerson[];
   isApplicant: (data: Record<string, unknown>, name: string) => boolean;
+  /** Resets a flat type's committed collection to [] and its add/edit scratch object to its empty defaults. No-op for nested/unknown types. */
+  clear: (data: Record<string, unknown>, typeKey: string) => void;
+  /** Resets a nested type's in-progress array on its parent's currently-open scratch object (e.g. grandchild's `gchildData` on `data.child._childAddEdit`). No-op for flat/unknown types or when no scratch is open. */
+  clearNested: (data: Record<string, unknown>, typeKey: string) => void;
 }
 
 declare global {

@@ -9,6 +9,8 @@ import {
   forEachRelatedPerson,
   collectAllRelatedPeople,
   isApplicant,
+  clearRelatedPeopleType,
+  clearNestedRelatedPeopleType,
   registerRelatedPeopleGlobal,
 } from './relatedPeople';
 import type { RelatedPeopleTypeConfig } from '@/types/relatedPeople';
@@ -437,6 +439,114 @@ describe('isApplicant', () => {
   });
 });
 
+describe('clearRelatedPeopleType', () => {
+  it('empties the committed array and resets the add/edit scratch object generically', () => {
+    const data = {
+      spouse: {
+        spouseData: [{ spouseName: 'Sam Spouse', spouseIsAlive: 'yes' }],
+        _spouseAddEdit: {
+          spouseFormName: 'Sam Spouse',
+          spouseFormIsAlive: 'yes',
+          spouseFormMinorAck: true,
+          spouseFormOpen: true,
+          spouseEditIndex: '0',
+        },
+      },
+    };
+
+    clearRelatedPeopleType(data, 'spouse');
+
+    expect(data.spouse.spouseData).toEqual([]);
+    expect(data.spouse._spouseAddEdit).toMatchObject({
+      spouseFormName: '',
+      spouseFormIsAlive: '',
+      spouseFormMinorAck: false,
+      spouseFormOpen: false,
+      spouseFormShowErrors: false,
+      spouseEditIndex: '-1',
+    });
+  });
+
+  it('creates the array/scratch object from scratch when neither exists yet', () => {
+    const data = {};
+
+    clearRelatedPeopleType(data, 'spouse');
+
+    expect(data.spouse.spouseData).toEqual([]);
+    expect(data.spouse._spouseAddEdit).toMatchObject({
+      spouseFormOpen: false,
+      spouseFormShowErrors: false,
+      spouseEditIndex: '-1',
+    });
+  });
+
+  it('is a no-op for nested types (e.g. grandchild) and unknown type keys', () => {
+    const data = { child: { childData: [{ childName: 'Charlie Child' }] } };
+
+    clearRelatedPeopleType(data, 'grandchild');
+    clearRelatedPeopleType(data, 'notARealType');
+
+    expect(data.child.childData).toEqual([{ childName: 'Charlie Child' }]);
+  });
+
+  it('resets a nested array field in the scratch object (e.g. gchildData) to [] not ""', () => {
+    const data = {
+      child: {
+        childData: [{ childName: 'Charlie Child' }],
+        _childAddEdit: {
+          childFormName: 'Charlie Child',
+          gchildData: [{ grandchildName: 'Gracie Grandchild' }],
+        },
+      },
+    };
+
+    clearRelatedPeopleType(data, 'child');
+
+    expect(data.child.childData).toEqual([]);
+    expect(data.child._childAddEdit.gchildData).toEqual([]);
+    expect(data.child._childAddEdit.childFormName).toBe('');
+  });
+});
+
+describe('clearNestedRelatedPeopleType', () => {
+  it('empties the currently-open parent scratch array (grandchild on _childAddEdit.gchildData)', () => {
+    const data = {
+      child: {
+        childData: [],
+        _childAddEdit: {
+          childFormName: 'Charlie Child',
+          gchildData: [{ grandchildName: 'Gracie Grandchild' }],
+        },
+      },
+    };
+
+    clearNestedRelatedPeopleType(data, 'grandchild');
+
+    expect(data.child._childAddEdit.gchildData).toEqual([]);
+    expect(data.child._childAddEdit.childFormName).toBe('Charlie Child');
+  });
+
+  it('is a no-op when no child add/edit scratch is open', () => {
+    const data = { child: { childData: [] } };
+
+    expect(() =>
+      clearNestedRelatedPeopleType(data, 'grandchild')
+    ).not.toThrow();
+    expect(data.child._childAddEdit).toBeUndefined();
+  });
+
+  it('is a no-op for flat types and unknown type keys', () => {
+    const data = {
+      spouse: { spouseData: [{ spouseName: 'Sam Spouse' }] },
+    };
+
+    clearNestedRelatedPeopleType(data, 'spouse');
+    clearNestedRelatedPeopleType(data, 'notARealType');
+
+    expect(data.spouse.spouseData).toEqual([{ spouseName: 'Sam Spouse' }]);
+  });
+});
+
 describe('registerRelatedPeopleGlobal', () => {
   beforeEach(() => {
     delete (window as { RelatedPeople?: unknown }).RelatedPeople;
@@ -456,6 +566,10 @@ describe('registerRelatedPeopleGlobal', () => {
       'function'
     );
     expect(typeof window.RelatedPeople?.isApplicant).toBe('function');
+    expect(window.RelatedPeople?.clear).toBe(clearRelatedPeopleType);
+    expect(window.RelatedPeople?.clearNested).toBe(
+      clearNestedRelatedPeopleType
+    );
   });
 
   it('is usable end-to-end once registered (what CHEFS schema scripts actually call)', () => {
