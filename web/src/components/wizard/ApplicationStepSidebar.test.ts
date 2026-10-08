@@ -134,4 +134,98 @@ describe('ApplicationStepSidebar', () => {
     host.remove();
     warn.mockRestore();
   });
+
+  it('bans the pathway from the exact substep, sparing the current step', async () => {
+    const steps: WizardStep[] = [
+      {
+        key: 'step1',
+        number: 1,
+        title: 'First',
+        defaultSubstep: 'step1-a',
+        substeps: [
+          { key: 'step1-a', label: 'First A' },
+          { key: 'step1-b', label: 'First B' },
+        ],
+      },
+      {
+        key: 'step2',
+        number: 2,
+        title: 'Second',
+        defaultSubstep: 'step2-a',
+        substeps: [{ key: 'step2-a', label: 'Second A' }],
+      },
+    ];
+    initWizardState('step1-a', { hiddenSteps: {}, hiddenSubsteps: {} }, {}, {});
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const app = createApp(ApplicationStepSidebar, {
+      steps,
+      initialStep: 'step1-a',
+    });
+    app.config.warnHandler = () => {};
+    app.mount(host);
+    await nextTick();
+
+    window.wizardBanPathway?.('step1-a', true, 'step1-a');
+
+    const state = useWizardState();
+    expect(state.disabledMap['step1-b']).toBe(true);
+    expect(state.disabledMap['step2-a']).toBe(true);
+    expect(state.disabledMap['step2']).toBe(true);
+    // The step the caller is still on must stay reachable.
+    expect(state.disabledMap['step1']).toBeUndefined();
+    expect(state.disabledMap['step1-a']).toBeUndefined();
+
+    window.wizardBanPathway?.('step1-a', false, 'step1-a');
+    expect(state.disabledMap['step1-b']).toBeUndefined();
+    expect(state.disabledMap['step2-a']).toBeUndefined();
+    expect(state.disabledMap['step2']).toBeUndefined();
+
+    app.unmount();
+    host.remove();
+  });
+
+  it('bans after the final substep when given a top-level step key', async () => {
+    const steps: WizardStep[] = [
+      {
+        key: 'step1',
+        number: 1,
+        title: 'First',
+        defaultSubstep: 'step1-a',
+        substeps: [
+          { key: 'step1-a', label: 'First A' },
+          { key: 'step1-b', label: 'First B' },
+        ],
+      },
+      {
+        key: 'step2',
+        number: 2,
+        title: 'Second',
+        defaultSubstep: 'step2-a',
+        substeps: [{ key: 'step2-a', label: 'Second A' }],
+      },
+    ];
+    initWizardState('step1-a', { hiddenSteps: {}, hiddenSubsteps: {} }, {}, {});
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const app = createApp(ApplicationStepSidebar, {
+      steps,
+      initialStep: 'step1-a',
+    });
+    app.config.warnHandler = () => {};
+    app.mount(host);
+    await nextTick();
+
+    window.wizardBanPathway?.('step1', true, 'step1-a');
+
+    const state = useWizardState();
+    expect(state.disabledMap['step1-b']).toBeUndefined();
+    expect(state.disabledMap['step2-a']).toBe(true);
+    expect(state.disabledMap['step2']).toBe(true);
+
+    app.unmount();
+    host.remove();
+  });
 });
