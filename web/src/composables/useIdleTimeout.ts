@@ -40,6 +40,13 @@ export function useIdleTimeout() {
 
   let warningTimer: ReturnType<typeof setTimeout> | null = null;
   let countdownInterval: ReturnType<typeof setInterval> | null = null;
+  // Absolute wall-clock deadlines (epoch ms) — chained setTimeout/setInterval
+  // calls are heavily throttled in backgrounded tabs (Chrome clamps them to
+  // as little as once/minute), so firing correctly depends on comparing
+  // Date.now() to a deadline rather than trusting tick counts.
+  // See: https://developer.chrome.com/blog/timer-throttling-in-chrome-88
+  let warningDeadline = 0;
+  let logoutDeadline = 0;
   let lastActivityAt = 0;
   let started = false;
 
@@ -63,15 +70,23 @@ export function useIdleTimeout() {
     globalThis.location.href = `${import.meta.env.BASE_URL}api/auth/logout`;
   }
 
+  // Recomputed from logoutDeadline (not decremented) so a throttled/delayed
+  // tick self-corrects instead of leaving a stale countdown on screen.
+  function tickCountdown() {
+    remainingSeconds.value = Math.max(
+      Math.ceil((logoutDeadline - Date.now()) / 1000),
+      0
+    );
+    if (Date.now() >= logoutDeadline) {
+      forceLogout();
+    }
+  }
+
   function showIdleWarning() {
     showWarning.value = true;
-    remainingSeconds.value = WARNING_SECONDS;
-    countdownInterval = setInterval(() => {
-      remainingSeconds.value -= 1;
-      if (remainingSeconds.value <= 0) {
-        forceLogout();
-      }
-    }, 1000);
+    logoutDeadline = Date.now() + WARNING_SECONDS * 1000;
+    tickCountdown();
+    countdownInterval = setInterval(tickCountdown, 1000);
   }
 
   // Schedules the warning dialog to appear once the user has been idle for
@@ -85,7 +100,21 @@ export function useIdleTimeout() {
       idleTimeoutSeconds.value - WARNING_SECONDS,
       0
     );
+    warningDeadline = Date.now() + warningDelaySeconds * 1000;
     warningTimer = setTimeout(showIdleWarning, warningDelaySeconds * 1000);
+  }
+
+  // A backgrounded tab can delay the scheduled timers above by minutes; when
+  // the tab regains focus, reconcile immediately against the deadlines
+  // instead of waiting for the (possibly very late) throttled timer to fire.
+  function onVisibilityChange() {
+    if (document.visibilityState !== 'visible' || !started) return;
+
+    if (showWarning.value) {
+      tickCountdown();
+    } else if (warningDeadline && Date.now() >= warningDeadline) {
+      showIdleWarning();
+    }
   }
 
   function onActivity() {
@@ -127,6 +156,7 @@ export function useIdleTimeout() {
     ACTIVITY_EVENTS.forEach((eventName) =>
       window.addEventListener(eventName, onActivity, { passive: true })
     );
+    document.addEventListener('visibilitychange', onVisibilityChange);
     scheduleIdleTimer();
   }
 
@@ -139,6 +169,7 @@ export function useIdleTimeout() {
     ACTIVITY_EVENTS.forEach((eventName) =>
       window.removeEventListener(eventName, onActivity)
     );
+    document.removeEventListener('visibilitychange', onVisibilityChange);
   }
 
   onBeforeUnmount(stop);
