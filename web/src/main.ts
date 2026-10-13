@@ -10,8 +10,12 @@ import { registerServices } from './services';
 import { initializePinia, registerPinia } from './stores';
 import './styles/backdrop.scss';
 import './styles/index.scss';
+import { registerRelatedPeopleGlobal } from './utils/relatedPeople';
 
 async function bootstrap() {
+  // Must run before any CHEFS <chefs-form-viewer> can initialize and call it.
+  registerRelatedPeopleGlobal();
+
   const app = createApp(App);
 
   // Add Pinia store with extensible registration function
