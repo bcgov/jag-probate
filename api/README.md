@@ -12,6 +12,10 @@ Local Development: `http://localhost:5000`
 
 The Docker stack runs WeasyPrint at `http://weasyprint:5001` for the API and exposes it at `http://localhost:8061` for local inspection. Set `WEASYPRINT_BASE_URL` only when the API must use a different WeasyPrint host.
 
+Templates use Fluid's built-in money filters with CAD as the default currency.
+The shared options set `MoneyFormat` to `{{amount}}` because the exhibit templates
+already supply the dollar sign: `1134.65` renders as `$1,134.65`.
+
 ### Health Check
 
 #### GET /api/health
