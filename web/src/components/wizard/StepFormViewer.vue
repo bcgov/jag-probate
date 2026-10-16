@@ -57,6 +57,10 @@
   import { useWizardDataStore } from '@/stores/WizardDataStore';
   import chefsFormStylesUrl from '@/styles/chefs-form.scss?url';
   import {
+    createPdfPreviewBridge,
+    type PdfPreviewBridge,
+  } from '@/utils/pdfPreviewBridge';
+  import {
     inject,
     nextTick,
     onMounted,
@@ -240,6 +244,7 @@
 
   // Track generated blob URLs so they can be revoked on component teardown.
   const activeBlobUrls = new Set<string>();
+  let pdfBridge: PdfPreviewBridge | null = null;
 
   // ── Per-step state ────────────────────────────────────────────────────────
   type ViewState = 'loading' | 'ready' | 'error';
@@ -1426,9 +1431,39 @@
     window.wizardGetPersistedPayload = () => buildPersistedPayload();
 
     // Bridge expected by CHEFS schema scripts in preview/print substeps.
-    // Generation counter so concurrent previewPdf calls don't race —
-    // only the most recent call's result is applied to the iframe.
-    let previewGeneration = 0;
+    pdfBridge = createPdfPreviewBridge({
+      generate: async (templateKey, submissionData) => {
+        const { url } = await reportService.generateReport({
+          templateKey,
+          submissionData,
+        });
+        return url;
+      },
+      // Start from the hydrated store, which covers every step ever
+      // persisted for this submission — not just ones mounted this
+      // session (background preloading was removed, so on resume only
+      // the step(s) actually visited have a live formio instance).
+      // Then overlay each currently-mounted step's own live fields so
+      // just-typed edits aren't missed while waiting on the store's
+      // autosave capture gates.
+      resolveSubmissionData: () => {
+        const submissionData: Record<string, any> = {
+          ...wizardDataStore.accumulatedData,
+        };
+        for (const [sKey, el] of Object.entries(stepEls)) {
+          const formData = el?.formioInstance?.data;
+          if (!formData) continue;
+          const ownKeys = stepOwnedKeys[sKey];
+          if (!ownKeys) continue;
+          for (const key of ownKeys) {
+            if (key.startsWith('_') || CAPTURE_EXCLUDED_KEYS.has(key)) continue;
+            if (formData[key] === undefined) continue;
+            submissionData[key] = formData[key];
+          }
+        }
+        return submissionData;
+      },
+    });
 
     window.probate = {
       generatePdf: async (
@@ -1442,104 +1477,8 @@
         activeBlobUrls.add(url);
         return url;
       },
-      downloadPdf: async (
-        instance: any,
-        data: unknown,
-        templateKey: string,
-        iframeTitle: string,
-        fileName: string
-      ): Promise<void> => {
-        const root = instance.root;
-        const rootEl = root?.element ?? document;
-        const frame: HTMLIFrameElement | null = rootEl.querySelector(
-          `iframe[title='${iframeTitle}']`
-        );
-
-        let url = frame?.getAttribute('src') ?? '';
-        let freshUrl = false;
-        if (!url || url === 'about:blank' || !url.startsWith('blob:')) {
-          const result = await reportService.generateReport({
-            templateKey,
-            submissionData: data,
-          });
-          url = result.url;
-          freshUrl = true;
-        }
-
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = fileName;
-        a.click();
-
-        if (freshUrl) {
-          URL.revokeObjectURL(url);
-        }
-      },
-      previewPdf: async (
-        instance: any,
-        data: unknown,
-        currentStep: string,
-        targetStep: string,
-        templateKey: string,
-        iframeTitle: string
-      ): Promise<void> => {
-        if (currentStep !== targetStep) return;
-
-        const root = instance.root;
-        const rootEl = root?.element ?? document;
-        const frame: HTMLIFrameElement | null = rootEl.querySelector(
-          `iframe[title='${iframeTitle}']`
-        );
-
-        if (!frame) return;
-
-        // Start from the hydrated store, which covers every step ever
-        // persisted for this submission — not just ones mounted this
-        // session (background preloading was removed, so on resume only
-        // the step(s) actually visited have a live formio instance).
-        // Then overlay each currently-mounted step's own live fields so
-        // just-typed edits aren't missed while waiting on the store's
-        // autosave capture gates.
-        const submissionData: Record<string, any> = {
-          ...wizardDataStore.accumulatedData,
-        };
-        for (const [sKey, el] of Object.entries(stepEls)) {
-          const formData = el?.formioInstance?.data;
-          if (!formData) continue;
-          const ownKeys = stepOwnedKeys[sKey];
-          if (ownKeys) {
-            for (const key of ownKeys) {
-              if (!key.startsWith('_') && !CAPTURE_EXCLUDED_KEYS.has(key)) {
-                submissionData[key] = formData[key];
-              }
-            }
-          }
-        }
-
-        const generation = ++previewGeneration;
-
-        const { url } = await reportService.generateReport({
-          templateKey,
-          submissionData,
-        });
-
-        // A newer previewPdf call was made while we were awaiting —
-        // discard this stale result so it doesn't overwrite the latest.
-        if (generation !== previewGeneration) {
-          URL.revokeObjectURL(url);
-          return;
-        }
-
-        const oldSrc = frame.getAttribute('src') ?? '';
-        if (oldSrc.startsWith('blob:')) {
-          URL.revokeObjectURL(oldSrc);
-          activeBlobUrls.delete(oldSrc);
-        }
-
-        activeBlobUrls.add(url);
-        frame.setAttribute('src', url);
-        frame.setAttribute('data-pdf-loaded', 'true');
-      },
+      downloadPdf: pdfBridge.downloadPdf,
+      previewPdf: pdfBridge.previewPdf,
     };
   });
 
@@ -1561,6 +1500,8 @@
 
     activeBlobUrls.forEach((url) => URL.revokeObjectURL(url));
     activeBlobUrls.clear();
+    pdfBridge?.dispose();
+    pdfBridge = null;
 
     delete window.probate;
 
