@@ -55,6 +55,7 @@
   import CourtLocationService from '@/services/CourtLocationService';
   import ReportService from '@/services/ReportService';
   import { pinia } from '@/stores/pinia';
+  import { recalculateForm } from '@/utils/formioRecalculate';
   import { useWizardDataStore } from '@/stores/WizardDataStore';
   import { useWizardStateStore } from '@/stores/WizardStateStore';
   import chefsFormStylesUrl from '@/styles/chefs-form.scss?url';
@@ -1057,7 +1058,7 @@
       if (!hasChanges) return;
       // Re-run Form.io logic triggers so review-table scripts recompute using
       // freshly synced cross-step data.
-      el.formioInstance.triggerChange?.();
+      recalculateForm(el.formioInstance);
       // redraw() re-renders all components including fieldset legends, panel titles,
       // and HTML content components that use {{ data.xxx }} template expressions.
       // triggerChange() alone only recalculates computed values, not static DOM.
@@ -1086,7 +1087,7 @@
         },
       });
       if (stepKey === props.activeStep) {
-        el.formioInstance.triggerChange?.();
+        recalculateForm(el.formioInstance);
         el.formioInstance.redraw?.();
       }
     }
@@ -1293,7 +1294,7 @@
           if (el?.formioInstance?.data?.showSurvey2 === 'hide') {
             el.formioInstance.data.showSurvey2 = '';
             el.formioInstance.data.showStepFunction = false;
-            el.formioInstance.triggerChange?.();
+            recalculateForm(el.formioInstance);
             el.formioInstance.redraw?.();
           }
         } catch {
