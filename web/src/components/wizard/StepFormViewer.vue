@@ -54,7 +54,9 @@
   import ChefsService from '@/services/ChefsService';
   import CourtLocationService from '@/services/CourtLocationService';
   import ReportService from '@/services/ReportService';
+  import { pinia } from '@/stores/pinia';
   import { useWizardDataStore } from '@/stores/WizardDataStore';
+  import { useWizardStateStore } from '@/stores/WizardStateStore';
   import chefsFormStylesUrl from '@/styles/chefs-form.scss?url';
   import {
     createPdfPreviewBridge,
@@ -77,6 +79,7 @@
     disabledMap,
   } = useWizardState();
   const wizardDataStore = useWizardDataStore();
+  const wizardStateStore = useWizardStateStore(pinia);
 
   // ── Template ref ──────────────────────────────────────────────────────
   const viewerEl = ref<HTMLElement | null>(null);
@@ -369,8 +372,10 @@
   }
 
   async function hydrateFromPersistedPayload() {
-    // Clear any leftover data from a previous application session.
+    // Clear any leftover data from a previous application session, including
+    // visibility the previous application's CHEFS forms asked for.
     wizardDataStore.reset();
+    wizardStateStore.clearSubstepVisibilityOverrides();
     // If we have a submission ID, try loading step data from the API first.
     if (props.submissionPublicId) {
       try {

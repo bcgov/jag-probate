@@ -1,54 +1,36 @@
-import { reactive, ref } from 'vue';
-import type { WizardNavState, StepStatus } from '@/types/applicationStep';
+import { pinia } from '@/stores/pinia';
+import { useWizardStateStore } from '@/stores/WizardStateStore';
+import type { StepStatus, WizardNavState } from '@/types/applicationStep';
+import { storeToRefs } from 'pinia';
 
 /**
- * Module-level singleton reactive state shared across ALL ApplicationStepSidebar
- * instances on the page (desktop sidebar + mobile drawer).
- *
- * Any update — whether from the window bridge (CHEFS form JS) or a user click —
- * is immediately reflected everywhere because every instance reads the same refs.
+ * Thin wrapper over WizardStateStore, kept so existing call sites keep their
+ * shape. Always binds to the app-wide Pinia instance, so it works outside
+ * component setup and is shared by every sidebar instance (desktop + mobile)
+ * and the window.wizard* bridge.
  */
-
-const _navState = reactive<WizardNavState>({
-  hiddenSteps: {},
-  hiddenSubsteps: {},
-});
-const _statusMap = reactive<Record<string, StepStatus>>({});
-const _disabledMap = reactive<Record<string, boolean>>({});
-const _activeSubstep = ref('');
-
 export function useWizardState() {
+  const store = useWizardStateStore(pinia);
+  const { activeSubstep } = storeToRefs(store);
   return {
-    navState: _navState,
-    statusMap: _statusMap,
-    disabledMap: _disabledMap,
-    activeSubstep: _activeSubstep,
+    navState: store.navState,
+    statusMap: store.statusMap,
+    disabledMap: store.disabledMap,
+    activeSubstep,
   };
 }
 
-/** Called by the primary sidebar instance on mount to seed initial values. */
+/** Seeds initial values (initial load / resume). Visibility overrides set by CHEFS forms are kept. */
 export function initWizardState(
   initialStep: string,
   initialNavState: WizardNavState,
   initialStatusMap: Record<string, StepStatus>,
   initialDisabledMap: Record<string, boolean>
 ) {
-  _activeSubstep.value = initialStep;
-
-  // Replace hiddenSteps / hiddenSubsteps in-place (keeps reactivity)
-  Object.keys(_navState.hiddenSteps).forEach(
-    (k) => delete _navState.hiddenSteps[k]
+  useWizardStateStore(pinia).init(
+    initialStep,
+    initialNavState,
+    initialStatusMap,
+    initialDisabledMap
   );
-  Object.assign(_navState.hiddenSteps, initialNavState.hiddenSteps ?? {});
-
-  Object.keys(_navState.hiddenSubsteps).forEach(
-    (k) => delete _navState.hiddenSubsteps[k]
-  );
-  Object.assign(_navState.hiddenSubsteps, initialNavState.hiddenSubsteps ?? {});
-
-  Object.keys(_statusMap).forEach((k) => delete _statusMap[k]);
-  Object.assign(_statusMap, initialStatusMap);
-
-  Object.keys(_disabledMap).forEach((k) => delete _disabledMap[k]);
-  Object.assign(_disabledMap, initialDisabledMap);
 }
