@@ -71,22 +71,27 @@
           class="wiz-subitems"
           :style="{ display: isSubMenuOpen(step.key) ? 'block' : 'none' }"
         >
-          <div
-            v-for="substep in step.substeps"
-            :key="substep.key"
-            class="wiz-subitem"
-            :class="{
-              'is-active': activeSubstep === substep.key,
-              'is-disabled': isSubstepDisabled(substep.key),
-              'is-ghost': isSubstepHidden(substep.key),
-            }"
-            @click="onSubstepClick(substep.key)"
-          >
-            <span class="wiz-dot" :class="statusDotClass(substep.key)">
-              <font-awesome-icon :icon="statusIconName(substep.key)" />
-            </span>
-            {{ substep.label }}
-          </div>
+          <template v-for="substep in step.substeps" :key="substep.key">
+            <div
+              v-if="
+                !isSubstepHidden(substep.key) || substep.hiddenIsGhost !== false
+              "
+              class="wiz-subitem"
+              :class="{
+                'is-active': activeSubstep === substep.key,
+                'is-disabled': isSubstepDisabled(substep.key),
+                'is-ghost':
+                  isSubstepHidden(substep.key) &&
+                  substep.hiddenIsGhost !== false,
+              }"
+              @click="onSubstepClick(substep.key)"
+            >
+              <span class="wiz-dot" :class="statusDotClass(substep.key)">
+                <font-awesome-icon :icon="statusIconName(substep.key)" />
+              </span>
+              {{ substep.label }}
+            </div>
+          </template>
         </div>
       </template>
     </div>
@@ -102,25 +107,29 @@
       @mouseleave="clearHover"
     >
       <div class="wiz-flyout-title">{{ hoveredStepData.title }}</div>
-      <div
-        v-for="substep in hoveredStepData.substeps"
-        :key="substep.key"
-        class="wiz-flyout-item"
-        :class="{
-          'is-active': activeSubstep === substep.key,
-          'is-disabled': isSubstepDisabled(substep.key),
-          'is-ghost': isSubstepHidden(substep.key),
-        }"
-        @click="
-          onSubstepClick(substep.key);
-          hoveredStepKey = null;
-        "
-      >
-        <span class="wiz-dot" :class="statusDotClass(substep.key)">
-          <font-awesome-icon :icon="statusIconName(substep.key)" />
-        </span>
-        {{ substep.label }}
-      </div>
+      <template v-for="substep in hoveredStepData.substeps" :key="substep.key">
+        <div
+          v-if="
+            !isSubstepHidden(substep.key) || substep.hiddenIsGhost !== false
+          "
+          class="wiz-flyout-item"
+          :class="{
+            'is-active': activeSubstep === substep.key,
+            'is-disabled': isSubstepDisabled(substep.key),
+            'is-ghost':
+              isSubstepHidden(substep.key) && substep.hiddenIsGhost !== false,
+          }"
+          @click="
+            onSubstepClick(substep.key);
+            hoveredStepKey = null;
+          "
+        >
+          <span class="wiz-dot" :class="statusDotClass(substep.key)">
+            <font-awesome-icon :icon="statusIconName(substep.key)" />
+          </span>
+          {{ substep.label }}
+        </div>
+      </template>
     </div>
   </Teleport>
 </template>

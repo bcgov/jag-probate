@@ -203,6 +203,7 @@ public class ChefsApplicationService : IChefsApplicationService
                             Title = s.Title,
                             Icon = s.Icon,
                             Disabled = s.Disabled,
+                            HiddenIsGhost = s.HiddenIsGhost,
                         };
                     })
                     .OrderBy(s => s.Order)

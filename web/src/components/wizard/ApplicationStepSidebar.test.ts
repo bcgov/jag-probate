@@ -135,6 +135,71 @@ describe('ApplicationStepSidebar', () => {
     warn.mockRestore();
   });
 
+  it('ghosts hidden substeps by default and omits configured substeps', async () => {
+    const steps: WizardStep[] = [
+      {
+        key: 'step7',
+        number: 7,
+        title: 'Application Documents',
+        defaultSubstep: 'form-preview-p9',
+        substeps: [
+          { key: 'form-preview-p9', label: 'Preview P9' },
+          {
+            key: 'form-preview-p10',
+            label: 'Preview P10',
+            hiddenIsGhost: false,
+          },
+          { key: 'form-preview-p11', label: 'Preview P11' },
+        ],
+      },
+    ];
+    initWizardState(
+      'form-preview-p9',
+      { hiddenSteps: {}, hiddenSubsteps: {} },
+      {},
+      {}
+    );
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const app = createApp(ApplicationStepSidebar, {
+      steps,
+      initialStep: 'form-preview-p9',
+    });
+    app.config.warnHandler = () => {};
+    app.mount(host);
+    await nextTick();
+
+    window.wizardSetSubstepVisibility?.(
+      'form-preview-p10',
+      false,
+      'form-preview-p9'
+    );
+    window.wizardSetSubstepVisibility?.(
+      'form-preview-p11',
+      false,
+      'form-preview-p9'
+    );
+    await nextTick();
+    expect(host.textContent).not.toContain('Preview P10');
+    expect(host.textContent).toContain('Preview P11');
+    const p11Entry = Array.from(host.querySelectorAll('.wiz-subitem')).find(
+      (entry) => entry.textContent?.includes('Preview P11')
+    );
+    expect(p11Entry?.classList.contains('is-ghost')).toBe(true);
+
+    window.wizardSetSubstepVisibility?.(
+      'form-preview-p10',
+      true,
+      'form-preview-p9'
+    );
+    await nextTick();
+    expect(host.textContent).toContain('Preview P10');
+
+    app.unmount();
+    host.remove();
+  });
+
   it('bans the pathway from the exact substep, sparing the current step', async () => {
     const steps: WizardStep[] = [
       {

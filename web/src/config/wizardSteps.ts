@@ -19,7 +19,11 @@ export function mapSidebarStepsToWizardSteps(
       title: dto.title,
       icon: dto.icon || undefined,
       defaultSubstep: dto.children[0]?.key ?? dto.key,
-      substeps: dto.children.map((c) => ({ key: c.key, label: c.title })),
+      substeps: dto.children.map((c) => ({
+        key: c.key,
+        label: c.title,
+        hiddenIsGhost: c.hiddenIsGhost,
+      })),
     }));
 }
 
