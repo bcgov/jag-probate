@@ -54,4 +54,62 @@ describe('WizardDataStore accumulatedData', () => {
     expect(store.accumulatedData._internal).toBeUndefined();
     expect(store.accumulatedData.realField).toBe('keepMe');
   });
+
+  it("prefers a step's container field over another step's stale top-level copy", () => {
+    const store = useWizardDataStore();
+
+    store.setStepData('form-assets', {
+      realProperty: { realPropertyEntries: [{ marketValue: 1234567 }] },
+    });
+    // Later step holding a stale flat copy it captured from injected data.
+    store.setStepData('form-application-documents', {
+      realPropertyEntries: [{ marketValue: 2000000 }],
+    });
+
+    expect(store.accumulatedData.realPropertyEntries).toEqual([
+      { marketValue: 1234567 },
+    ]);
+  });
+
+  it('does not let an empty container field override a non-empty copy', () => {
+    const store = useWizardDataStore();
+
+    store.setStepData('form-applicant', {
+      applicant: { applicantCourthouseName: '' },
+    });
+    store.setStepData('form-notify', {
+      applicantCourthouseName: 'Chilliwack Law Courts',
+    });
+
+    expect(store.accumulatedData.applicantCourthouseName).toBe(
+      'Chilliwack Law Courts'
+    );
+  });
+
+  it('keeps last-write-wins within a single step', () => {
+    const store = useWizardDataStore();
+
+    store.setStepData('form-x', { checks: { flag: true }, flag: false });
+
+    expect(store.accumulatedData.flag).toBe(false);
+  });
+});
+
+describe('WizardDataStore keysHeldByOtherSteps', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia());
+  });
+
+  it('returns other steps top-level and container child keys only', () => {
+    const store = useWizardDataStore();
+
+    store.setStepData('form-assets', {
+      realProperty: { realPropertyEntries: [] },
+      _transient: { hidden: 1 },
+    });
+    store.setStepData('form-application-documents', { ownField: 'x' });
+
+    const held = store.keysHeldByOtherSteps('form-application-documents');
+    expect([...held].sort()).toEqual(['realProperty', 'realPropertyEntries']);
+  });
 });

@@ -834,17 +834,12 @@
                 // Build injectedKeys from OTHER steps only.  If we include
                 // the current step's own stored keys, captureStepData will
                 // treat conditional / late-appearing fields as "injected"
-                // and skip them — causing data loss on auto-save.
-                const otherStepKeys = new Set<string>();
-                for (const [sKey, sData] of Object.entries(
-                  wizardDataStore.stepData
-                )) {
-                  if (sKey === stepKey) continue;
-                  for (const k of Object.keys(sData)) {
-                    if (!k.startsWith('_')) otherStepKeys.add(k);
-                  }
-                }
-                stepInjectedKeys[stepKey] = otherStepKeys;
+                // and skip them — causing data loss on auto-save.  Include
+                // container children too: accumulatedData exposes them flat,
+                // so e.g. assets' realProperty.realPropertyEntries arrives
+                // here as top-level realPropertyEntries.
+                stepInjectedKeys[stepKey] =
+                  wizardDataStore.keysHeldByOtherSteps(stepKey);
 
                 // Read fresh here (not captured before the deferred wait above)
                 // so a hydration fetch that finishes while we waited for the
@@ -983,6 +978,16 @@
   }
 
   // ── Capture a step's own data into the store ───────────────────────────────
+  const warnedSkippedKeys = new Set<string>();
+  function warnSkippedDynamicKey(stepKey: string, key: string) {
+    const id = `${stepKey}:${key}`;
+    if (warnedSkippedKeys.has(id)) return;
+    warnedSkippedKeys.add(id);
+    console.warn(
+      `[wizard] ${stepKey}: not claiming "${key}" — already held by another step`
+    );
+  }
+
   function captureStepData(stepKey: string, detail?: any) {
     if (unmounted) return;
     const el = stepEls[stepKey];
@@ -1007,6 +1012,7 @@
     const injectedKeys = stepInjectedKeys[stepKey] ?? new Set<string>();
     if (ownKeys) {
       const ownData: Record<string, any> = {};
+      let heldElsewhere: Set<string> | null = null;
       for (const [key, value] of Object.entries(sanitizedSourceData)) {
         if (CAPTURE_EXCLUDED_KEYS.has(key) || key.startsWith('_')) continue;
 
@@ -1015,11 +1021,20 @@
           continue;
         }
 
-        // Dynamic field created after ready
-        if (!injectedKeys.has(key)) {
-          ownKeys.add(key);
-          ownData[key] = value;
+        if (injectedKeys.has(key)) continue;
+
+        // Dynamic field created after ready. Don't claim keys another step
+        // already holds — that's cross-step data that reached this form
+        // after injection, and claiming it would freeze a stale copy.
+        heldElsewhere ??= wizardDataStore.keysHeldByOtherSteps(stepKey);
+        if (heldElsewhere.has(key)) {
+          injectedKeys.add(key);
+          stepInjectedKeys[stepKey] = injectedKeys;
+          warnSkippedDynamicKey(stepKey, key);
+          continue;
         }
+        ownKeys.add(key);
+        ownData[key] = value;
       }
 
       normalizeContainerCapture(stepKey, ownData);
