@@ -648,6 +648,15 @@
     return { containerKeys, containerFieldKeys };
   }
 
+  function isOwnContainerField(stepKey: string, key: string): boolean {
+    const shape = stepCaptureShapes[stepKey];
+    if (!shape) return false;
+    for (const fieldKeys of Object.values(shape.containerFieldKeys)) {
+      if (fieldKeys.has(key)) return true;
+    }
+    return false;
+  }
+
   // avoid mirroring nested container fields to top-level aliases.
   function normalizeContainerCapture(
     stepKey: string,
@@ -1022,6 +1031,15 @@
         }
 
         if (injectedKeys.has(key)) continue;
+
+        // Flat alias of one of this step's own container fields (injected
+        // back via accumulatedData's flattening). The container holds the
+        // real value, so let normalizeContainerCapture handle it without
+        // marking the stale alias as owned.
+        if (isOwnContainerField(stepKey, key)) {
+          ownData[key] = value;
+          continue;
+        }
 
         // Dynamic field created after ready. Don't claim keys another step
         // already holds — that's cross-step data that reached this form
@@ -1479,7 +1497,23 @@
           for (const key of ownKeys) {
             if (key.startsWith('_') || CAPTURE_EXCLUDED_KEYS.has(key)) continue;
             if (formData[key] === undefined) continue;
+            // Flat aliases of own container fields can be stale; the
+            // container's live children are exposed flat below instead.
+            if (isOwnContainerField(sKey, key)) continue;
             submissionData[key] = formData[key];
+            const value = formData[key];
+            if (
+              stepCaptureShapes[sKey]?.containerKeys.has(key) &&
+              value &&
+              typeof value === 'object' &&
+              !Array.isArray(value)
+            ) {
+              for (const [childKey, childValue] of Object.entries(value)) {
+                if (childKey.startsWith('_')) continue;
+                if (CAPTURE_EXCLUDED_KEYS.has(childKey)) continue;
+                submissionData[childKey] = childValue;
+              }
+            }
           }
         }
         return submissionData;

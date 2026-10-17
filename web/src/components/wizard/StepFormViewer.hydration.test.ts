@@ -323,4 +323,73 @@ describe('StepFormViewer cross-step hydration on resume', () => {
     expect(docs.docsOwnField).toBe('keep');
     expect(docs.docsDynamicField).toBe('mine');
   });
+
+  it("sends a step's live container value, not its stale flat alias, to the PDF", async () => {
+    const chefsService = makeChefsService(async () => [
+      {
+        formId: 'form-assets',
+        data: JSON.stringify({
+          realProperty: { realPropertyEntries: [{ marketValue: 2000000 }] },
+        }),
+        updatedAt: '2026-01-01T00:00:00Z',
+        createdAt: '2026-01-01T00:00:00Z',
+      },
+    ]);
+    const generateReport = vi.fn(async () => ({ url: 'blob:fake' }));
+
+    app = createApp(StepFormViewer, {
+      activeStep: 'form-assets',
+      stepKeys: ['survey', 'form-assets'],
+      surveyStepKey: 'survey',
+      submissionPublicId: 'sub-123',
+    });
+    app.config.warnHandler = () => {};
+    app.provide('chefsService', chefsService);
+    app.provide('reportService', { generateReport });
+    app.provide('courtLocationService', undefined);
+    const vm = app.mount(host) as unknown as {
+      flushAllSteps: () => Promise<void>;
+    };
+
+    const el = await getFakeFilingElement();
+    (el.formioInstance as any).component = {
+      components: [
+        {
+          type: 'container',
+          key: 'realProperty',
+          components: [{ key: 'realPropertyEntries' }],
+        },
+      ],
+    };
+    el.dispatchEvent(new CustomEvent('formio:ready'));
+    el.formioInstance.data.realProperty = { realPropertyEntries: [] };
+    el.formioInstance.emit('change', { data: el.formioInstance.data });
+    await nextTick();
+
+    // Injection flattened the step's own container child back to the top.
+    expect(el.formioInstance.data.realPropertyEntries).toEqual([
+      { marketValue: 2000000 },
+    ]);
+
+    // The user edits the real (nested) field; the flat alias goes stale.
+    el.formioInstance.data.realProperty = {
+      realPropertyEntries: [{ marketValue: 2500000 }],
+    };
+    await vm.flushAllSteps().catch(() => {});
+
+    await (window as any).probate.previewPdf(
+      el.formioInstance,
+      el.formioInstance.data,
+      'x',
+      'x',
+      'P10',
+      'probe'
+    );
+
+    const sent = (generateReport.mock.calls[0] as any)[0].submissionData;
+    expect(sent.realPropertyEntries).toEqual([{ marketValue: 2500000 }]);
+    expect(sent.realProperty.realPropertyEntries).toEqual([
+      { marketValue: 2500000 },
+    ]);
+  });
 });

@@ -655,10 +655,15 @@
         {% endif %}
       </div>
 
-      <table class="asset-table outside-bc">
+      <table class="asset-table within-bc">
+        <colgroup>
+          <col style="width: 62%" />
+          <col style="width: 19%" />
+          <col style="width: 19%" />
+        </colgroup>
         <thead>
           <tr>
-            <th class="part-heading">
+            <th class="part-heading" colspan="2">
               Part I<br />Real Property outside British Columbia (including
               mortgages and vendors' and purchasers' interests in agreements for
               sale)
@@ -666,85 +671,99 @@
             <th class="value-heading">Value at Death</th>
           </tr>
           <tr>
-            <td class="instruction" colspan="2">
+            <td class="instruction" colspan="3">
               List item details; it is unnecessary to list debts or liabilities
               that charge or encumber the property
             </td>
           </tr>
         </thead>
-        <tbody>
-          {% for item in Model.realPropertyOutsideBCEntries %} {% if
-          item.propertyDescription != '' %} {% assign outsideRealPropertyTotal =
-          outsideRealPropertyTotal | plus: item.valueAtDeath %} {% assign
-          outsideRealPropertyCount = outsideRealPropertyCount | plus: 1 %}
-          <tr class="asset-row">
-            <td class="description">
+        {% for item in Model.realPropertyOutsideBCEntries %} {% if
+        item.propertyDescription != '' %} {% assign outsideRealPropertyTotal =
+        outsideRealPropertyTotal | plus: item.valueAtDeath %} {% assign
+        outsideRealPropertyCount = outsideRealPropertyCount | plus: 1 %}
+        <tbody class="asset-detail-group">
+          <tr class="asset-detail-start">
+            <td>
               <div class="description-text">{{ item.propertyDescription }}</div>
-              <div class="asset-detail">Market Value</div>
-              {% if item.marketValueSource != '' %}
+            </td>
+            <td></td>
+            <td></td>
+          </tr>
+          <tr class="asset-detail-row">
+            <td>
+              Market Value{% if item.marketValueSource != '' %}
               <div class="asset-detail-label">{{ item.marketValueSource }}</div>
               {% endif %}
-              <div class="asset-detail">
-                ${{ item.marketValue | money: 'CAD' }}
-              </div>
             </td>
-            <td class="death-value">${{ item.valueAtDeath | money: 'CAD' }}</td>
+            <td>${{ item.marketValue | money: 'CAD' }}</td>
+            <td>${{ item.valueAtDeath | money: 'CAD' }}</td>
           </tr>
-          {% endif %} {% endfor %} {% if outsideRealPropertyCount == 0 %}
+        </tbody>
+        {% endif %} {% endfor %}
+        <tbody>
+          {% if outsideRealPropertyCount == 0 %}
           <tr>
-            <td><b>None</b></td>
-            <td></td>
+            <td colspan="3"><b>None</b></td>
           </tr>
           {% endif %}
           <tr class="total-row">
-            <td>TOTAL REAL PROPERTY OUTSIDE BRITISH COLUMBIA</td>
+            <td colspan="2">TOTAL REAL PROPERTY OUTSIDE BRITISH COLUMBIA</td>
             <td>${{ outsideRealPropertyTotal | money: 'CAD' }}</td>
           </tr>
         </tbody>
       </table>
 
-      <table class="asset-table outside-bc">
+      <table class="asset-table within-bc">
+        <colgroup>
+          <col style="width: 62%" />
+          <col style="width: 19%" />
+          <col style="width: 19%" />
+        </colgroup>
         <thead>
           <tr>
-            <th class="part-heading">
+            <th class="part-heading" colspan="2">
               Part II<br />Tangible Personal Property outside British Columbia
               (including vehicles, furniture and other physical items)
             </th>
             <th class="value-heading">Value at Death</th>
           </tr>
           <tr>
-            <td class="instruction" colspan="2">
+            <td class="instruction" colspan="3">
               List item details; it is unnecessary to list secured debts
             </td>
           </tr>
         </thead>
-        <tbody>
-          {% for item in Model.tangiblePersonalPropertyOutsideBCEntries %} {% if
-          item.propertyDescription != '' %} {% assign
-          outsideTangiblePropertyTotal = outsideTangiblePropertyTotal | plus:
-          item.valueAtDeath %} {% assign outsideTangiblePropertyCount =
-          outsideTangiblePropertyCount | plus: 1 %}
-          <tr class="asset-row">
-            <td class="description">
+        {% for item in Model.tangiblePersonalPropertyOutsideBCEntries %} {% if
+        item.propertyDescription != '' %} {% assign outsideTangiblePropertyTotal =
+        outsideTangiblePropertyTotal | plus: item.valueAtDeath %} {% assign
+        outsideTangiblePropertyCount = outsideTangiblePropertyCount | plus: 1 %}
+        <tbody class="asset-detail-group">
+          <tr class="asset-detail-start">
+            <td>
               <div class="description-text">{{ item.propertyDescription }}</div>
-              <div class="asset-detail">Market Value</div>
-              {% if item.marketValueSource != '' %}
+            </td>
+            <td></td>
+            <td></td>
+          </tr>
+          <tr class="asset-detail-row">
+            <td>
+              Market Value{% if item.marketValueSource != '' %}
               <div class="asset-detail-label">{{ item.marketValueSource }}</div>
               {% endif %}
-              <div class="asset-detail">
-                ${{ item.marketValue | money: 'CAD' }}
-              </div>
             </td>
-            <td class="death-value">${{ item.valueAtDeath | money: 'CAD' }}</td>
+            <td>${{ item.marketValue | money: 'CAD' }}</td>
+            <td>${{ item.valueAtDeath | money: 'CAD' }}</td>
           </tr>
-          {% endif %} {% endfor %} {% if outsideTangiblePropertyCount == 0 %}
+        </tbody>
+        {% endif %} {% endfor %}
+        <tbody>
+          {% if outsideTangiblePropertyCount == 0 %}
           <tr>
-            <td><b>None</b></td>
-            <td></td>
+            <td colspan="3"><b>None</b></td>
           </tr>
           {% endif %}
           <tr class="total-row">
-            <td>TOTAL TANGIBLE PERSONAL PROPERTY OUTSIDE BRITISH COLUMBIA</td>
+            <td colspan="2">TOTAL TANGIBLE PERSONAL PROPERTY OUTSIDE BRITISH COLUMBIA</td>
             <td>${{ outsideTangiblePropertyTotal | money: 'CAD' }}</td>
           </tr>
         </tbody>
