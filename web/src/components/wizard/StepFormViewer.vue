@@ -54,8 +54,15 @@
   import ChefsService from '@/services/ChefsService';
   import CourtLocationService from '@/services/CourtLocationService';
   import ReportService from '@/services/ReportService';
+  import { pinia } from '@/stores/pinia';
+  import { recalculateForm } from '@/utils/formioRecalculate';
   import { useWizardDataStore } from '@/stores/WizardDataStore';
+  import { useWizardStateStore } from '@/stores/WizardStateStore';
   import chefsFormStylesUrl from '@/styles/chefs-form.scss?url';
+  import {
+    createPdfPreviewBridge,
+    type PdfPreviewBridge,
+  } from '@/utils/pdfPreviewBridge';
   import {
     inject,
     nextTick,
@@ -73,6 +80,7 @@
     disabledMap,
   } = useWizardState();
   const wizardDataStore = useWizardDataStore();
+  const wizardStateStore = useWizardStateStore(pinia);
 
   // ── Template ref ──────────────────────────────────────────────────────
   const viewerEl = ref<HTMLElement | null>(null);
@@ -240,6 +248,7 @@
 
   // Track generated blob URLs so they can be revoked on component teardown.
   const activeBlobUrls = new Set<string>();
+  let pdfBridge: PdfPreviewBridge | null = null;
 
   // ── Per-step state ────────────────────────────────────────────────────────
   type ViewState = 'loading' | 'ready' | 'error';
@@ -364,8 +373,10 @@
   }
 
   async function hydrateFromPersistedPayload() {
-    // Clear any leftover data from a previous application session.
+    // Clear any leftover data from a previous application session, including
+    // visibility the previous application's CHEFS forms asked for.
     wizardDataStore.reset();
+    wizardStateStore.clearSubstepVisibilityOverrides();
     // If we have a submission ID, try loading step data from the API first.
     if (props.submissionPublicId) {
       try {
@@ -637,6 +648,15 @@
     return { containerKeys, containerFieldKeys };
   }
 
+  function isOwnContainerField(stepKey: string, key: string): boolean {
+    const shape = stepCaptureShapes[stepKey];
+    if (!shape) return false;
+    for (const fieldKeys of Object.values(shape.containerFieldKeys)) {
+      if (fieldKeys.has(key)) return true;
+    }
+    return false;
+  }
+
   // avoid mirroring nested container fields to top-level aliases.
   function normalizeContainerCapture(
     stepKey: string,
@@ -823,17 +843,12 @@
                 // Build injectedKeys from OTHER steps only.  If we include
                 // the current step's own stored keys, captureStepData will
                 // treat conditional / late-appearing fields as "injected"
-                // and skip them — causing data loss on auto-save.
-                const otherStepKeys = new Set<string>();
-                for (const [sKey, sData] of Object.entries(
-                  wizardDataStore.stepData
-                )) {
-                  if (sKey === stepKey) continue;
-                  for (const k of Object.keys(sData)) {
-                    if (!k.startsWith('_')) otherStepKeys.add(k);
-                  }
-                }
-                stepInjectedKeys[stepKey] = otherStepKeys;
+                // and skip them — causing data loss on auto-save.  Include
+                // container children too: accumulatedData exposes them flat,
+                // so e.g. assets' realProperty.realPropertyEntries arrives
+                // here as top-level realPropertyEntries.
+                stepInjectedKeys[stepKey] =
+                  wizardDataStore.keysHeldByOtherSteps(stepKey);
 
                 // Read fresh here (not captured before the deferred wait above)
                 // so a hydration fetch that finishes while we waited for the
@@ -972,6 +987,16 @@
   }
 
   // ── Capture a step's own data into the store ───────────────────────────────
+  const warnedSkippedKeys = new Set<string>();
+  function warnSkippedDynamicKey(stepKey: string, key: string) {
+    const id = `${stepKey}:${key}`;
+    if (warnedSkippedKeys.has(id)) return;
+    warnedSkippedKeys.add(id);
+    console.warn(
+      `[wizard] ${stepKey}: not claiming "${key}" — already held by another step`
+    );
+  }
+
   function captureStepData(stepKey: string, detail?: any) {
     if (unmounted) return;
     const el = stepEls[stepKey];
@@ -996,6 +1021,7 @@
     const injectedKeys = stepInjectedKeys[stepKey] ?? new Set<string>();
     if (ownKeys) {
       const ownData: Record<string, any> = {};
+      let heldElsewhere: Set<string> | null = null;
       for (const [key, value] of Object.entries(sanitizedSourceData)) {
         if (CAPTURE_EXCLUDED_KEYS.has(key) || key.startsWith('_')) continue;
 
@@ -1004,11 +1030,29 @@
           continue;
         }
 
-        // Dynamic field created after ready
-        if (!injectedKeys.has(key)) {
-          ownKeys.add(key);
+        if (injectedKeys.has(key)) continue;
+
+        // Flat alias of one of this step's own container fields (injected
+        // back via accumulatedData's flattening). The container holds the
+        // real value, so let normalizeContainerCapture handle it without
+        // marking the stale alias as owned.
+        if (isOwnContainerField(stepKey, key)) {
           ownData[key] = value;
+          continue;
         }
+
+        // Dynamic field created after ready. Don't claim keys another step
+        // already holds — that's cross-step data that reached this form
+        // after injection, and claiming it would freeze a stale copy.
+        heldElsewhere ??= wizardDataStore.keysHeldByOtherSteps(stepKey);
+        if (heldElsewhere.has(key)) {
+          injectedKeys.add(key);
+          stepInjectedKeys[stepKey] = injectedKeys;
+          warnSkippedDynamicKey(stepKey, key);
+          continue;
+        }
+        ownKeys.add(key);
+        ownData[key] = value;
       }
 
       normalizeContainerCapture(stepKey, ownData);
@@ -1047,7 +1091,7 @@
       if (!hasChanges) return;
       // Re-run Form.io logic triggers so review-table scripts recompute using
       // freshly synced cross-step data.
-      el.formioInstance.triggerChange?.();
+      recalculateForm(el.formioInstance);
       // redraw() re-renders all components including fieldset legends, panel titles,
       // and HTML content components that use {{ data.xxx }} template expressions.
       // triggerChange() alone only recalculates computed values, not static DOM.
@@ -1076,7 +1120,7 @@
         },
       });
       if (stepKey === props.activeStep) {
-        el.formioInstance.triggerChange?.();
+        recalculateForm(el.formioInstance);
         el.formioInstance.redraw?.();
       }
     }
@@ -1283,7 +1327,7 @@
           if (el?.formioInstance?.data?.showSurvey2 === 'hide') {
             el.formioInstance.data.showSurvey2 = '';
             el.formioInstance.data.showStepFunction = false;
-            el.formioInstance.triggerChange?.();
+            recalculateForm(el.formioInstance);
             el.formioInstance.redraw?.();
           }
         } catch {
@@ -1426,9 +1470,55 @@
     window.wizardGetPersistedPayload = () => buildPersistedPayload();
 
     // Bridge expected by CHEFS schema scripts in preview/print substeps.
-    // Generation counter so concurrent previewPdf calls don't race —
-    // only the most recent call's result is applied to the iframe.
-    let previewGeneration = 0;
+    pdfBridge = createPdfPreviewBridge({
+      generate: async (templateKey, submissionData) => {
+        const { url } = await reportService.generateReport({
+          templateKey,
+          submissionData,
+        });
+        return url;
+      },
+      // Start from the hydrated store, which covers every step ever
+      // persisted for this submission — not just ones mounted this
+      // session (background preloading was removed, so on resume only
+      // the step(s) actually visited have a live formio instance).
+      // Then overlay each currently-mounted step's own live fields so
+      // just-typed edits aren't missed while waiting on the store's
+      // autosave capture gates.
+      resolveSubmissionData: () => {
+        const submissionData: Record<string, any> = {
+          ...wizardDataStore.accumulatedData,
+        };
+        for (const [sKey, el] of Object.entries(stepEls)) {
+          const formData = el?.formioInstance?.data;
+          if (!formData) continue;
+          const ownKeys = stepOwnedKeys[sKey];
+          if (!ownKeys) continue;
+          for (const key of ownKeys) {
+            if (key.startsWith('_') || CAPTURE_EXCLUDED_KEYS.has(key)) continue;
+            if (formData[key] === undefined) continue;
+            // Flat aliases of own container fields can be stale; the
+            // container's live children are exposed flat below instead.
+            if (isOwnContainerField(sKey, key)) continue;
+            submissionData[key] = formData[key];
+            const value = formData[key];
+            if (
+              stepCaptureShapes[sKey]?.containerKeys.has(key) &&
+              value &&
+              typeof value === 'object' &&
+              !Array.isArray(value)
+            ) {
+              for (const [childKey, childValue] of Object.entries(value)) {
+                if (childKey.startsWith('_')) continue;
+                if (CAPTURE_EXCLUDED_KEYS.has(childKey)) continue;
+                submissionData[childKey] = childValue;
+              }
+            }
+          }
+        }
+        return submissionData;
+      },
+    });
 
     window.probate = {
       generatePdf: async (
@@ -1442,104 +1532,8 @@
         activeBlobUrls.add(url);
         return url;
       },
-      downloadPdf: async (
-        instance: any,
-        data: unknown,
-        templateKey: string,
-        iframeTitle: string,
-        fileName: string
-      ): Promise<void> => {
-        const root = instance.root;
-        const rootEl = root?.element ?? document;
-        const frame: HTMLIFrameElement | null = rootEl.querySelector(
-          `iframe[title='${iframeTitle}']`
-        );
-
-        let url = frame?.getAttribute('src') ?? '';
-        let freshUrl = false;
-        if (!url || url === 'about:blank' || !url.startsWith('blob:')) {
-          const result = await reportService.generateReport({
-            templateKey,
-            submissionData: data,
-          });
-          url = result.url;
-          freshUrl = true;
-        }
-
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = fileName;
-        a.click();
-
-        if (freshUrl) {
-          URL.revokeObjectURL(url);
-        }
-      },
-      previewPdf: async (
-        instance: any,
-        data: unknown,
-        currentStep: string,
-        targetStep: string,
-        templateKey: string,
-        iframeTitle: string
-      ): Promise<void> => {
-        if (currentStep !== targetStep) return;
-
-        const root = instance.root;
-        const rootEl = root?.element ?? document;
-        const frame: HTMLIFrameElement | null = rootEl.querySelector(
-          `iframe[title='${iframeTitle}']`
-        );
-
-        if (!frame) return;
-
-        // Start from the hydrated store, which covers every step ever
-        // persisted for this submission — not just ones mounted this
-        // session (background preloading was removed, so on resume only
-        // the step(s) actually visited have a live formio instance).
-        // Then overlay each currently-mounted step's own live fields so
-        // just-typed edits aren't missed while waiting on the store's
-        // autosave capture gates.
-        const submissionData: Record<string, any> = {
-          ...wizardDataStore.accumulatedData,
-        };
-        for (const [sKey, el] of Object.entries(stepEls)) {
-          const formData = el?.formioInstance?.data;
-          if (!formData) continue;
-          const ownKeys = stepOwnedKeys[sKey];
-          if (ownKeys) {
-            for (const key of ownKeys) {
-              if (!key.startsWith('_') && !CAPTURE_EXCLUDED_KEYS.has(key)) {
-                submissionData[key] = formData[key];
-              }
-            }
-          }
-        }
-
-        const generation = ++previewGeneration;
-
-        const { url } = await reportService.generateReport({
-          templateKey,
-          submissionData,
-        });
-
-        // A newer previewPdf call was made while we were awaiting —
-        // discard this stale result so it doesn't overwrite the latest.
-        if (generation !== previewGeneration) {
-          URL.revokeObjectURL(url);
-          return;
-        }
-
-        const oldSrc = frame.getAttribute('src') ?? '';
-        if (oldSrc.startsWith('blob:')) {
-          URL.revokeObjectURL(oldSrc);
-          activeBlobUrls.delete(oldSrc);
-        }
-
-        activeBlobUrls.add(url);
-        frame.setAttribute('src', url);
-        frame.setAttribute('data-pdf-loaded', 'true');
-      },
+      downloadPdf: pdfBridge.downloadPdf,
+      previewPdf: pdfBridge.previewPdf,
     };
   });
 
@@ -1561,6 +1555,8 @@
 
     activeBlobUrls.forEach((url) => URL.revokeObjectURL(url));
     activeBlobUrls.clear();
+    pdfBridge?.dispose();
+    pdfBridge = null;
 
     delete window.probate;
 

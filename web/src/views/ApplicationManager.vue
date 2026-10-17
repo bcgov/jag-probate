@@ -170,7 +170,8 @@
     mapSidebarStepsToWizardSteps,
   } from '@/config/wizardSteps';
   import type ChefsService from '@/services/ChefsService';
-  import { useAuthStore, useLayoutStore } from '@/stores';
+  import { useAuthStore, useLayoutStore, useWizardStateStore } from '@/stores';
+  import { pinia } from '@/stores/pinia';
   import type {
     StepStatus,
     WizardNavState,
@@ -211,6 +212,7 @@
   const resumeSubstepKey = ref('');
 
   const { navState, statusMap, disabledMap } = useWizardState();
+  const wizardStateStore = useWizardStateStore(pinia);
 
   const sidebarInitialNavState = computed<WizardNavState>(
     () => persistedNavState.value ?? initialNavState.value
@@ -277,6 +279,9 @@
       firstWizardStepKey.value = wizardStepDtos[0]?.key ?? surveyStepKey.value;
 
       wizardSteps.value = mapSidebarStepsToWizardSteps(wizardStepDtos);
+      // Make the step config available to the bridge/store before the sidebar
+      // mounts (replays deferred calls such as wizardBanPathway).
+      wizardStateStore.setSteps(wizardSteps.value);
       // Progressive reveal by default; onResumeWizardState overrides this
       // with the real saved state if the carrier step has one.
       initialNavState.value = deriveInitialNavState(wizardStepDtos);

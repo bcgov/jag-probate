@@ -3,6 +3,8 @@
 export interface WizardSubstep {
   key: string;
   label: string;
+  /** Keep a hidden substep visible as a ghost; defaults to true. */
+  hiddenIsGhost?: boolean;
 }
 
 export interface WizardStep {

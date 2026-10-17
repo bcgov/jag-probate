@@ -12,6 +12,87 @@ namespace Probate.Api.Tests.Services;
 
 public class TemplateServiceTests
 {
+    [Theory]
+    [InlineData("${{ Model.amount | money }}", "$1,134.65")]
+    [InlineData("${{ Model.amount | money: 'CAD' }}", "$1,134.65")]
+    [InlineData("${{ Model.amount | money_with_currency }}", "$1,134.65 CAD")]
+    public void RenderTemplates_FormatsMoneyWithOneTemplateDollarSign(string source, string expected)
+    {
+        var temporaryDirectory = Directory.CreateTempSubdirectory();
+        try
+        {
+            var templatesPath = Path.Join(temporaryDirectory.FullName, "Templates");
+            Directory.CreateDirectory(templatesPath);
+            File.WriteAllText(Path.Join(templatesPath, "test.html"), source);
+
+            var environment = new Mock<IWebHostEnvironment>();
+            environment.SetupGet(value => value.ContentRootPath).Returns(temporaryDirectory.FullName);
+            var options = Microsoft.Extensions.Options.Options.Create(
+                new TemplateOptions
+                {
+                    Groups = new Dictionary<string, string[]> { ["test"] = ["test.html"] },
+                }
+            );
+            var service = new TemplateService(
+                environment.Object,
+                options,
+                NullLogger<TemplateService>.Instance
+            );
+
+            var documents = service.RenderTemplates(
+                "test",
+                new Dictionary<string, object> { ["amount"] = 1134.65m }
+            );
+
+            Assert.Equal(expected, Assert.Single(documents));
+        }
+        finally
+        {
+            temporaryDirectory.Delete(recursive: true);
+        }
+    }
+
+    [Theory]
+    [InlineData("P10-exhibits.html")]
+    [InlineData("P11-exhibits.html")]
+    public void RenderTemplates_ExhibitsFormatMoneyWithOneDollarSign(string fileName)
+    {
+        var environment = new Mock<IWebHostEnvironment>();
+        environment.SetupGet(value => value.ContentRootPath).Returns(AppContext.BaseDirectory);
+        var options = Microsoft.Extensions.Options.Options.Create(
+            new TemplateOptions
+            {
+                Groups = new Dictionary<string, string[]> { ["exhibits"] = [fileName] },
+            }
+        );
+        var service = new TemplateService(
+            environment.Object,
+            options,
+            NullLogger<TemplateService>.Instance
+        );
+
+        var documents = service.RenderTemplates(
+            "exhibits",
+            new Dictionary<string, object>
+            {
+                ["realPropertyEntries"] = new[]
+                {
+                    new Dictionary<string, object>
+                    {
+                        ["propertyDescription"] = "Test property",
+                        ["marketValue"] = 1134.65m,
+                        ["valueAtDeath"] = 1134.65m,
+                    },
+                },
+            }
+        );
+
+        var document = Assert.Single(documents);
+        Assert.Contains("<td>$1,134.65</td>", document);
+        Assert.DoesNotContain("$$", document);
+        Assert.DoesNotContain("$1134.65", document);
+    }
+
     [Fact]
     public void RenderTemplates_BindsSubmissionDataToModel()
     {

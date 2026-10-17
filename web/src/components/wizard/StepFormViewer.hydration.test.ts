@@ -255,4 +255,141 @@ describe('StepFormViewer cross-step hydration on resume', () => {
       vi.useRealTimers();
     }
   });
+
+  it("drops a stale flat copy of another step's container field instead of re-saving it", async () => {
+    // Polluted persisted state: the documents step previously claimed the
+    // flattened assets field realPropertyEntries as its own.
+    const chefsService = makeChefsService(async () => [
+      {
+        formId: 'form-assets',
+        data: JSON.stringify({
+          realProperty: { realPropertyEntries: [{ marketValue: 1234567 }] },
+        }),
+        updatedAt: '2026-01-01T00:00:00Z',
+        createdAt: '2026-01-01T00:00:00Z',
+      },
+      {
+        formId: 'form-application-documents',
+        data: JSON.stringify({
+          docsOwnField: 'keep',
+          realPropertyEntries: [{ marketValue: 2000000 }],
+        }),
+        updatedAt: '2026-01-01T00:00:00Z',
+        createdAt: '2026-01-01T00:00:00Z',
+      },
+    ]);
+
+    app = createApp(StepFormViewer, {
+      activeStep: 'form-application-documents',
+      stepKeys: ['survey', 'form-assets', 'form-application-documents'],
+      surveyStepKey: 'survey',
+      submissionPublicId: 'sub-123',
+    });
+    app.config.warnHandler = () => {};
+    app.provide('chefsService', chefsService);
+    app.provide('reportService', {});
+    app.provide('courtLocationService', undefined);
+    const vm = app.mount(host) as unknown as {
+      flushAllSteps: () => Promise<void>;
+    };
+    vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    const el = await getFakeFilingElement();
+    el.dispatchEvent(new CustomEvent('formio:ready'));
+    el.formioInstance.data.docsOwnField = '';
+    el.formioInstance.emit('change', { data: el.formioInstance.data });
+    await nextTick();
+
+    // The assets container value is injected, not the stale copy.
+    expect(el.formioInstance.data.realPropertyEntries).toEqual([
+      { marketValue: 1234567 },
+    ]);
+
+    // Form.io later surfaces a key another step holds as a container child.
+    el.formioInstance.data.realPropertyExists = true;
+    useWizardDataStore().setStepData('form-assets', {
+      realProperty: {
+        realPropertyEntries: [{ marketValue: 1234567 }],
+        realPropertyExists: true,
+      },
+    });
+    el.formioInstance.data.docsDynamicField = 'mine';
+
+    await vm.flushAllSteps().catch(() => {});
+
+    const docs = useWizardDataStore().getStepData('form-application-documents');
+    expect(docs).not.toHaveProperty('realPropertyEntries');
+    expect(docs).not.toHaveProperty('realPropertyExists');
+    expect(docs.docsOwnField).toBe('keep');
+    expect(docs.docsDynamicField).toBe('mine');
+  });
+
+  it("sends a step's live container value, not its stale flat alias, to the PDF", async () => {
+    const chefsService = makeChefsService(async () => [
+      {
+        formId: 'form-assets',
+        data: JSON.stringify({
+          realProperty: { realPropertyEntries: [{ marketValue: 2000000 }] },
+        }),
+        updatedAt: '2026-01-01T00:00:00Z',
+        createdAt: '2026-01-01T00:00:00Z',
+      },
+    ]);
+    const generateReport = vi.fn(async () => ({ url: 'blob:fake' }));
+
+    app = createApp(StepFormViewer, {
+      activeStep: 'form-assets',
+      stepKeys: ['survey', 'form-assets'],
+      surveyStepKey: 'survey',
+      submissionPublicId: 'sub-123',
+    });
+    app.config.warnHandler = () => {};
+    app.provide('chefsService', chefsService);
+    app.provide('reportService', { generateReport });
+    app.provide('courtLocationService', undefined);
+    const vm = app.mount(host) as unknown as {
+      flushAllSteps: () => Promise<void>;
+    };
+
+    const el = await getFakeFilingElement();
+    (el.formioInstance as any).component = {
+      components: [
+        {
+          type: 'container',
+          key: 'realProperty',
+          components: [{ key: 'realPropertyEntries' }],
+        },
+      ],
+    };
+    el.dispatchEvent(new CustomEvent('formio:ready'));
+    el.formioInstance.data.realProperty = { realPropertyEntries: [] };
+    el.formioInstance.emit('change', { data: el.formioInstance.data });
+    await nextTick();
+
+    // Injection flattened the step's own container child back to the top.
+    expect(el.formioInstance.data.realPropertyEntries).toEqual([
+      { marketValue: 2000000 },
+    ]);
+
+    // The user edits the real (nested) field; the flat alias goes stale.
+    el.formioInstance.data.realProperty = {
+      realPropertyEntries: [{ marketValue: 2500000 }],
+    };
+    await vm.flushAllSteps().catch(() => {});
+
+    await (window as any).probate.previewPdf(
+      el.formioInstance,
+      el.formioInstance.data,
+      'x',
+      'x',
+      'P10',
+      'probe'
+    );
+
+    const sent = (generateReport.mock.calls[0] as any)[0].submissionData;
+    expect(sent.realPropertyEntries).toEqual([{ marketValue: 2500000 }]);
+    expect(sent.realProperty.realPropertyEntries).toEqual([
+      { marketValue: 2500000 },
+    ]);
+  });
 });

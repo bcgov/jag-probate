@@ -12,6 +12,7 @@ public class SidebarSubstepDto
     public string Title { get; set; } = string.Empty;
     public string Icon { get; set; } = string.Empty;
     public bool Disabled { get; set; }
+    public bool HiddenIsGhost { get; set; } = true;
 }
 
 /// <summary>

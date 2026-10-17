@@ -35,6 +35,10 @@
   import { useAuthStore } from '@/stores';
   import type { UpsertSubmissionDto } from '@/types';
   import { extractTokenPayload } from '@/utils/claims';
+  import {
+    createPdfPreviewBridge,
+    type PdfPreviewBridge,
+  } from '@/utils/pdfPreviewBridge';
   import { computed, inject, onMounted, onUnmounted, ref } from 'vue';
 
   const authStore = useAuthStore();
@@ -373,9 +377,20 @@
   // ── Blob URL tracking ─────────────────────────────────────────────────────
   // Tracks every blob URL we create so they can be revoked on unmount.
   const activeBlobUrls = new Set<string>();
+  let pdfBridge: PdfPreviewBridge | null = null;
 
   // ── Lifecycle ─────────────────────────────────────────────────────────────
   onMounted(() => {
+    pdfBridge = createPdfPreviewBridge({
+      generate: async (templateKey, submissionData) => {
+        const { url } = await reportService.generateReport({
+          templateKey,
+          submissionData,
+        });
+        return url;
+      },
+      resolveSubmissionData: (data) => data,
+    });
     window.probate = {
       generatePdf: async (
         templateKey: string,
@@ -388,81 +403,16 @@
         activeBlobUrls.add(url);
         return url;
       },
-      downloadPdf: async (
-        instance: any,
-        data: unknown,
-        templateKey: string,
-        iframeTitle: string,
-        fileName: string
-      ): Promise<void> => {
-        const root = instance.root;
-        const rootEl = root?.element ?? document;
-        const frame: HTMLIFrameElement | null = rootEl.querySelector(
-          `iframe[title='${iframeTitle}']`
-        );
-
-        // Reuse blob URL already on the iframe, otherwise generate a fresh one
-        let url = frame?.getAttribute('src') ?? '';
-        let freshUrl = false;
-        if (!url || url === 'about:blank' || !url.startsWith('blob:')) {
-          const result = await reportService.generateReport({
-            templateKey,
-            submissionData: data,
-          });
-          url = result.url;
-          freshUrl = true;
-        }
-
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = fileName;
-        a.click();
-
-        // Revoke download-only URLs immediately — the browser queues the
-        // download synchronously on click so the URL is no longer needed.
-        if (freshUrl) {
-          URL.revokeObjectURL(url);
-        }
-      },
-      previewPdf: async (
-        instance: any,
-        data: unknown,
-        currentStep: string,
-        targetStep: string,
-        templateKey: string,
-        iframeTitle: string
-      ): Promise<void> => {
-        if (currentStep !== targetStep) return;
-
-        const root = instance.root;
-        const rootEl = root?.element ?? document;
-        const frame: HTMLIFrameElement | null = rootEl.querySelector(
-          `iframe[title='${iframeTitle}']`
-        );
-
-        if (!frame) return;
-
-        // Revoke the previous blob URL on this iframe before replacing it
-        const oldSrc = frame.getAttribute('src') ?? '';
-        if (oldSrc.startsWith('blob:')) {
-          URL.revokeObjectURL(oldSrc);
-          activeBlobUrls.delete(oldSrc);
-        }
-
-        const { url } = await reportService.generateReport({
-          templateKey,
-          submissionData: data,
-        });
-        activeBlobUrls.add(url);
-        frame.setAttribute('src', url);
-        frame.setAttribute('data-pdf-loaded', 'true');
-      },
+      downloadPdf: pdfBridge.downloadPdf,
+      previewPdf: pdfBridge.previewPdf,
     };
     initForm();
   });
   onUnmounted(() => {
     activeBlobUrls.forEach((url) => URL.revokeObjectURL(url));
     activeBlobUrls.clear();
+    pdfBridge?.dispose();
+    pdfBridge = null;
     teardownAutoSave();
     delete window.probate;
   });
