@@ -168,7 +168,8 @@
         endif %} (the "deceased") whose last residential address was
         <b
           >{{ Model.deceasedAddressStreet }}, {{ Model.deceasedAddressCity }},
-          {{ Model.deceasedAddressProvince }}, {{
+          {{ Model.deceasedAddressProvince }}{{ Model.deceasedAddressState }}{{
+          Model.deceasedAddressProvinceText }}, {{
           Model.deceasedAddressPostalCode }}, {{ Model.deceasedAddressCountry
           }}</b
         >.

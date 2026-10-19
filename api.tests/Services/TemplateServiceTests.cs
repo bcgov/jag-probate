@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text.Json;
 using System.Xml.Linq;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -134,6 +135,40 @@ public class TemplateServiceTests
     }
 
     [Theory]
+    [InlineData("deceasedAddressProvince", "British Columbia")]
+    [InlineData("deceasedAddressState", "Washington")]
+    [InlineData("deceasedAddressProvinceText", "Bavaria")]
+    public void RenderTemplates_P18IncludesAddressRegion(string field, string region)
+    {
+        var document = RenderTemplate("P18.html", new Dictionary<string, object>
+        {
+            ["deceasedAddressStreet"] = "123 Test Street",
+            ["deceasedAddressCity"] = "Test City",
+            [field] = region,
+            ["deceasedAddressPostalCode"] = "12345",
+            ["deceasedAddressCountry"] = "Test Country",
+        });
+        Assert.Contains(
+            $"123 Test Street, Test City, {region}, 12345, Test Country",
+            NormalizeText(ParseDocument(document).Root!.Value)
+        );
+    }
+
+    [Fact]
+    public void RenderTemplates_P10ConfiguredFilesMatchExactCaseAndRender()
+    {
+        using var config = JsonDocument.Parse(File.ReadAllText(Path.Join(AppContext.BaseDirectory, "appsettings.json")));
+        var files = config.RootElement.GetProperty("Templates").GetProperty("Groups").GetProperty("P10");
+        var actualNames = Directory.GetFiles(Path.Join(AppContext.BaseDirectory, "Templates")).Select(Path.GetFileName);
+        foreach (var entry in files.EnumerateArray())
+        {
+            var fileName = entry.GetString()!;
+            Assert.Contains(fileName, actualNames, StringComparer.Ordinal);
+            Assert.NotEmpty(RenderTemplate(fileName, new Dictionary<string, object>()));
+        }
+    }
+
+    [Theory]
     [InlineData(false)]
     [InlineData(true)]
     public void RenderTemplates_P11EmptyOrForeignOnly_RendersEmptyExhibitA(bool foreignOnly)
@@ -145,7 +180,7 @@ public class TemplateServiceTests
             data["realPropertyOutsideBCEntries"] = new[] { Asset("Foreign real property", 150m, 125m) };
             data["tangiblePersonalPropertyOutsideBCEntries"] = new[] { Asset("Foreign tangible property", 275m, 250m) };
         }
-        var document = RenderP11(data);
+        var document = RenderTemplate("P11-exhibits.html", data);
 
         Assert.Contains("<b>EXHIBIT A</b>", document);
         Assert.Contains(
@@ -173,7 +208,7 @@ public class TemplateServiceTests
     [Fact]
     public void RenderTemplates_P11RendersAllExhibitAAssetTypesAndTotals()
     {
-        var document = RenderP11(
+        var document = RenderTemplate("P11-exhibits.html",
             new Dictionary<string, object>
             {
                 ["applicant"] = new Dictionary<string, object>
@@ -226,7 +261,7 @@ public class TemplateServiceTests
     [Fact]
     public void RenderTemplates_P11RendersDebtsAndOptionalLabels()
     {
-        var document = RenderP11(
+        var document = RenderTemplate("P11-exhibits.html",
             new Dictionary<string, object>
             {
                 ["realPropertyEntries"] = new[]
@@ -251,14 +286,14 @@ public class TemplateServiceTests
         AssertRow(document, "GROSS VALUE OF ASSETS LESS SECURED DEBTS", "$100.00");
     }
 
-    private static string RenderP11(Dictionary<string, object> submissionData)
+    private static string RenderTemplate(string fileName, Dictionary<string, object> submissionData)
     {
         var environment = new Mock<IWebHostEnvironment>();
         environment.SetupGet(value => value.ContentRootPath).Returns(AppContext.BaseDirectory);
         var options = Microsoft.Extensions.Options.Options.Create(
             new TemplateOptions
             {
-                Groups = new Dictionary<string, string[]> { ["P11"] = ["P11-exhibits.html"] },
+                Groups = new Dictionary<string, string[]> { ["test"] = [fileName] },
             }
         );
         var service = new TemplateService(
@@ -267,7 +302,7 @@ public class TemplateServiceTests
             NullLogger<TemplateService>.Instance
         );
 
-        return Assert.Single(service.RenderTemplates("P11", submissionData));
+        return Assert.Single(service.RenderTemplates("test", submissionData));
     }
 
     private static Dictionary<string, object> Asset(
