@@ -228,4 +228,48 @@ describe('ApplicationStepSidebar', () => {
     app.unmount();
     host.remove();
   });
+
+  it('reports substep visibility to other forms through wizardIsSubstepVisible', async () => {
+    const steps: WizardStep[] = [
+      {
+        key: 'step1',
+        number: 1,
+        title: 'First',
+        defaultSubstep: 'step1-a',
+        substeps: [
+          { key: 'step1-a', label: 'First A' },
+          { key: 'step1-b', label: 'First B' },
+        ],
+      },
+      {
+        key: 'step2',
+        number: 2,
+        title: 'Second',
+        defaultSubstep: 'step2-a',
+        substeps: [{ key: 'step2-a', label: 'Second A' }],
+      },
+    ];
+    initWizardState('step1-a', { hiddenSteps: {}, hiddenSubsteps: {} }, {}, {});
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const app = createApp(ApplicationStepSidebar, {
+      steps,
+      initialStep: 'step1-a',
+    });
+    app.config.warnHandler = () => {};
+    app.mount(host);
+    await nextTick();
+
+    expect(window.wizardIsSubstepVisible?.('step1-b')).toBe(true);
+    window.wizardSetSubstepVisibility?.('step1-b', false, 'step1-a');
+    expect(window.wizardIsSubstepVisible?.('step1-b')).toBe(false);
+    window.wizardSetSubstepVisibility?.('step1-b', true, 'step1-a');
+    window.wizardSetStepVisibility?.('step2', false, 'step1-a');
+    expect(window.wizardIsSubstepVisible?.('step2-a')).toBe(false);
+
+    app.unmount();
+    host.remove();
+    expect(window.wizardIsSubstepVisible).toBeUndefined();
+  });
 });

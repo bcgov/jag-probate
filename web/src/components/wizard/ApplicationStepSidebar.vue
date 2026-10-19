@@ -678,6 +678,11 @@
         banPathwayAfter(stepKey, isBanned);
       }
     };
+    // Read-only: lets another step's form (e.g. the Step 5 review) follow a
+    // substep's real visibility instead of re-deriving it from answers.
+    window.wizardIsSubstepVisible = (substepKey) =>
+      !isSubstepHidden(substepKey) &&
+      !isStepHidden(getParentStepKey(substepKey) ?? substepKey);
     // Note: window.wizardValidateStep is owned by StepFormViewer (it has direct
     // access to the Form.io instance) — not assigned here.
   }
@@ -694,6 +699,7 @@
       'wizardSetAllVisibility',
       'wizardSetStepClickable',
       'wizardBanPathway',
+      'wizardIsSubstepVisible',
     ];
     fns.forEach((fn) => delete window[fn]);
   }

@@ -35,6 +35,12 @@ export const RELATED_PEOPLE_TYPES: RelatedPeopleTypeConfig[] = [
     orgOnly: true,
   },
   { key: 'citor', prefix: 'citor', dataPath: ['applicant', 'citorData'] },
+  // Step 4 "Other" pathway: same-priority successors named by the applicant.
+  {
+    key: 'intestateSuccessor',
+    prefix: 'successor',
+    dataPath: ['applicant', 'applicantSuccessorData'],
+  },
   {
     key: 'grandchild',
     prefix: 'grandchild',

@@ -261,6 +261,29 @@ describe('forEachRelatedPerson / collectAllRelatedPeople', () => {
     expect(people[0].name).toBe('Real Spouse');
   });
 
+  it('reads Step 4 same-priority intestate successors as adult, competent people', () => {
+    const data = {
+      applicant: {
+        applicantSuccessorData: [
+          {
+            successorName: 'Alex Clark',
+            successorRelationship: 'deceased’s father’s sibling',
+            successorIsAlive: 'yes',
+            successorIsAdult: 'yes',
+            successorIsCompetent: 'yes',
+          },
+          { successorName: '' },
+        ],
+      },
+    };
+
+    const people = collectAllRelatedPeople(data);
+    expect(people).toHaveLength(1);
+    expect(people[0].type).toBe('intestateSuccessor');
+    expect(people[0].name).toBe('Alex Clark');
+    expect(people[0].status).toBe('adult-competent');
+  });
+
   it('ignores a type entirely when its container/array is missing', () => {
     expect(collectAllRelatedPeople({})).toEqual([]);
     expect(collectAllRelatedPeople({ spouse: {} })).toEqual([]);

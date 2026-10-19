@@ -89,6 +89,8 @@ declare global {
       isBanned: boolean,
       sourceStepKey?: string
     ) => void;
+    // Read-only: true when the substep (and its parent step) are not hidden.
+    wizardIsSubstepVisible?: (substepKey: string) => boolean;
     // Review edit navigation
     wizardGoToField?: (
       substepKey: string,
