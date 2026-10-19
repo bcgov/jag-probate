@@ -38,7 +38,7 @@
           }"
           @click="onStepClick(step)"
           @mouseenter="onStepMouseEnter(step, $event)"
-          @mouseleave="onStepMouseLeave"
+          @mouseleave="clearHover"
         >
           <div class="wiz-icon" :class="stepIconClass(step)">
             <font-awesome-icon
@@ -136,9 +136,10 @@
 
 <script setup lang="ts">
   import {
-    initWizardState,
-    useWizardState,
-  } from '@/composables/useWizardState';
+    getOrderedSubstepKeys,
+    getVisibleSubstepKeys,
+  } from '@/config/wizardSteps';
+  import { useWizardState } from '@/composables/useWizardState';
   import { pinia } from '@/stores/pinia';
   import {
     attachNavigationHandlers,
@@ -159,9 +160,6 @@
     steps: WizardStep[];
     /** Substep key to activate on mount. */
     initialStep?: string;
-    initialNavState?: WizardNavState;
-    initialStatusMap?: Record<string, StepStatus>;
-    initialDisabledMap?: Record<string, boolean>;
     /**
      * When true (default), registers window.wizard* bridge functions on mount.
      * Set false for secondary instances (e.g. mobile drawer) so the primary
@@ -174,9 +172,6 @@
 
   const props = withDefaults(defineProps<Props>(), {
     initialStep: '',
-    initialNavState: () => ({ hiddenSteps: {}, hiddenSubsteps: {} }),
-    initialStatusMap: () => ({}),
-    initialDisabledMap: () => ({}),
     registerBridge: true,
     surveyStepKey: '',
   });
@@ -220,12 +215,6 @@
     hoveredStepKey.value = step.key;
   }
 
-  function onStepMouseLeave() {
-    hoverClearTimer = setTimeout(() => {
-      hoveredStepKey.value = null;
-    }, 150);
-  }
-
   function cancelHoverClear() {
     if (hoverClearTimer) {
       clearTimeout(hoverClearTimer);
@@ -245,20 +234,7 @@
   // ── Computed ─────────────────────────────────────────────────────────────────
 
   /** Flat ordered list of ALL substep keys derived from config. */
-  const allSubstepKeys = computed<string[]>(() => {
-    const result: string[] = [];
-    for (const step of props.steps) {
-      if (step.substeps.length === 0) {
-        // Single-page step with no children — the step key IS the substep.
-        result.push(step.key);
-      } else {
-        for (const sub of step.substeps) {
-          result.push(sub.key);
-        }
-      }
-    }
-    return result;
-  });
+  const allSubstepKeys = computed(() => getOrderedSubstepKeys(props.steps));
 
   // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -271,12 +247,12 @@
 
   /** Returns visible substeps in config order. */
   function getVisibleSubstepsOrdered(): string[] {
-    return allSubstepKeys.value.filter((key) => {
-      if (isSubstepHidden(key)) return false;
-      const parent = getParentStepKey(key);
-      if (parent && navState.hiddenSteps[parent]) return false;
-      return true;
-    });
+    return getVisibleSubstepKeys(
+      allSubstepKeys.value,
+      getParentStepKey,
+      isStepHidden,
+      isSubstepHidden
+    );
   }
 
   function getAdjacentVisibleSubstep(
@@ -567,31 +543,8 @@
 
   let detachNavigation: (() => void) | null = null;
 
-  // Seed state before mounted hooks run so CHEFS schema scripts see it while
-  // the first form is initializing.
-  if (props.registerBridge) {
-    wizardStore.setSteps(props.steps);
-    initWizardState(
-      props.initialStep,
-      props.initialNavState,
-      props.initialStatusMap,
-      props.initialDisabledMap
-    );
-  }
-
-  watch(
-    () => props.steps,
-    (next) => {
-      if (props.registerBridge) wizardStore.setSteps(next);
-    }
-  );
-
   let resizeCleanup: (() => void) | null = null;
   let hasAppliedInitialStep = false;
-
-  function applyInitialStep(stepKey: string) {
-    seedActiveSubstep(stepKey);
-  }
 
   // Visibility changed (bridge call, dev control, setAllVisibility) and the
   // active substep is no longer visible - move to the nearest visible one.
@@ -624,7 +577,7 @@
     // Only the primary instance seeds shared state. The hidden mobile sidebar
     // mounts when the form becomes ready and must not overwrite resume state.
     if (props.registerBridge) {
-      applyInitialStep(props.initialStep);
+      seedActiveSubstep(props.initialStep);
       hasAppliedInitialStep = true;
       // Attached after seeding so navigation calls CHEFS made while no sidebar
       // was attached replay relative to the real starting substep.
@@ -644,15 +597,7 @@
     () => props.initialStep,
     (newVal, oldVal) => {
       if (!hasAppliedInitialStep || !newVal || newVal === oldVal) return;
-      if (props.registerBridge) {
-        initWizardState(
-          newVal,
-          props.initialNavState,
-          props.initialStatusMap,
-          props.initialDisabledMap
-        );
-      }
-      applyInitialStep(newVal);
+      if (props.registerBridge) seedActiveSubstep(newVal);
     }
   );
 

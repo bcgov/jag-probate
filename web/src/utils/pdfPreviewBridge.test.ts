@@ -6,8 +6,12 @@ const iframeHtml = `<iframe src="about:blank" title="${TITLE}"></iframe>`;
 
 function deferred<T>() {
   let resolve!: (value: T) => void;
-  const promise = new Promise<T>((r) => (resolve = r));
-  return { promise, resolve };
+  let reject!: (reason?: unknown) => void;
+  const promise = new Promise<T>((res, rej) => {
+    resolve = res;
+    reject = rej;
+  });
+  return { promise, resolve, reject };
 }
 
 const flush = () => new Promise((r) => setTimeout(r, 0));
@@ -104,6 +108,76 @@ describe('createPdfPreviewBridge', () => {
     expect(frame()?.getAttribute('src')).toBe('blob:pdf-2');
     expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:pdf-1');
   });
+
+  it.each([false, true])(
+    'keeps cached A while B is pending (dispose: %s)',
+    async (dispose) => {
+      root.innerHTML = iframeHtml;
+      const pending = deferred<string>();
+      const bridge = makeBridge();
+      await bridge.previewPdf(instance, { a: 1 }, 's', 's', 'P10', TITLE);
+      generate.mockImplementationOnce(() => pending.promise);
+
+      const newer = bridge.previewPdf(
+        instance,
+        { a: 2 },
+        's',
+        's',
+        'P10',
+        TITLE
+      );
+      await bridge.previewPdf(instance, { a: 1 }, 's', 's', 'P10', TITLE);
+      expect(URL.revokeObjectURL).not.toHaveBeenCalled();
+      if (dispose) bridge.dispose();
+      pending.resolve('blob:pdf-2');
+      await newer;
+
+      expect(frame()?.getAttribute('src')).toBe('blob:pdf-1');
+      expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:pdf-2');
+      if (dispose)
+        expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:pdf-1');
+      else expect(URL.revokeObjectURL).not.toHaveBeenCalledWith('blob:pdf-1');
+    }
+  );
+
+  it.each([
+    { completion: 'resolve', nextValue: 3 },
+    { completion: 'reject', nextValue: 3 },
+    { completion: 'resolve', nextValue: 2 },
+  ])(
+    'keeps the next request after stale B $completion (data: $nextValue)',
+    async ({ completion, nextValue }) => {
+      root.innerHTML = iframeHtml;
+      const pendingB = deferred<string>();
+      const pendingNext = deferred<string>();
+      const bridge = makeBridge();
+      const preview = (value: number) =>
+        bridge.previewPdf(instance, { a: value }, 's', 's', 'P10', TITLE);
+      await preview(1);
+      generate.mockImplementationOnce(() => pendingB.promise);
+      const requestB = preview(2);
+      await preview(1);
+      generate.mockImplementationOnce(() => pendingNext.promise);
+      const requestNext = preview(nextValue);
+
+      expect(generate).toHaveBeenCalledTimes(3);
+      if (completion === 'reject') {
+        pendingB.reject(new Error('stale B failed'));
+        await expect(requestB).rejects.toThrow('stale B failed');
+      } else {
+        pendingB.resolve('blob:stale-b');
+        await requestB;
+        expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:stale-b');
+      }
+      expect(frame()?.getAttribute('src')).toBe('blob:pdf-1');
+      const sharedNext = preview(nextValue);
+      expect(generate).toHaveBeenCalledTimes(3);
+      pendingNext.resolve('blob:current');
+      await Promise.all([requestNext, sharedNext]);
+      expect(frame()?.getAttribute('src')).toBe('blob:current');
+      expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:pdf-1');
+    }
+  );
 
   it('discards a stale result when newer data was requested', async () => {
     root.innerHTML = iframeHtml;

@@ -9,11 +9,8 @@
       <ApplicationStepSidebar
         ref="sidebarRef"
         :steps="wizardSteps"
-        :initial-step="firstWizardSubstepKey"
+        :initial-step="wizardStateStore.activeSubstep"
         :survey-step-key="surveyStepKey"
-        :initial-nav-state="sidebarInitialNavState"
-        :initial-status-map="sidebarInitialStatusMap"
-        :initial-disabled-map="sidebarInitialDisabledMap"
         @navigate="onNavigate"
       />
     </div>
@@ -127,11 +124,7 @@
         >
           <ApplicationStepSidebar
             :steps="wizardSteps"
-            :initial-step="activeStep"
             :survey-step-key="surveyStepKey"
-            :initial-nav-state="sidebarInitialNavState"
-            :initial-status-map="sidebarInitialStatusMap"
-            :initial-disabled-map="sidebarInitialDisabledMap"
             :register-bridge="false"
             @navigate="onMobileNavigate"
           />
@@ -160,11 +153,10 @@
   import ApplicationStepSidebar from '@/components/wizard/ApplicationStepSidebar.vue';
   import StepFormViewer from '@/components/wizard/StepFormViewer.vue';
   import StepNavButtons from '@/components/wizard/StepNavButton.vue';
-  import { repairResumeVisibility } from '@/components/wizard/resumeWizardState';
   import {
-    initWizardState,
-    useWizardState,
-  } from '@/composables/useWizardState';
+    repairResumeVisibility,
+    type ResumeWizardState,
+  } from '@/components/wizard/resumeWizardState';
   import {
     deriveInitialNavState,
     mapSidebarStepsToWizardSteps,
@@ -204,32 +196,10 @@
     hiddenSteps: {},
     hiddenSubsteps: {},
   });
-  /** Snapshot of current wizard state so remounting (e.g. step0 round-trip) doesn't reset unlocks. */
-  const persistedNavState = ref<WizardNavState | null>(null);
-  const persistedStatusMap = ref<Record<string, StepStatus>>({});
-  const persistedDisabledMap = ref<Record<string, boolean>>({});
-  /** Last-active substep restored from the carrier step's saved host wizard state. */
-  const resumeSubstepKey = ref('');
-
-  const { navState, statusMap, disabledMap } = useWizardState();
   const wizardStateStore = useWizardStateStore(pinia);
-
-  const sidebarInitialNavState = computed<WizardNavState>(
-    () => persistedNavState.value ?? initialNavState.value
-  );
-  const sidebarInitialStatusMap = computed<Record<string, StepStatus>>(() =>
-    persistedNavState.value ? persistedStatusMap.value : {}
-  );
-  const sidebarInitialDisabledMap = computed<Record<string, boolean>>(() =>
-    persistedNavState.value ? persistedDisabledMap.value : {}
-  );
-
-  const firstWizardSubstepKey = computed<string>(
-    () =>
-      resumeSubstepKey.value ||
-      wizardSteps.value[0]?.defaultSubstep ||
-      firstWizardStepKey.value
-  );
+  let resumedState: ResumeWizardState | null = null;
+  let hydrationComplete = false;
+  let disposed = false;
 
   const substepToStepMap = computed<Record<string, string>>(() => {
     const map: Record<string, string> = {};
@@ -243,15 +213,6 @@
     return map;
   });
 
-  function snapshotWizardState() {
-    persistedNavState.value = {
-      hiddenSteps: { ...navState.hiddenSteps },
-      hiddenSubsteps: { ...navState.hiddenSubsteps },
-    };
-    persistedStatusMap.value = { ...statusMap };
-    persistedDisabledMap.value = { ...disabledMap };
-  }
-
   // Set submissionPublicId synchronously so child components (StepFormViewer)
   // see it in their own onMounted, which runs before the parent's onMounted.
   const rawId = route.params.id;
@@ -264,6 +225,7 @@
       const sortedDtos = (await chefsService.getSidebarStructure())
         .slice()
         .sort((a, b) => a.order - b.order);
+      if (disposed) return;
 
       allStepKeys.value = sortedDtos.map((d) => d.key);
 
@@ -285,10 +247,7 @@
       // Progressive reveal by default; onResumeWizardState overrides this
       // with the real saved state if the carrier step has one.
       initialNavState.value = deriveInitialNavState(wizardStepDtos);
-
-      if (!activeStep.value && !submissionPublicId.value) {
-        activeStep.value = surveyStepKey.value;
-      }
+      initializeWizard();
     } catch (error) {
       console.error('Failed to load sidebar structure from backend', error);
     }
@@ -341,10 +300,12 @@
     globalThis.addEventListener('keydown', handleDevToggleKeydown);
   });
   onUnmounted(() => {
+    disposed = true;
     layoutStore.setHasMobileNav(false);
     layoutStore.closeMobileNav();
     globalThis.removeEventListener('keydown', handleDevToggleKeydown);
     clearTimeout(devToggleArmedTimer);
+    wizardStateStore.reset();
   });
   /** Resolve the top-level form key from either a step key or substep key. */
   const activeStepKey = computed(
@@ -352,8 +313,6 @@
   );
 
   function onNavigate(stepKey: string) {
-    // Capture latest shared state before route-like step switches (especially step0).
-    snapshotWizardState();
     activeStep.value = stepKey;
   }
 
@@ -363,43 +322,39 @@
   }
 
   function onHydrationComplete() {
-    if (activeStep.value) return;
-    activeStep.value = submissionPublicId.value
-      ? firstWizardStepKey.value
-      : surveyStepKey.value;
+    if (hydrationComplete) return;
+    hydrationComplete = true;
+    initializeWizard();
   }
 
-  function onResumeWizardState(state: {
-    activeStep: string;
-    activeSubstep: string;
-    hiddenSteps: Record<string, boolean>;
-    hiddenSubsteps: Record<string, boolean>;
-    statusMap: Record<string, string>;
-    disabledMap: Record<string, boolean>;
-  }) {
-    const repairedState = repairResumeVisibility(state, wizardSteps.value);
-    resumeSubstepKey.value =
-      repairedState.activeSubstep || repairedState.activeStep;
-    persistedNavState.value = {
-      hiddenSteps: repairedState.hiddenSteps,
-      hiddenSubsteps: repairedState.hiddenSubsteps,
-    };
-    persistedStatusMap.value = repairedState.statusMap as Record<
-      string,
-      StepStatus
-    >;
-    persistedDisabledMap.value = repairedState.disabledMap;
-    initWizardState(
-      resumeSubstepKey.value,
-      persistedNavState.value,
-      persistedStatusMap.value,
-      persistedDisabledMap.value
+  function initializeWizard() {
+    if (disposed || !allStepKeys.value.length || !hydrationComplete) return;
+    const state = resumedState
+      ? repairResumeVisibility(resumedState, wizardSteps.value)
+      : null;
+    wizardStateStore.init(
+      state?.activeSubstep ||
+        state?.activeStep ||
+        wizardSteps.value[0]?.defaultSubstep ||
+        firstWizardStepKey.value,
+      state ?? initialNavState.value,
+      (state?.statusMap ?? {}) as Record<string, StepStatus>,
+      state?.disabledMap ?? {}
     );
-    activeStep.value = repairedState.activeStep;
+    activeStep.value =
+      state?.activeStep ||
+      (submissionPublicId.value
+        ? firstWizardStepKey.value
+        : surveyStepKey.value);
+  }
+
+  function onResumeWizardState(state: ResumeWizardState) {
+    if (disposed) return;
+    resumedState = state;
+    initializeWizard();
   }
 
   function onMobileNavigate(stepKey: string) {
-    snapshotWizardState();
     activeStep.value = stepKey;
     sidebarRef.value?.updateSidebar?.(stepKey);
     layoutStore.closeMobileNav();

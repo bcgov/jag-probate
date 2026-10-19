@@ -120,12 +120,16 @@ describe('StepFormViewer cross-step hydration on resume', () => {
     app = null;
   });
 
-  function mountViewer(chefsService: unknown) {
+  function mountViewer(
+    chefsService: unknown,
+    onHydrationComplete?: () => void
+  ) {
     app = createApp(StepFormViewer, {
       activeStep: 'form-filing',
       stepKeys: ['survey', 'form-applicant', 'form-filing'],
       surveyStepKey: 'survey',
       submissionPublicId: 'sub-123',
+      onHydrationComplete,
     });
     app.config.warnHandler = () => {};
     app.provide('chefsService', chefsService);
@@ -163,9 +167,13 @@ describe('StepFormViewer cross-step hydration on resume', () => {
       },
     ]);
 
-    mountViewer(chefsService);
+    const onHydrationComplete = vi.fn(() => {
+      expect(chefsService.getAuthToken).not.toHaveBeenCalled();
+    });
+    mountViewer(chefsService, onHydrationComplete);
 
     const el = await getFakeFilingElement();
+    expect(onHydrationComplete).toHaveBeenCalledOnce();
     expect(el.formioInstance.data).toEqual({});
 
     // form.io fires formio:ready before its component tree has built the

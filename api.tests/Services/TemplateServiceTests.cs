@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
+using System.Xml.Linq;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
@@ -130,4 +132,204 @@ public class TemplateServiceTests
             temporaryDirectory.Delete(recursive: true);
         }
     }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void RenderTemplates_P11EmptyOrForeignOnly_RendersEmptyExhibitA(bool foreignOnly)
+    {
+        var data = new Dictionary<string, object>();
+        if (foreignOnly)
+        {
+            data["hasOutsideBcProperty"] = true;
+            data["realPropertyOutsideBCEntries"] = new[] { Asset("Foreign real property", 150m, 125m) };
+            data["tangiblePersonalPropertyOutsideBCEntries"] = new[] { Asset("Foreign tangible property", 275m, 250m) };
+        }
+        var document = RenderP11(data);
+
+        Assert.Contains("<b>EXHIBIT A</b>", document);
+        Assert.Contains(
+            "This is <b>Exhibit A</b> referred to in the affidavit of",
+            document
+        );
+        Assert.Contains(
+            "A commissioner for taking affidavits for British Columbia",
+            document
+        );
+        Assert.DoesNotContain("EXHIBIT B", document);
+        Assert.DoesNotContain("Foreign real property", document);
+        Assert.DoesNotContain("Foreign tangible property", document);
+        Assert.Equal(3, ParseDocument(document).Descendants("td").Count(cell => NormalizeText(cell.Value) == "None"));
+        AssertRow(document, "TOTAL REAL PROPERTY WITHIN BRITISH COLUMBIA", "$0.00");
+        AssertRow(
+            document,
+            "TOTAL TANGIBLE PERSONAL PROPERTY WITHIN BRITISH COLUMBIA",
+            "$0.00"
+        );
+        AssertRow(document, "TOTAL INTANGIBLE PERSONAL PROPERTY", "$0.00");
+        AssertRow(document, "GROSS VALUE OF ASSETS LESS SECURED DEBTS", "$0.00");
+    }
+
+    [Fact]
+    public void RenderTemplates_P11RendersAllExhibitAAssetTypesAndTotals()
+    {
+        var document = RenderP11(
+            new Dictionary<string, object>
+            {
+                ["applicant"] = new Dictionary<string, object>
+                {
+                    ["applicantName"] = "Applicant Name",
+                },
+                ["deceasedName"] = "Deceased Name",
+                ["otherNameYN"] = "yes",
+                ["deceasedOtherNames"] = new[]
+                {
+                    Name("Former", "Middle", "Name"),
+                },
+                ["realPropertyEntries"] = new[]
+                {
+                    Asset("BC real property", 110m, 100m),
+                },
+                ["tangiblePersonalPropertyEntries"] = new[]
+                {
+                    Asset("BC tangible property", 220m, 200m),
+                },
+                ["intangiblePersonalPropertyEntries"] = new[]
+                {
+                    Asset("BC intangible property", 330m, 300m),
+                },
+                ["intangibleOutOfBCPersonalPropertyEntries"] = new[]
+                {
+                    Asset("Foreign intangible property", 440m, 400m),
+                },
+            }
+        );
+
+        Assert.Contains("Applicant Name", document);
+        Assert.Contains("Deceased Name", document);
+        Assert.Contains("Former Middle Name", document);
+        AssertAssetValues(document, "BC real property", "$110.00", "$100.00");
+        AssertAssetValues(document, "BC tangible property", "$220.00", "$200.00");
+        AssertAssetValues(document, "BC intangible property", "$330.00", "$300.00");
+        AssertAssetValues(document, "Foreign intangible property", "$440.00", "$400.00");
+        AssertRow(document, "TOTAL REAL PROPERTY WITHIN BRITISH COLUMBIA", "$100.00");
+        AssertRow(
+            document,
+            "TOTAL TANGIBLE PERSONAL PROPERTY WITHIN BRITISH COLUMBIA",
+            "$200.00"
+        );
+        AssertRow(document, "TOTAL INTANGIBLE PERSONAL PROPERTY", "$700.00");
+        AssertRow(document, "GROSS VALUE OF ASSETS LESS SECURED DEBTS", "$1,000.00");
+        Assert.DoesNotContain("EXHIBIT B", document);
+    }
+
+    [Fact]
+    public void RenderTemplates_P11RendersDebtsAndOptionalLabels()
+    {
+        var document = RenderP11(
+            new Dictionary<string, object>
+            {
+                ["realPropertyEntries"] = new[]
+                {
+                    Asset(
+                        "Property with debt",
+                        125m,
+                        100m,
+                        "BC Assessment",
+                        Debt("Mortgage", 25m),
+                        Debt("Line of credit", 10m)
+                    ),
+                },
+            }
+        );
+
+        Assert.Contains("BC Assessment", document);
+        AssertAssetValues(document, "Property with debt", "$125.00", "");
+        AssertRow(document, "Less: Mortgage", "- $25.00", "");
+        AssertRow(document, "Less: Line of credit", "- $10.00", "$100.00");
+        AssertRow(document, "TOTAL REAL PROPERTY WITHIN BRITISH COLUMBIA", "$100.00");
+        AssertRow(document, "GROSS VALUE OF ASSETS LESS SECURED DEBTS", "$100.00");
+    }
+
+    private static string RenderP11(Dictionary<string, object> submissionData)
+    {
+        var environment = new Mock<IWebHostEnvironment>();
+        environment.SetupGet(value => value.ContentRootPath).Returns(AppContext.BaseDirectory);
+        var options = Microsoft.Extensions.Options.Options.Create(
+            new TemplateOptions
+            {
+                Groups = new Dictionary<string, string[]> { ["P11"] = ["P11-exhibits.html"] },
+            }
+        );
+        var service = new TemplateService(
+            environment.Object,
+            options,
+            NullLogger<TemplateService>.Instance
+        );
+
+        return Assert.Single(service.RenderTemplates("P11", submissionData));
+    }
+
+    private static Dictionary<string, object> Asset(
+        string description,
+        decimal marketValue,
+        decimal valueAtDeath,
+        string marketValueSource = "",
+        params Dictionary<string, object>[] securedDebts
+    ) => new()
+    {
+        ["propertyDescription"] = description,
+        ["marketValue"] = marketValue,
+        ["valueAtDeath"] = valueAtDeath,
+        ["marketValueSource"] = marketValueSource,
+        ["securedDebts"] = securedDebts,
+    };
+
+    private static Dictionary<string, object> Debt(string description, decimal amount) => new()
+    {
+        ["debtDescription"] = description,
+        ["debtAmount"] = amount,
+    };
+
+    private static Dictionary<string, object> Name(
+        string firstName,
+        string middleName,
+        string lastName
+    ) => new()
+    {
+        ["firstNameGivenName1"] = firstName,
+        ["middleNameS1"] = middleName,
+        ["lastNameFamilyNameOrSurname1"] = lastName,
+    };
+
+    private static void AssertAssetValues(
+        string document,
+        string description,
+        string expectedMarketValue,
+        string expectedValueAtDeath
+    )
+    {
+        var group = Assert.Single(
+            ParseDocument(document).Descendants("tbody"),
+            body => NormalizeText(body.Elements("tr").FirstOrDefault()?.Elements("td").FirstOrDefault()?.Value ?? "") == description);
+        var values = group.Elements("tr").ElementAt(1).Elements("td").Skip(1)
+            .Select(cell => NormalizeText(cell.Value));
+        Assert.Equal(new[] { expectedMarketValue, expectedValueAtDeath }, values);
+    }
+
+    private static void AssertRow(string document, params string[] expected) => Assert.Contains(
+        ParseDocument(document).Descendants("tr"),
+        row => row.Elements("td").Select(cell => NormalizeText(cell.Value)).SequenceEqual(expected)
+    );
+
+    private static XDocument ParseDocument(string document) => XDocument.Parse(
+        document
+            .Replace("<!doctype html>", "", StringComparison.OrdinalIgnoreCase)
+            .Replace("&nbsp;", "&#160;", StringComparison.Ordinal)
+    );
+
+    private static string NormalizeText(string value) => string.Join(
+        " ",
+        value.Replace('\u00a0', ' ').Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries)
+    );
 }

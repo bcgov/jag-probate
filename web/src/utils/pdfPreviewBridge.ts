@@ -139,6 +139,11 @@ export function createPdfPreviewBridge(
 
     if (signature !== null) {
       if (entry.url && entry.urlSignature === signature) {
+        if (entry.pending && entry.pendingSignature !== signature) {
+          entry.generation += 1;
+          entry.pending = null;
+          entry.pendingSignature = null;
+        }
         applyEntry(iframeTitle, entry);
         return;
       }

@@ -3,12 +3,13 @@ import type { WizardStep } from '@/types/applicationStep';
 import { pinia } from '@/stores/pinia';
 import { useWizardStateStore } from '@/stores/WizardStateStore';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { createApp, nextTick } from 'vue';
+import { createApp, h, nextTick, ref } from 'vue';
 import ApplicationStepSidebar from './ApplicationStepSidebar.vue';
 
 describe('ApplicationStepSidebar', () => {
   beforeEach(() => {
     useWizardStateStore(pinia).reset();
+    initWizardState('', { hiddenSteps: {}, hiddenSubsteps: {} }, {}, {});
   });
 
   it('shows statuses restored after the primary sidebar has initialized', async () => {
@@ -109,6 +110,7 @@ describe('ApplicationStepSidebar', () => {
         substeps: [{ key: 'step4-a', label: 'Fourth A' }],
       },
     ];
+    useWizardStateStore(pinia).setSteps(steps);
     initWizardState('step4-a', { hiddenSteps: {}, hiddenSubsteps: {} }, {}, {});
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
     const host = document.createElement('div');
@@ -226,6 +228,7 @@ describe('ApplicationStepSidebar', () => {
         substeps: [{ key: 'step2-a', label: 'Second A' }],
       },
     ];
+    useWizardStateStore(pinia).setSteps(steps);
     initWizardState('step1-a', { hiddenSteps: {}, hiddenSubsteps: {} }, {}, {});
 
     const host = document.createElement('div');
@@ -277,6 +280,7 @@ describe('ApplicationStepSidebar', () => {
         substeps: [{ key: 'step2-a', label: 'Second A' }],
       },
     ];
+    useWizardStateStore(pinia).setSteps(steps);
     initWizardState('step1-a', { hiddenSteps: {}, hiddenSubsteps: {} }, {}, {});
 
     const host = document.createElement('div');
@@ -328,7 +332,6 @@ describe('ApplicationStepSidebar', () => {
     app.mount(host);
     await nextTick();
 
-    // initWizardState in setup must not wipe the rule result.
     expect(host.textContent).not.toContain('Preview P10');
 
     app.unmount();
@@ -370,6 +373,74 @@ describe('ApplicationStepSidebar', () => {
     expect(useWizardState().activeSubstep.value).toBe('p9');
     expect(navigated).toEqual(['p9']);
 
+    app.unmount();
+    host.remove();
+  });
+
+  it('derives secondary navigation from reactive props without replacing store configuration', async () => {
+    const store = useWizardStateStore(pinia);
+    store.setSteps([
+      {
+        key: 'other',
+        number: 1,
+        title: 'Other',
+        defaultSubstep: 'other',
+        substeps: [],
+      },
+    ]);
+    store.init(
+      'solo',
+      { hiddenSteps: {}, hiddenSubsteps: {} },
+      {},
+      { p10: true }
+    );
+    const steps = ref<WizardStep[]>([
+      {
+        key: 'solo',
+        number: 1,
+        title: 'Solo',
+        defaultSubstep: 'solo',
+        substeps: [],
+      },
+      {
+        key: 'docs',
+        number: 2,
+        title: 'Docs',
+        defaultSubstep: 'p9',
+        substeps: [
+          { key: 'p9', label: 'P9' },
+          { key: 'p10', label: 'P10' },
+        ],
+      },
+    ]);
+    const sidebar = ref<InstanceType<typeof ApplicationStepSidebar>>();
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const app = createApp(() =>
+      h(ApplicationStepSidebar, {
+        ref: sidebar,
+        steps: steps.value,
+        registerBridge: false,
+      })
+    );
+    app.config.warnHandler = () => {};
+    app.mount(host);
+    await nextTick();
+
+    expect(sidebar.value?.hasNext).toBe(true);
+    store.setStepVisibility('docs', false);
+    await nextTick();
+    expect(sidebar.value?.hasNext).toBe(false);
+    store.setStepVisibility('docs', true);
+    store.setSubstepVisibilityOverride('p9', false);
+    await nextTick();
+    expect(sidebar.value?.hasNext).toBe(true);
+
+    steps.value = [steps.value[0]];
+    await nextTick();
+    expect(sidebar.value?.hasNext).toBe(false);
+    expect(sidebar.value?.isLastStep).toBe(true);
+    expect(store.orderedSubstepKeys).toEqual(['other']);
     app.unmount();
     host.remove();
   });

@@ -35,11 +35,6 @@
         page: p11-exhibits;
       }
 
-      .exhibit-b {
-        break-before: page;
-        page-break-before: always;
-      }
-
       p {
         margin: 0 0 8px;
       }
@@ -163,32 +158,6 @@
         font-style: italic;
       }
 
-      .asset-table.within-bc .description {
-        width: 62%;
-      }
-
-      .asset-table.outside-bc .description {
-        width: 81%;
-      }
-
-      .asset-table .amount,
-      .asset-table .death-value {
-        width: 19%;
-        text-align: right;
-        white-space: nowrap;
-      }
-
-      .asset-row .amount,
-      .asset-row .death-value {
-        vertical-align: bottom;
-      }
-
-      .asset-row,
-      .asset-row td {
-        break-inside: avoid;
-        page-break-inside: avoid;
-      }
-
       .asset-detail-group {
         break-inside: avoid;
         page-break-inside: avoid;
@@ -218,10 +187,6 @@
 
       .description-text {
         white-space: pre-line;
-      }
-
-      .asset-detail {
-        margin-top: 8px;
       }
 
       .asset-detail-label {
@@ -265,8 +230,6 @@
     {% assign realPropertyTotal = 0 %} {% assign tangiblePropertyTotal = 0 %} {%
     assign intangiblePropertyTotal = 0 %} {% assign realPropertyCount = 0 %} {%
     assign tangiblePropertyCount = 0 %} {% assign intangiblePropertyCount = 0 %}
-    {% assign hasOutsideBcProperty = false %}
-
     <div class="exhibit-container">
       <div class="exhibit-heading">
         <div class="exhibit-label"><b>EXHIBIT A</b></div>
@@ -597,165 +560,5 @@
       </table>
     </div>
 
-    {% if hasOutsideBcProperty %} {% assign outsideRealPropertyTotal = 0 %} {%
-    assign outsideTangiblePropertyTotal = 0 %} {% assign
-    outsideRealPropertyCount = 0 %} {% assign outsideTangiblePropertyCount = 0
-    %}
-    <div class="exhibit-container exhibit-b">
-      <div class="exhibit-heading">
-        <div class="exhibit-label"><b>EXHIBIT B</b></div>
-        <div class="exhibit-certificate">
-          <p>This is <b>Exhibit B</b> referred to in the affidavit of</p>
-          <div class="certificate-name-row">
-            <span class="certificate-name"
-              ><b>{{ Model.applicant.applicantName }}</b></span
-            >
-            <span class="certificate-name-suffix">, sworn/affirmed</span>
-          </div>
-          <div class="certificate-row">
-            <span>before me on</span>
-            <span class="certificate-line"></span>
-            <span class="certificate-caption certificate-caption-right"
-              >Affidavit Date</span
-            >
-          </div>
-          <div class="certificate-line"></div>
-          <p class="certificate-caption">
-            A commissioner for taking affidavits for British Columbia
-          </p>
-        </div>
-      </div>
-
-      <p class="text-center statement-title">
-        <b
-          >Statement of Real and Tangible Property Outside of British
-          Columbia</b
-        >
-      </p>
-      <p>Full legal name of the deceased: <b>{{ Model.deceasedName }}</b></p>
-      <div class="other-names">
-        <p>
-          Other names in which the deceased held or may have held an interest in
-          property:
-        </p>
-        {% if Model.otherNameYN == 'yes' %} {% for name in
-        Model.deceasedOtherNames %}
-        <p>
-          &nbsp;&nbsp;&nbsp;&nbsp;{{ forloop.index }}.
-          <b
-            >{{ name.firstNameGivenName1 }} {{ name.middleNameS1 }} {{
-            name.lastNameFamilyNameOrSurname1 }}</b
-          >
-        </p>
-        {% endfor %} {% else %}
-        <p>&nbsp;&nbsp;&nbsp;&nbsp;1. <b>None</b></p>
-        {% endif %}
-      </div>
-
-      <table class="asset-table outside-bc">
-        <thead>
-          <tr>
-            <th class="part-heading">
-              Part I<br />Real Property outside British Columbia (including
-              mortgages and vendors' and purchasers' interests in agreements for
-              sale)
-            </th>
-            <th class="value-heading">Value at Death</th>
-          </tr>
-          <tr>
-            <td class="instruction" colspan="2">
-              List item details; it is unnecessary to list debts or liabilities
-              that charge or encumber the property
-            </td>
-          </tr>
-        </thead>
-        <tbody>
-          {% for item in Model.realPropertyOutsideBCEntries %} {% if
-          item.propertyDescription != '' %} {% assign outsideRealPropertyTotal =
-          outsideRealPropertyTotal | plus: item.valueAtDeath %} {% assign
-          outsideRealPropertyCount = outsideRealPropertyCount | plus: 1 %}
-          <tr class="asset-row">
-            <td class="description">
-              <div class="description-text">{{ item.propertyDescription }}</div>
-              <div class="asset-detail">Market Value</div>
-              {% if item.marketValueSource != '' %}
-              <div class="asset-detail-label">{{ item.marketValueSource }}</div>
-              {% endif %}
-              <div class="asset-detail">
-                ${{ item.marketValue | money: 'CAD' }}
-              </div>
-            </td>
-            <td class="death-value">${{ item.valueAtDeath | money: 'CAD' }}</td>
-          </tr>
-          {% endif %} {% endfor %} {% if outsideRealPropertyCount == 0 %}
-          <tr>
-            <td><b>None</b></td>
-            <td></td>
-          </tr>
-          {% endif %}
-          <tr class="total-row">
-            <td>TOTAL REAL PROPERTY OUTSIDE BRITISH COLUMBIA</td>
-            <td>${{ outsideRealPropertyTotal | money: 'CAD' }}</td>
-          </tr>
-        </tbody>
-      </table>
-
-      <table class="asset-table outside-bc">
-        <thead>
-          <tr>
-            <th class="part-heading">
-              Part II<br />Tangible Personal Property outside British Columbia
-              (including vehicles, furniture and other physical items)
-            </th>
-            <th class="value-heading">Value at Death</th>
-          </tr>
-          <tr>
-            <td class="instruction" colspan="2">
-              List item details; it is unnecessary to list secured debts
-            </td>
-          </tr>
-        </thead>
-        <tbody>
-          {% for item in Model.tangiblePersonalPropertyOutsideBCEntries %} {% if
-          item.propertyDescription != '' %} {% assign
-          outsideTangiblePropertyTotal = outsideTangiblePropertyTotal | plus:
-          item.valueAtDeath %} {% assign outsideTangiblePropertyCount =
-          outsideTangiblePropertyCount | plus: 1 %}
-          <tr class="asset-row">
-            <td class="description">
-              <div class="description-text">{{ item.propertyDescription }}</div>
-              <div class="asset-detail">Market Value</div>
-              {% if item.marketValueSource != '' %}
-              <div class="asset-detail-label">{{ item.marketValueSource }}</div>
-              {% endif %}
-              <div class="asset-detail">
-                ${{ item.marketValue | money: 'CAD' }}
-              </div>
-            </td>
-            <td class="death-value">${{ item.valueAtDeath | money: 'CAD' }}</td>
-          </tr>
-          {% endif %} {% endfor %} {% if outsideTangiblePropertyCount == 0 %}
-          <tr>
-            <td><b>None</b></td>
-            <td></td>
-          </tr>
-          {% endif %}
-          <tr class="total-row">
-            <td>TOTAL TANGIBLE PERSONAL PROPERTY OUTSIDE BRITISH COLUMBIA</td>
-            <td>${{ outsideTangiblePropertyTotal | money: 'CAD' }}</td>
-          </tr>
-        </tbody>
-      </table>
-
-      {% assign grossValueOutsideBc = outsideRealPropertyTotal | plus:
-      outsideTangiblePropertyTotal %}
-      <table class="gross-table">
-        <tr>
-          <td>GROSS VALUE OF ASSETS OUTSIDE BRITISH COLUMBIA</td>
-          <td>${{ grossValueOutsideBc | money: 'CAD' }}</td>
-        </tr>
-      </table>
-    </div>
-    {% endif %}
   </body>
 </html>

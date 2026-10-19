@@ -1,3 +1,7 @@
+import {
+  getOrderedSubstepKeys,
+  getVisibleSubstepKeys,
+} from '@/config/wizardSteps';
 import type {
   StepStatus,
   WizardNavState,
@@ -30,6 +34,7 @@ export const useWizardStateStore = defineStore('wizardState', () => {
   const statusMap = reactive<Record<string, StepStatus>>({});
   const disabledMap = reactive<Record<string, boolean>>({});
   const steps = ref<WizardStep[]>([]);
+  let pendingSeedMutations: Array<() => void> | null = [];
   /**
    * Bumped by every visibility mutation except init(). The primary sidebar
    * watches it to move off the active substep once that becomes hidden.
@@ -39,18 +44,7 @@ export const useWizardStateStore = defineStore('wizardState', () => {
   const configReady = computed(() => steps.value.length > 0);
 
   /** Flat ordered list of ALL substep keys derived from config. */
-  const orderedSubstepKeys = computed<string[]>(() => {
-    const result: string[] = [];
-    for (const step of steps.value) {
-      if (step.substeps.length === 0) {
-        // Single-page step with no children — the step key IS the substep.
-        result.push(step.key);
-      } else {
-        for (const sub of step.substeps) result.push(sub.key);
-      }
-    }
-    return result;
-  });
+  const orderedSubstepKeys = computed(() => getOrderedSubstepKeys(steps.value));
 
   const parentByKey = computed<Record<string, string>>(() => {
     const map: Record<string, string> = {};
@@ -76,11 +70,12 @@ export const useWizardStateStore = defineStore('wizardState', () => {
 
   /** Visible substeps in config order. */
   const visibleSubstepsOrdered = computed<string[]>(() =>
-    orderedSubstepKeys.value.filter((key) => {
-      if (isSubstepHidden(key)) return false;
-      const parent = parentOf(key);
-      return !(parent && navState.hiddenSteps[parent]);
-    })
+    getVisibleSubstepKeys(
+      orderedSubstepKeys.value,
+      parentOf,
+      isStepHidden,
+      isSubstepHidden
+    )
   );
 
   function replaceRecord<T>(
@@ -91,6 +86,11 @@ export const useWizardStateStore = defineStore('wizardState', () => {
     Object.assign(target, next ?? {});
   }
 
+  function mutate(update: () => void) {
+    pendingSeedMutations?.push(update);
+    update();
+  }
+
   /** Seeds state (initial load / resume). Leaves visibility overrides intact. */
   function init(
     initialStep: string,
@@ -98,11 +98,14 @@ export const useWizardStateStore = defineStore('wizardState', () => {
     initialStatusMap: Record<string, StepStatus>,
     initialDisabledMap: Record<string, boolean>
   ) {
+    const pending = pendingSeedMutations;
+    pendingSeedMutations = null;
     activeSubstep.value = initialStep;
     replaceRecord(navState.hiddenSteps, initialNavState.hiddenSteps);
     replaceRecord(navState.hiddenSubsteps, initialNavState.hiddenSubsteps);
     replaceRecord(statusMap, initialStatusMap);
     replaceRecord(disabledMap, initialDisabledMap);
+    pending?.forEach((update) => update());
   }
 
   // ── Step config + deferred calls ──────────────────────────────────────────
@@ -117,7 +120,9 @@ export const useWizardStateStore = defineStore('wizardState', () => {
       return;
     }
     if (pendingUntilConfig.length >= MAX_PENDING) {
-      pendingUntilConfig.shift();
+      const dropped = pendingUntilConfig.shift();
+      pendingSeedMutations =
+        pendingSeedMutations?.filter((update) => update !== dropped) ?? null;
       console.warn(
         '[WizardStateStore] Dropped oldest queued call; step config not loaded.'
       );
@@ -135,24 +140,31 @@ export const useWizardStateStore = defineStore('wizardState', () => {
   // ── Mutations ─────────────────────────────────────────────────────────────
 
   function setStepStatus(substepKey: string, status: StepStatus | null) {
-    if (status) statusMap[substepKey] = status;
-    else delete statusMap[substepKey];
+    mutate(() => {
+      if (status) statusMap[substepKey] = status;
+      else delete statusMap[substepKey];
+    });
   }
 
   function setAllStatuses(map: Record<string, StepStatus>) {
-    replaceRecord(statusMap, map);
+    const snapshot = { ...map };
+    mutate(() => replaceRecord(statusMap, snapshot));
   }
 
   function setStepVisibility(stepKey: string, isVisible: boolean) {
-    if (isVisible) delete navState.hiddenSteps[stepKey];
-    else navState.hiddenSteps[stepKey] = true;
+    mutate(() => {
+      if (isVisible) delete navState.hiddenSteps[stepKey];
+      else navState.hiddenSteps[stepKey] = true;
+    });
     visibilityRevision.value++;
   }
 
   /** Writes the persisted layer only (dev controls / legacy direct use). */
   function setSubstepVisibility(substepKey: string, isVisible: boolean) {
-    if (isVisible) delete navState.hiddenSubsteps[substepKey];
-    else navState.hiddenSubsteps[substepKey] = true;
+    mutate(() => {
+      if (isVisible) delete navState.hiddenSubsteps[substepKey];
+      else navState.hiddenSubsteps[substepKey] = true;
+    });
     visibilityRevision.value++;
   }
 
@@ -172,26 +184,34 @@ export const useWizardStateStore = defineStore('wizardState', () => {
     ) {
       return;
     }
-    substepVisibilityOverrides[substepKey] = isVisible;
-    if (isVisible) delete navState.hiddenSubsteps[substepKey];
-    else navState.hiddenSubsteps[substepKey] = true;
+    mutate(() => {
+      substepVisibilityOverrides[substepKey] = isVisible;
+      if (isVisible) delete navState.hiddenSubsteps[substepKey];
+      else navState.hiddenSubsteps[substepKey] = true;
+    });
     visibilityRevision.value++;
   }
 
   function clearSubstepVisibilityOverrides() {
-    replaceRecord(substepVisibilityOverrides, {});
+    mutate(() => replaceRecord(substepVisibilityOverrides, {}));
     visibilityRevision.value++;
   }
 
   function setAllVisibility(nextState: WizardNavState) {
-    replaceRecord(navState.hiddenSteps, nextState.hiddenSteps);
-    replaceRecord(navState.hiddenSubsteps, nextState.hiddenSubsteps);
+    const hiddenSteps = { ...nextState.hiddenSteps };
+    const hiddenSubsteps = { ...nextState.hiddenSubsteps };
+    mutate(() => {
+      replaceRecord(navState.hiddenSteps, hiddenSteps);
+      replaceRecord(navState.hiddenSubsteps, hiddenSubsteps);
+    });
     visibilityRevision.value++;
   }
 
   function setStepClickable(stepKey: string, isClickable: boolean) {
-    if (isClickable) delete disabledMap[stepKey];
-    else disabledMap[stepKey] = true;
+    mutate(() => {
+      if (isClickable) delete disabledMap[stepKey];
+      else disabledMap[stepKey] = true;
+    });
   }
 
   /**
@@ -203,7 +223,7 @@ export const useWizardStateStore = defineStore('wizardState', () => {
    * pathway once it discovers it's invalid and un-ban it once fixed.
    */
   function banPathwayAfter(stepKey: string, isBanned: boolean) {
-    whenConfigReady(() => {
+    const update = () => {
       const ordered = orderedSubstepKeys.value;
       // A substep key bans from its own position; a top-level step key falls
       // back to its final child so the whole step stays usable.
@@ -224,9 +244,13 @@ export const useWizardStateStore = defineStore('wizardState', () => {
           .map((key) => parentOf(key) ?? key)
           .filter((key) => key !== cutoffParentKey)
       );
-      for (const key of laterKeys) setStepClickable(key, !isBanned);
-      for (const key of laterStepKeys) setStepClickable(key, !isBanned);
-    });
+      for (const key of [...laterKeys, ...laterStepKeys]) {
+        if (isBanned) disabledMap[key] = true;
+        else delete disabledMap[key];
+      }
+    };
+    pendingSeedMutations?.push(update);
+    whenConfigReady(update);
   }
 
   /**
@@ -235,7 +259,8 @@ export const useWizardStateStore = defineStore('wizardState', () => {
    * loaded there's nothing to compare against, so calls are accepted.
    */
   function isActiveBridgeSource(sourceStepKey?: string): boolean {
-    if (!sourceStepKey || !configReady.value) return true;
+    if (!sourceStepKey || !configReady.value || pendingSeedMutations !== null)
+      return true;
     const activeRoot = parentOf(activeSubstep.value) ?? activeSubstep.value;
     const sourceRoot = parentOf(sourceStepKey) ?? sourceStepKey;
     if (sourceRoot === activeRoot) return true;
@@ -247,7 +272,9 @@ export const useWizardStateStore = defineStore('wizardState', () => {
 
   /** Full reset (new session / tests). */
   function reset() {
+    pendingSeedMutations = null;
     init('', { hiddenSteps: {}, hiddenSubsteps: {} }, {}, {});
+    pendingSeedMutations = [];
     replaceRecord(substepVisibilityOverrides, {});
     pendingUntilConfig.splice(0);
     steps.value = [];
