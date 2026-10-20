@@ -1,6 +1,27 @@
 import type { SidebarStepDto } from '@/types';
 import type { WizardNavState, WizardStep } from '@/types/applicationStep';
 
+export function getOrderedSubstepKeys(steps: WizardStep[]): string[] {
+  return steps.flatMap((step) =>
+    step.substeps.length
+      ? step.substeps.map((substep) => substep.key)
+      : [step.key]
+  );
+}
+
+export function getVisibleSubstepKeys(
+  orderedKeys: string[],
+  parentOf: (key: string) => string | null,
+  isStepHidden: (key: string) => boolean,
+  isSubstepHidden: (key: string) => boolean
+): string[] {
+  return orderedKeys.filter((key) => {
+    if (isSubstepHidden(key)) return false;
+    const parent = parentOf(key);
+    return !(parent && isStepHidden(parent));
+  });
+}
+
 /**
  * Maps the backend sidebar structure (GET /api/Chefs/Sidebar) to the
  * WizardStep[] shape the sidebar component renders. FormId/ApiKey are never
@@ -19,7 +40,11 @@ export function mapSidebarStepsToWizardSteps(
       title: dto.title,
       icon: dto.icon || undefined,
       defaultSubstep: dto.children[0]?.key ?? dto.key,
-      substeps: dto.children.map((c) => ({ key: c.key, label: c.title })),
+      substeps: dto.children.map((c) => ({
+        key: c.key,
+        label: c.title,
+        hiddenIsGhost: c.hiddenIsGhost,
+      })),
     }));
 }
 

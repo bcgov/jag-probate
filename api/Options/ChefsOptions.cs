@@ -18,6 +18,7 @@ public class ChefsSubstepOptions
     public string Icon { get; set; } = string.Empty;
     public int? Order { get; set; }
     public bool Disabled { get; set; }
+    public bool HiddenIsGhost { get; set; } = true;
 }
 
 public class ChefsFormOptions

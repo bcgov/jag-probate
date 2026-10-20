@@ -20,6 +20,7 @@ export interface SidebarSubstepDto {
   title: string;
   icon: string;
   disabled: boolean;
+  hiddenIsGhost: boolean;
 }
 
 /** Sidebar step metadata for a single top-level step.*/

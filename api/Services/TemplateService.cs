@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using Fluid;
+using Fluid.Filters;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -15,6 +16,7 @@ public class TemplateService : ITemplateService
     private readonly Dictionary<string, string[]> _templateGroups;
     private readonly string _templatesPath;
     private readonly ILogger<TemplateService> _logger;
+    private readonly Fluid.TemplateOptions _fluidOptions = new();
 
     public TemplateService(
         IWebHostEnvironment env,
@@ -23,6 +25,9 @@ public class TemplateService : ITemplateService
     )
     {
         _logger = logger;
+        _fluidOptions.Filters.WithMoneyFilters();
+        _fluidOptions.MoneyOptions.Currency = "CAD";
+        _fluidOptions.MoneyOptions.MoneyFormat = "{{amount}}";
         _templatesPath = Path.Join(env.ContentRootPath, "Templates");
         _templateGroups = new Dictionary<string, string[]>(
             options.Value.Groups,
@@ -74,7 +79,7 @@ public class TemplateService : ITemplateService
                     $"Template file '{fileName}' could not be parsed: {error}"
                 );
 
-            var context = new TemplateContext();
+            var context = new TemplateContext(_fluidOptions);
             context.SetValue("Model", submissionData);
             documents.Add(template.Render(context));
         }

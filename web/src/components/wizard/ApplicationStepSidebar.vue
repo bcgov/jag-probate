@@ -38,7 +38,7 @@
           }"
           @click="onStepClick(step)"
           @mouseenter="onStepMouseEnter(step, $event)"
-          @mouseleave="onStepMouseLeave"
+          @mouseleave="clearHover"
         >
           <div class="wiz-icon" :class="stepIconClass(step)">
             <font-awesome-icon
@@ -71,22 +71,27 @@
           class="wiz-subitems"
           :style="{ display: isSubMenuOpen(step.key) ? 'block' : 'none' }"
         >
-          <div
-            v-for="substep in step.substeps"
-            :key="substep.key"
-            class="wiz-subitem"
-            :class="{
-              'is-active': activeSubstep === substep.key,
-              'is-disabled': isSubstepDisabled(substep.key),
-              'is-ghost': isSubstepHidden(substep.key),
-            }"
-            @click="onSubstepClick(substep.key)"
-          >
-            <span class="wiz-dot" :class="statusDotClass(substep.key)">
-              <font-awesome-icon :icon="statusIconName(substep.key)" />
-            </span>
-            {{ substep.label }}
-          </div>
+          <template v-for="substep in step.substeps" :key="substep.key">
+            <div
+              v-if="
+                !isSubstepHidden(substep.key) || substep.hiddenIsGhost !== false
+              "
+              class="wiz-subitem"
+              :class="{
+                'is-active': activeSubstep === substep.key,
+                'is-disabled': isSubstepDisabled(substep.key),
+                'is-ghost':
+                  isSubstepHidden(substep.key) &&
+                  substep.hiddenIsGhost !== false,
+              }"
+              @click="onSubstepClick(substep.key)"
+            >
+              <span class="wiz-dot" :class="statusDotClass(substep.key)">
+                <font-awesome-icon :icon="statusIconName(substep.key)" />
+              </span>
+              {{ substep.label }}
+            </div>
+          </template>
         </div>
       </template>
     </div>
@@ -102,34 +107,45 @@
       @mouseleave="clearHover"
     >
       <div class="wiz-flyout-title">{{ hoveredStepData.title }}</div>
-      <div
-        v-for="substep in hoveredStepData.substeps"
-        :key="substep.key"
-        class="wiz-flyout-item"
-        :class="{
-          'is-active': activeSubstep === substep.key,
-          'is-disabled': isSubstepDisabled(substep.key),
-          'is-ghost': isSubstepHidden(substep.key),
-        }"
-        @click="
-          onSubstepClick(substep.key);
-          hoveredStepKey = null;
-        "
-      >
-        <span class="wiz-dot" :class="statusDotClass(substep.key)">
-          <font-awesome-icon :icon="statusIconName(substep.key)" />
-        </span>
-        {{ substep.label }}
-      </div>
+      <template v-for="substep in hoveredStepData.substeps" :key="substep.key">
+        <div
+          v-if="
+            !isSubstepHidden(substep.key) || substep.hiddenIsGhost !== false
+          "
+          class="wiz-flyout-item"
+          :class="{
+            'is-active': activeSubstep === substep.key,
+            'is-disabled': isSubstepDisabled(substep.key),
+            'is-ghost':
+              isSubstepHidden(substep.key) && substep.hiddenIsGhost !== false,
+          }"
+          @click="
+            onSubstepClick(substep.key);
+            hoveredStepKey = null;
+          "
+        >
+          <span class="wiz-dot" :class="statusDotClass(substep.key)">
+            <font-awesome-icon :icon="statusIconName(substep.key)" />
+          </span>
+          {{ substep.label }}
+        </div>
+      </template>
     </div>
   </Teleport>
 </template>
 
 <script setup lang="ts">
   import {
-    initWizardState,
-    useWizardState,
-  } from '@/composables/useWizardState';
+    getOrderedSubstepKeys,
+    getVisibleSubstepKeys,
+  } from '@/config/wizardSteps';
+  import { useWizardState } from '@/composables/useWizardState';
+  import { pinia } from '@/stores/pinia';
+  import {
+    attachNavigationHandlers,
+    installWizardBridge,
+  } from '@/stores/wizardBridge';
+  import { useWizardStateStore } from '@/stores/WizardStateStore';
   import type {
     StepStatus,
     WizardNavState,
@@ -144,9 +160,6 @@
     steps: WizardStep[];
     /** Substep key to activate on mount. */
     initialStep?: string;
-    initialNavState?: WizardNavState;
-    initialStatusMap?: Record<string, StepStatus>;
-    initialDisabledMap?: Record<string, boolean>;
     /**
      * When true (default), registers window.wizard* bridge functions on mount.
      * Set false for secondary instances (e.g. mobile drawer) so the primary
@@ -159,9 +172,6 @@
 
   const props = withDefaults(defineProps<Props>(), {
     initialStep: '',
-    initialNavState: () => ({ hiddenSteps: {}, hiddenSubsteps: {} }),
-    initialStatusMap: () => ({}),
-    initialDisabledMap: () => ({}),
     registerBridge: true,
     surveyStepKey: '',
   });
@@ -178,6 +188,7 @@
   // ── Reactive state (shared across all instances via composable) ──────────────
 
   const { navState, statusMap, disabledMap, activeSubstep } = useWizardState();
+  const wizardStore = useWizardStateStore(pinia);
 
   const collapsed = ref(false);
 
@@ -204,12 +215,6 @@
     hoveredStepKey.value = step.key;
   }
 
-  function onStepMouseLeave() {
-    hoverClearTimer = setTimeout(() => {
-      hoveredStepKey.value = null;
-    }, 150);
-  }
-
   function cancelHoverClear() {
     if (hoverClearTimer) {
       clearTimeout(hoverClearTimer);
@@ -229,20 +234,7 @@
   // ── Computed ─────────────────────────────────────────────────────────────────
 
   /** Flat ordered list of ALL substep keys derived from config. */
-  const allSubstepKeys = computed<string[]>(() => {
-    const result: string[] = [];
-    for (const step of props.steps) {
-      if (step.substeps.length === 0) {
-        // Single-page step with no children — the step key IS the substep.
-        result.push(step.key);
-      } else {
-        for (const sub of step.substeps) {
-          result.push(sub.key);
-        }
-      }
-    }
-    return result;
-  });
+  const allSubstepKeys = computed(() => getOrderedSubstepKeys(props.steps));
 
   // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -255,12 +247,12 @@
 
   /** Returns visible substeps in config order. */
   function getVisibleSubstepsOrdered(): string[] {
-    return allSubstepKeys.value.filter((key) => {
-      if (navState.hiddenSubsteps[key]) return false;
-      const parent = getParentStepKey(key);
-      if (parent && navState.hiddenSteps[parent]) return false;
-      return true;
-    });
+    return getVisibleSubstepKeys(
+      allSubstepKeys.value,
+      getParentStepKey,
+      isStepHidden,
+      isSubstepHidden
+    );
   }
 
   function getAdjacentVisibleSubstep(
@@ -345,7 +337,7 @@
   }
 
   function isSubstepHidden(substepKey: string): boolean {
-    return !!navState.hiddenSubsteps[substepKey];
+    return wizardStore.isSubstepHidden(substepKey);
   }
 
   function isStepDisabled(stepKey: string): boolean {
@@ -494,120 +486,32 @@
     if (prev) updateSidebar(prev);
   }
 
+  // State mutations live in WizardStateStore (shared with the window.wizard*
+  // bridge). Moving off a substep that becomes hidden is handled by the
+  // visibilityRevision watcher below.
   function setStepStatus(substepKey: string, status: StepStatus | null) {
-    if (status) {
-      statusMap[substepKey] = status;
-    } else {
-      delete statusMap[substepKey];
-    }
+    wizardStore.setStepStatus(substepKey, status);
     emit('validation', substepKey, status);
   }
 
   function setAllStatuses(map: Record<string, StepStatus>) {
-    Object.keys(statusMap).forEach((k) => delete statusMap[k]);
-    Object.assign(statusMap, map);
+    wizardStore.setAllStatuses(map);
   }
 
   function setStepVisibility(stepKey: string, isVisible: boolean) {
-    if (isVisible) {
-      delete navState.hiddenSteps[stepKey];
-    } else {
-      navState.hiddenSteps[stepKey] = true;
-    }
-    const parentOfCurrent = getParentStepKey(activeSubstep.value);
-    if (parentOfCurrent === stepKey && !isVisible) {
-      const fallback =
-        getFallbackSubstep(activeSubstep.value) ??
-        getVisibleSubstepsOrdered()[0] ??
-        '';
-      updateSidebar(fallback);
-    }
+    wizardStore.setStepVisibility(stepKey, isVisible);
   }
 
   function setSubstepVisibility(substepKey: string, isVisible: boolean) {
-    if (isVisible) {
-      delete navState.hiddenSubsteps[substepKey];
-    } else {
-      navState.hiddenSubsteps[substepKey] = true;
-    }
-    if (activeSubstep.value === substepKey && !isVisible) {
-      const fallback =
-        getFallbackSubstep(substepKey) ?? getVisibleSubstepsOrdered()[0] ?? '';
-      updateSidebar(fallback);
-    }
+    wizardStore.setSubstepVisibility(substepKey, isVisible);
   }
 
   function setAllVisibility(nextState: WizardNavState) {
-    Object.keys(navState.hiddenSteps).forEach(
-      (k) => delete navState.hiddenSteps[k]
-    );
-    Object.assign(navState.hiddenSteps, nextState.hiddenSteps ?? {});
-    Object.keys(navState.hiddenSubsteps).forEach(
-      (k) => delete navState.hiddenSubsteps[k]
-    );
-    Object.assign(navState.hiddenSubsteps, nextState.hiddenSubsteps ?? {});
-    const ordered = getVisibleSubstepsOrdered();
-    if (!ordered.includes(activeSubstep.value)) {
-      const fallback =
-        getFallbackSubstep(activeSubstep.value) ?? ordered[0] ?? '';
-      updateSidebar(fallback);
-    }
+    wizardStore.setAllVisibility(nextState);
   }
 
   function setStepClickable(stepKey: string, isClickable: boolean) {
-    if (isClickable) {
-      delete disabledMap[stepKey];
-    } else {
-      disabledMap[stepKey] = true;
-    }
-  }
-
-  /**
-   * Disables (isBanned true) or re-enables (false) every step/substep that
-   * comes after stepKey in config order, by reusing setStepClickable per key.
-   * A substep key bans everything after that exact substep (including its own
-   * later siblings); a top-level step key bans everything after that step's
-   * final substep. Unlike attemptNext()'s one-step-at-a-time progressive
-   * unlock, this can re-lock substeps that were already unlocked, so a
-   * substep's own watcher can retroactively ban the pathway once it discovers
-   * it's invalid (e.g. after the user edits a prior answer) and un-ban it once
-   * fixed.
-   */
-  function banPathwayAfter(stepKey: string, isBanned: boolean) {
-    const ordered = allSubstepKeys.value;
-    // A substep key bans from its own position; a top-level step key falls
-    // back to its final child so the whole step stays usable.
-    let lastIdx = ordered.indexOf(stepKey);
-    if (lastIdx === -1) {
-      ordered.forEach((key, i) => {
-        if (getParentStepKey(key) === stepKey) lastIdx = i;
-      });
-    }
-    if (lastIdx === -1) return;
-
-    const laterKeys = ordered.slice(lastIdx + 1);
-    // Later siblings share the cutoff's parent — banning that parent would
-    // disable the step the caller is still on.
-    const cutoffParentKey = getParentStepKey(stepKey) ?? stepKey;
-    const laterStepKeys = new Set(
-      laterKeys
-        .map((key) => getParentStepKey(key) ?? key)
-        .filter((key) => key !== cutoffParentKey)
-    );
-    for (const key of laterKeys) setStepClickable(key, !isBanned);
-    for (const key of laterStepKeys) setStepClickable(key, !isBanned);
-  }
-
-  function isActiveBridgeSource(sourceStepKey?: string): boolean {
-    if (!sourceStepKey) return true;
-    const activeRoot =
-      getParentStepKey(activeSubstep.value) ?? activeSubstep.value;
-    const sourceRoot = getParentStepKey(sourceStepKey) ?? sourceStepKey;
-    if (sourceRoot === activeRoot) return true;
-    console.warn(
-      `[ApplicationStepSidebar] Ignored bridge call from inactive step "${sourceRoot}".`
-    );
-    return false;
+    wizardStore.setStepClickable(stepKey, isClickable);
   }
 
   // ── Computed exposed values ───────────────────────────────────────────────────
@@ -630,92 +534,32 @@
     return all.length > 0 && activeSubstep.value === all[all.length - 1];
   });
 
-  // ── Window function bridge ────────────────────────────────────────────────────
-  // Preserves backward compat with CHEFS form JS that calls window.wizard* functions.
-  // Remove these once CHEFS forms no longer contain wizard/nav JS (Step 3).
+  // ── Store + bridge wiring ─────────────────────────────────────────────────────
+  // The window.wizard* bridge and its state live in WizardStateStore, installed
+  // at bootstrap (main.ts) so CHEFS calls made before this component mounts
+  // aren't lost. installWizardBridge() is idempotent; calling it here keeps the
+  // component self-sufficient (e.g. in isolation/tests).
+  installWizardBridge();
 
-  function registerWindowFunctions() {
-    window.wizardUpdateSidebar = (stepKey, sourceStepKey) => {
-      if (isActiveBridgeSource(sourceStepKey)) updateSidebar(stepKey);
-    };
-    window.wizardNavigateNext = (sourceStepKey) => {
-      if (isActiveBridgeSource(sourceStepKey)) navigateNext();
-    };
-    window.wizardNavigatePrevious = (sourceStepKey) => {
-      if (isActiveBridgeSource(sourceStepKey)) navigatePrevious();
-    };
-    window.wizardSetStepStatus = (substepKey, status, sourceStepKey) => {
-      if (isActiveBridgeSource(sourceStepKey))
-        setStepStatus(substepKey, status);
-    };
-    window.wizardSetAllStatuses = (map, sourceStepKey) => {
-      if (isActiveBridgeSource(sourceStepKey)) setAllStatuses(map);
-    };
-    window.wizardSetStepVisibility = (stepKey, isVisible, sourceStepKey) => {
-      if (isActiveBridgeSource(sourceStepKey)) {
-        setStepVisibility(stepKey, isVisible);
-      }
-    };
-    window.wizardSetSubstepVisibility = (
-      substepKey,
-      isVisible,
-      sourceStepKey
-    ) => {
-      if (isActiveBridgeSource(sourceStepKey)) {
-        setSubstepVisibility(substepKey, isVisible);
-      }
-    };
-    window.wizardSetAllVisibility = (nextState, sourceStepKey) => {
-      if (isActiveBridgeSource(sourceStepKey)) setAllVisibility(nextState);
-    };
-    window.wizardSetStepClickable = (stepKey, isClickable, sourceStepKey) => {
-      if (isActiveBridgeSource(sourceStepKey)) {
-        setStepClickable(stepKey, isClickable);
-      }
-    };
-    window.wizardBanPathway = (stepKey, isBanned, sourceStepKey) => {
-      if (isActiveBridgeSource(sourceStepKey)) {
-        banPathwayAfter(stepKey, isBanned);
-      }
-    };
-    // Note: window.wizardValidateStep is owned by StepFormViewer (it has direct
-    // access to the Form.io instance) — not assigned here.
-  }
-
-  function unregisterWindowFunctions() {
-    const fns: (keyof Window)[] = [
-      'wizardUpdateSidebar',
-      'wizardNavigateNext',
-      'wizardNavigatePrevious',
-      'wizardSetStepStatus',
-      'wizardSetAllStatuses',
-      'wizardSetStepVisibility',
-      'wizardSetSubstepVisibility',
-      'wizardSetAllVisibility',
-      'wizardSetStepClickable',
-      'wizardBanPathway',
-    ];
-    fns.forEach((fn) => delete window[fn]);
-  }
-
-  // Register before mounted hooks run so CHEFS schema scripts can call the
-  // bridge while the first form is initializing.
-  if (props.registerBridge) {
-    initWizardState(
-      props.initialStep,
-      props.initialNavState,
-      props.initialStatusMap,
-      props.initialDisabledMap
-    );
-    registerWindowFunctions();
-  }
+  let detachNavigation: (() => void) | null = null;
 
   let resizeCleanup: (() => void) | null = null;
   let hasAppliedInitialStep = false;
 
-  function applyInitialStep(stepKey: string) {
-    seedActiveSubstep(stepKey);
-  }
+  // Visibility changed (bridge call, dev control, setAllVisibility) and the
+  // active substep is no longer visible - move to the nearest visible one.
+  // init()/resume don't bump the revision; seeding resolves that itself.
+  watch(
+    () => wizardStore.visibilityRevision,
+    () => {
+      if (!props.registerBridge || !hasAppliedInitialStep) return;
+      const ordered = getVisibleSubstepsOrdered();
+      if (!activeSubstep.value || ordered.includes(activeSubstep.value)) return;
+      const fallback =
+        getFallbackSubstep(activeSubstep.value) ?? ordered[0] ?? '';
+      if (fallback) updateSidebar(fallback);
+    }
+  );
 
   onMounted(() => {
     // Keep collapsed state in sync with viewport — reset to expanded on small screens
@@ -733,8 +577,15 @@
     // Only the primary instance seeds shared state. The hidden mobile sidebar
     // mounts when the form becomes ready and must not overwrite resume state.
     if (props.registerBridge) {
-      applyInitialStep(props.initialStep);
+      seedActiveSubstep(props.initialStep);
       hasAppliedInitialStep = true;
+      // Attached after seeding so navigation calls CHEFS made while no sidebar
+      // was attached replay relative to the real starting substep.
+      detachNavigation = attachNavigationHandlers({
+        updateSidebar: (stepKey) => updateSidebar(stepKey),
+        navigateNext,
+        navigatePrevious,
+      });
     }
   });
 
@@ -746,20 +597,12 @@
     () => props.initialStep,
     (newVal, oldVal) => {
       if (!hasAppliedInitialStep || !newVal || newVal === oldVal) return;
-      if (props.registerBridge) {
-        initWizardState(
-          newVal,
-          props.initialNavState,
-          props.initialStatusMap,
-          props.initialDisabledMap
-        );
-      }
-      applyInitialStep(newVal);
+      if (props.registerBridge) seedActiveSubstep(newVal);
     }
   );
 
   onUnmounted(() => {
-    if (props.registerBridge) unregisterWindowFunctions();
+    detachNavigation?.();
     resizeCleanup?.();
     if (hoverClearTimer) clearTimeout(hoverClearTimer);
   });

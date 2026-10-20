@@ -7,7 +7,7 @@ import './assets/main.css';
 import registerFontAwesomeAndLibrary from './plugins/FontAwesome';
 import router from './router';
 import { registerServices } from './services';
-import { initializePinia, registerPinia } from './stores';
+import { initializePinia, installWizardBridge, registerPinia } from './stores';
 import './styles/backdrop.scss';
 import './styles/index.scss';
 import { registerRelatedPeopleGlobal } from './utils/relatedPeople';
@@ -20,6 +20,9 @@ async function bootstrap() {
 
   // Add Pinia store with extensible registration function
   registerPinia(app);
+  // Wizard state + window.wizard* bridge must exist before any CHEFS form
+  // script runs, independent of whether the wizard sidebar is mounted.
+  installWizardBridge();
   await initializePinia();
   registerFontAwesomeAndLibrary(app);
 
