@@ -152,20 +152,19 @@
         applicant)
       </p>
 
-      {% assign aliasCount = 0 %}
       <p class="numbered-paragraph">
         1. has applied for a grant of administration without will annexed in
         respect to the estate of
         <b>{{ Model.deceasedName }}</b>{% if Model.otherNameYN == 'yes' %}{% for
         alias in Model.deceasedOtherNames %}{% if alias.firstNameGivenName1 !=
         '' or alias.middleNameS1 != '' or alias.lastNameFamilyNameOrSurname1 !=
-        '' %}{% if aliasCount == 0 %}, also known as {% else %}, {% endif %}
+        '' %}, also known as
         <b
           >{{ alias.firstNameGivenName1 }}{% if alias.middleNameS1 != '' %} {{
           alias.middleNameS1 }} {% endif %} {{
           alias.lastNameFamilyNameOrSurname1 }}</b
-        >{% assign aliasCount = aliasCount | plus: 1 %}{% endif %}{% endfor %}{%
-        endif %} (the "deceased") whose last residential address was
+        >{% endif %}{% endfor %}{%
+        endif %} (the "deceased"), whose last residential address was
         <b
           >{{ Model.deceasedAddressStreet }}, {{ Model.deceasedAddressCity }},
           {{ Model.deceasedAddressProvince }}{{ Model.deceasedAddressState }}{{
