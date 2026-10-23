@@ -163,8 +163,8 @@
           >{{ alias.firstNameGivenName1 }}{% if alias.middleNameS1 != '' %} {{
           alias.middleNameS1 }} {% endif %} {{
           alias.lastNameFamilyNameOrSurname1 }}</b
-        >{% endif %}{% endfor %}{%
-        endif %} (the "deceased"), whose last residential address was
+        >{% endif %}{% endfor %}{% endif %} (the "deceased") whose last
+        residential address was
         <b
           >{{ Model.deceasedAddressStreet }}, {{ Model.deceasedAddressCity }},
           {{ Model.deceasedAddressProvince }}{{ Model.deceasedAddressState }}{{
