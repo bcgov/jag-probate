@@ -81,6 +81,11 @@
         margin: 0;
         text-align: center;
       }
+
+      .closing-block {
+        break-before: avoid;
+      }
+
       .closing-block,
       .closing-block table,
       .closing-block tr {
@@ -239,7 +244,8 @@
         disclosed in Exhibit A, on a determination being made as to the value of
         that asset.
       </p>
-      {% if Model.additionalAssetInformation != '' %}
+      {% if Model.additionalAssetInformation and
+      Model.additionalAssetInformation != '' %}
       <p class="indent">8. {{ Model.additionalAssetInformation }}</p>
       {% endif %}
       <div class="closing-block">
