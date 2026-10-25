@@ -38,5 +38,17 @@ namespace Probate.Db.Models
         /// </summary>
         [MaxLength(50)]
         public string FormVersion { get; set; }
+
+        /// <summary>
+        /// Actual CHEFS form ID used when this step was submitted.
+        /// </summary>
+        [MaxLength(100)]
+        public string ChefsFormId { get; set; }
+
+        /// <summary>
+        /// CHEFS submission ID returned when this step was submitted.
+        /// </summary>
+        [MaxLength(100)]
+        public string ChefsSubmissionId { get; set; }
     }
 }
