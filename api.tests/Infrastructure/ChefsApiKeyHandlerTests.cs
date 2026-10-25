@@ -64,7 +64,11 @@ public class ChefsApiKeyHandlerTests
             {
                 Forms =
                 {
-                    ["form-primary"] = new ChefsFormOptions { FormId = PrimaryFormId, ApiKey = " " },
+                    ["form-primary"] = new ChefsFormOptions
+                    {
+                        FormId = PrimaryFormId,
+                        ApiKey = " ",
+                    },
                 },
             }
         );
@@ -133,7 +137,11 @@ public class ChefsApiKeyHandlerTests
         {
             Forms =
             {
-                ["form-primary"] = new ChefsFormOptions { FormId = PrimaryFormId, ApiKey = PrimaryApiKey },
+                ["form-primary"] = new ChefsFormOptions
+                {
+                    FormId = PrimaryFormId,
+                    ApiKey = PrimaryApiKey,
+                },
                 ["form-secondary"] = new ChefsFormOptions
                 {
                     FormId = SecondaryFormId,

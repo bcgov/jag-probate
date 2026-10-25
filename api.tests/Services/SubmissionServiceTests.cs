@@ -107,11 +107,12 @@ public class SubmissionServiceTests
             }
         );
         chefsApi.Verify(
-            api => api.DeleteSubmissionAsync(
-                It.IsAny<string>(),
-                It.IsAny<string>(),
-                It.IsAny<CancellationToken>()
-            ),
+            api =>
+                api.DeleteSubmissionAsync(
+                    It.IsAny<string>(),
+                    It.IsAny<string>(),
+                    It.IsAny<CancellationToken>()
+                ),
             Times.Exactly(2)
         );
     }
@@ -176,18 +177,12 @@ public class SubmissionServiceTests
         return new ProbateDbContext(options);
     }
 
-    private static SubmissionService CreateService(
-        ProbateDbContext db,
-        Mock<IChefsApi> chefsApi
-    )
+    private static SubmissionService CreateService(ProbateDbContext db, Mock<IChefsApi> chefsApi)
     {
         var options = Microsoft.Extensions.Options.Options.Create(
             new ChefsOptions
             {
-                Forms =
-                {
-                    ["form-step-one"] = new ChefsFormOptions { FormId = "chefs-form-guid" },
-                },
+                Forms = { ["form-step-one"] = new ChefsFormOptions { FormId = "chefs-form-guid" } },
             }
         );
 

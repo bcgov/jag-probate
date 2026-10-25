@@ -15,26 +15,24 @@ namespace Probate.Db.Migrations
                 table: "step_data",
                 type: "character varying(100)",
                 maxLength: 100,
-                nullable: true);
+                nullable: true
+            );
 
             migrationBuilder.AddColumn<string>(
                 name: "chefs_submission_id",
                 table: "step_data",
                 type: "character varying(100)",
                 maxLength: 100,
-                nullable: true);
+                nullable: true
+            );
         }
 
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.DropColumn(
-                name: "chefs_form_id",
-                table: "step_data");
+            migrationBuilder.DropColumn(name: "chefs_form_id", table: "step_data");
 
-            migrationBuilder.DropColumn(
-                name: "chefs_submission_id",
-                table: "step_data");
+            migrationBuilder.DropColumn(name: "chefs_submission_id", table: "step_data");
         }
     }
 }

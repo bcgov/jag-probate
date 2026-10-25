@@ -10,8 +10,8 @@ using MapsterMapper;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Probate.Api.Infrastructure.Chefs;
 using Probate.Api.Helpers.Exceptions;
+using Probate.Api.Infrastructure.Chefs;
 using Probate.Api.Models;
 using Probate.Api.Options;
 using Probate.Db.Models;
@@ -345,11 +345,14 @@ namespace Probate.Api.Services
                         step.FormId
                     );
                 }
-                catch (Exception ex) when (
-                    ex is ApiException
-                    || ex is HttpRequestException
-                    || (ex is TaskCanceledException && !cancellationToken.IsCancellationRequested)
-                )
+                catch (Exception ex)
+                    when (ex is ApiException
+                        || ex is HttpRequestException
+                        || (
+                            ex is TaskCanceledException
+                            && !cancellationToken.IsCancellationRequested
+                        )
+                    )
                 {
                     failedDeleteCount++;
                     firstDeleteFailure ??= ex;
