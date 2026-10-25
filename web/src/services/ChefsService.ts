@@ -24,7 +24,7 @@ class ChefsService {
    * The backend resolves the key to the actual CHEFS form GUID, keeping it
    * server-side and never exposing it to the client directly.
    *
-   * @param formKey Logical form key (e.g. "legal", "nonlegal").
+   * @param formKey Logical form key (e.g. "form-deceased", "form-related-people").
    */
   async getAuthToken(formKey: string): Promise<ChefsAuthToken> {
     return await this.httpService.get<ChefsAuthToken>(
