@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
+using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using Mapster;
@@ -9,6 +11,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Probate.Api.Infrastructure.Chefs;
+using Probate.Api.Helpers.Exceptions;
 using Probate.Api.Models;
 using Probate.Api.Options;
 using Probate.Db.Models;
@@ -242,10 +245,22 @@ namespace Probate.Api.Services
                     continue;
                 }
 
+                if (!string.IsNullOrWhiteSpace(step.ChefsSubmissionId))
+                {
+                    if (string.IsNullOrWhiteSpace(step.ChefsFormId))
+                    {
+                        step.ChefsFormId = formOptions.FormId;
+                        await _db.SaveChangesAsync(cancellationToken);
+                    }
+
+                    if (!string.IsNullOrWhiteSpace(step.ChefsFormId))
+                        continue;
+                }
+
                 try
                 {
                     object? parsedData = Newtonsoft.Json.JsonConvert.DeserializeObject(step.Data);
-                    await _chefsApi.CreateSubmissionAsync(
+                    var chefsSubmission = await _chefsApi.CreateSubmissionAsync(
                         formOptions.FormId,
                         new Infrastructure.Chefs.ChefsCreateSubmissionRequest
                         {
@@ -257,6 +272,20 @@ namespace Probate.Api.Services
                         },
                         cancellationToken
                     );
+
+                    if (string.IsNullOrWhiteSpace(chefsSubmission?.Id))
+                    {
+                        _logger.LogWarning(
+                            "CHEFS returned no submission ID for step {FormId} on submission {PublicId}",
+                            step.FormId,
+                            publicId
+                        );
+                        continue;
+                    }
+
+                    step.ChefsFormId = formOptions.FormId;
+                    step.ChefsSubmissionId = chefsSubmission.Id;
+                    await _db.SaveChangesAsync(cancellationToken);
                 }
                 catch (ApiException ex)
                 {
@@ -279,40 +308,71 @@ namespace Probate.Api.Services
         )
         {
             var submission =
-                await _db.Submissions.FirstOrDefaultAsync(s => s.PublicId == id, cancellationToken)
+                await _db
+                    .Submissions.Include(s => s.StepDataEntries)
+                    .FirstOrDefaultAsync(s => s.PublicId == id, cancellationToken)
                 ?? throw new KeyNotFoundException($"Submission {id} not found.");
 
-            // Soft delete locally first
-            submission.DeletedAt = DateTime.UtcNow;
+            submission.DeletedAt ??= DateTime.UtcNow;
             await _db.SaveChangesAsync(cancellationToken);
 
-            // Then delete from CHEFS — get formId from options
-            // TODO step based forms will need to handle multiple form ids.
-            if (
-                !_options.Forms.TryGetValue("legal", out var formOptions)
-                || string.IsNullOrWhiteSpace(formOptions?.FormId)
-            )
-                throw new InvalidOperationException("Form key 'legal' is not configured.");
+            Exception? firstDeleteFailure = null;
+            var failedDeleteCount = 0;
 
-            try
+            foreach (var step in submission.StepDataEntries)
             {
-                await _chefsApi.DeleteSubmissionAsync(
-                    formOptions.FormId,
-                    submission.ChefsSubmissionId,
-                    cancellationToken
-                );
+                var chefsFormId = step.ChefsFormId;
+                var chefsSubmissionId = step.ChefsSubmissionId;
+                if (
+                    string.IsNullOrWhiteSpace(chefsFormId)
+                    || string.IsNullOrWhiteSpace(chefsSubmissionId)
+                )
+                    continue;
+
+                try
+                {
+                    await _chefsApi.DeleteSubmissionAsync(
+                        chefsFormId,
+                        chefsSubmissionId,
+                        cancellationToken
+                    );
+                }
+                catch (ApiException ex) when (ex.StatusCode == HttpStatusCode.NotFound)
+                {
+                    _logger.LogInformation(
+                        "CHEFS submission {ChefsSubmissionId} for step {FormId} was already deleted",
+                        chefsSubmissionId,
+                        step.FormId
+                    );
+                }
+                catch (Exception ex) when (
+                    ex is ApiException
+                    || ex is HttpRequestException
+                    || (ex is TaskCanceledException && !cancellationToken.IsCancellationRequested)
+                )
+                {
+                    failedDeleteCount++;
+                    firstDeleteFailure ??= ex;
+                    _logger.LogWarning(
+                        ex,
+                        "CHEFS delete failed for submission {ChefsSubmissionId}, form {ChefsFormId}",
+                        chefsSubmissionId,
+                        chefsFormId
+                    );
+                    continue;
+                }
+
+                step.ChefsSubmissionId = null;
+                step.ChefsFormId = null;
+                await _db.SaveChangesAsync(cancellationToken);
             }
-            catch (ApiException ex)
-            {
-                _logger.LogWarning(
-                    ex,
-                    "CHEFS delete failed for submission {ChefsSubmissionId}: {StatusCode}",
-                    submission.ChefsSubmissionId,
-                    ex.StatusCode
+
+            if (firstDeleteFailure != null)
+                throw new ChefsApiException(
+                    $"Failed to delete {failedDeleteCount} CHEFS step submission(s); retry deletion to try again.",
+                    HttpStatusCode.BadGateway,
+                    firstDeleteFailure
                 );
-                // Local soft delete already done — log but don't throw
-                // so the user's record is still hidden even if CHEFS delete fails
-            }
         }
     }
 }

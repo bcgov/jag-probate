@@ -66,7 +66,7 @@ public class ChefsController : ControllerBase
     /// Gets a short-lived auth token for the CHEFS web component.
     /// The token is used with the X-Chefs-Gateway-Token header for client-side form embedding.
     /// </summary>
-    /// <param name="formKey">Logical form key (e.g. "legal"). Resolved to the actual CHEFS form GUID server-side via Chefs:Forms config.</param>
+    /// <param name="formKey">Logical form key (e.g. "form-deceased"). Resolved to the actual CHEFS form GUID server-side via Chefs:Forms config.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <response code="200">Auth token and form ID.</response>
     /// <response code="400">formKey missing, invalid characters, or not a recognised form key.</response>
