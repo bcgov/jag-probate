@@ -56,6 +56,7 @@ public class SubmissionsControllerTests
         var dto = new CreateSubmissionDto
         {
             ChefsSubmissionId = "chefs-new-001",
+            ApplicantName = "Jane Doe",
             CreatedBy = "user1",
             Status = "draft",
         };
@@ -63,6 +64,7 @@ public class SubmissionsControllerTests
         {
             PublicId = Guid.NewGuid(),
             ChefsSubmissionId = "chefs-new-001",
+            ApplicantName = "Jane Doe",
             CreatedBy = "user1",
             Status = "draft",
             CreatedAt = DateTime.UtcNow,
@@ -91,6 +93,7 @@ public class SubmissionsControllerTests
         var dto = new CreateSubmissionDto
         {
             ChefsSubmissionId = "",
+            ApplicantName = "",
             CreatedBy = "user1",
             Status = "draft",
         };
@@ -116,6 +119,7 @@ public class SubmissionsControllerTests
         var dto = new CreateSubmissionDto
         {
             ChefsSubmissionId = "   ",
+            ApplicantName = "",
             CreatedBy = "user1",
             Status = "draft",
         };
@@ -135,6 +139,7 @@ public class SubmissionsControllerTests
         var dto = new CreateSubmissionDto
         {
             ChefsSubmissionId = "",
+            ApplicantName = "",
             CreatedBy = "user1",
             Status = "draft",
         };
@@ -220,7 +225,16 @@ public class SubmissionsControllerTests
         var submissionId = Guid.NewGuid();
         _mockService
             .Setup(x => x.GetSubmissionByIdAsync(submissionId, cts.Token))
-            .ReturnsAsync(new SubmissionResponseDto { PublicId = submissionId });
+            .ReturnsAsync(
+                new SubmissionResponseDto
+                {
+                    PublicId = submissionId,
+                    ChefsSubmissionId = "",
+                    ApplicantName = "",
+                    CreatedBy = "jdoe",
+                    Status = "draft",
+                }
+            );
 
         // Act
         await _controller.GetSubmission(submissionId, cts.Token);
@@ -242,6 +256,7 @@ public class SubmissionsControllerTests
             {
                 PublicId = Guid.NewGuid(),
                 ChefsSubmissionId = "chefs-001",
+                ApplicantName = "",
                 CreatedBy = "jdoe",
                 Status = "draft",
             },
@@ -249,6 +264,7 @@ public class SubmissionsControllerTests
             {
                 PublicId = Guid.NewGuid(),
                 ChefsSubmissionId = "chefs-002",
+                ApplicantName = "",
                 CreatedBy = "jdoe",
                 Status = "submitted",
             },
@@ -338,11 +354,19 @@ public class SubmissionsControllerTests
     public async Task UpsertSubmission_WithValidDto_ReturnsOkWithResult()
     {
         // Arrange
-        var dto = new CreateSubmissionDto { ChefsSubmissionId = "chefs-upd-001", Status = "draft" };
+        var dto = new CreateSubmissionDto
+        {
+            ChefsSubmissionId = "chefs-upd-001",
+            ApplicantName = "Jane Doe",
+            CreatedBy = "jdoe",
+            Status = "draft",
+        };
         var upserted = new SubmissionResponseDto
         {
             PublicId = Guid.NewGuid(),
             ChefsSubmissionId = "chefs-upd-001",
+            ApplicantName = "Jane Doe",
+            CreatedBy = "jdoe",
             Status = "draft",
         };
 
@@ -366,7 +390,13 @@ public class SubmissionsControllerTests
     public async Task UpsertSubmission_WithEmptyChefsSubmissionId_ReturnsBadRequest()
     {
         // Arrange
-        var dto = new CreateSubmissionDto { ChefsSubmissionId = "", Status = "draft" };
+        var dto = new CreateSubmissionDto
+        {
+            ChefsSubmissionId = "",
+            ApplicantName = "",
+            CreatedBy = "jdoe",
+            Status = "draft",
+        };
 
         // Act
         var result = await _controller.UpsertSubmission(dto);
@@ -386,7 +416,12 @@ public class SubmissionsControllerTests
     public async Task UpsertSubmission_DoesNotCallService_WhenValidationFails()
     {
         // Arrange
-        var dto = new CreateSubmissionDto { ChefsSubmissionId = "  " };
+        var dto = new CreateSubmissionDto
+        {
+            ChefsSubmissionId = "  ",
+            ApplicantName = "",
+            CreatedBy = "jdoe",
+        };
 
         // Act
         await _controller.UpsertSubmission(dto);

@@ -9,9 +9,9 @@ namespace Probate.Api.Tests.Infrastructure;
 
 public class ChefsApiKeyHandlerTests
 {
-    private const string LegalFormId = "11111111-1111-1111-1111-111111111111";
-    private const string LegalApiKey = "legal-api-key";
-    private const string NonLegalFormId = "22222222-2222-2222-2222-222222222222";
+    private const string PrimaryFormId = "11111111-1111-1111-1111-111111111111";
+    private const string PrimaryApiKey = "primary-api-key";
+    private const string SecondaryFormId = "22222222-2222-2222-2222-222222222222";
 
     [Theory]
     [InlineData("/api/v1/forms/11111111-1111-1111-1111-111111111111/submissions")]
@@ -32,7 +32,7 @@ public class ChefsApiKeyHandlerTests
         Assert.NotNull(captureHandler.Request);
         Assert.Equal("Basic", captureHandler.Request.Headers.Authorization?.Scheme);
         Assert.Equal(
-            Convert.ToBase64String(Encoding.UTF8.GetBytes($"{LegalFormId}:{LegalApiKey}")),
+            Convert.ToBase64String(Encoding.UTF8.GetBytes($"{PrimaryFormId}:{PrimaryApiKey}")),
             captureHandler.Request.Headers.Authorization?.Parameter
         );
     }
@@ -44,13 +44,13 @@ public class ChefsApiKeyHandlerTests
         using var invoker = CreateInvoker(captureHandler);
         using var request = new HttpRequestMessage(
             HttpMethod.Delete,
-            $"https://chefs.example.com/api/v1/forms/{NonLegalFormId}/submissions/submission-id"
+            $"https://chefs.example.com/api/v1/forms/{SecondaryFormId}/submissions/submission-id"
         );
 
         using var response = await invoker.SendAsync(request, CancellationToken.None);
 
         Assert.Equal(
-            Convert.ToBase64String(Encoding.UTF8.GetBytes($"{NonLegalFormId}:nonlegal-api-key")),
+            Convert.ToBase64String(Encoding.UTF8.GetBytes($"{SecondaryFormId}:secondary-api-key")),
             captureHandler.Request?.Headers.Authorization?.Parameter
         );
     }
@@ -64,13 +64,13 @@ public class ChefsApiKeyHandlerTests
             {
                 Forms =
                 {
-                    ["legal"] = new ChefsFormOptions { FormId = LegalFormId, ApiKey = " " },
+                    ["form-primary"] = new ChefsFormOptions { FormId = PrimaryFormId, ApiKey = " " },
                 },
             }
         );
         using var request = new HttpRequestMessage(
             HttpMethod.Get,
-            $"https://chefs.example.com/api/v1/forms/{LegalFormId}/submissions"
+            $"https://chefs.example.com/api/v1/forms/{PrimaryFormId}/submissions"
         );
 
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
@@ -102,7 +102,7 @@ public class ChefsApiKeyHandlerTests
         using var invoker = CreateInvoker(new CaptureHandler());
         using var request = new HttpRequestMessage(
             HttpMethod.Get,
-            $"https://chefs.example.com/app/admin/forms/{LegalFormId}/submissions"
+            $"https://chefs.example.com/app/admin/forms/{PrimaryFormId}/submissions"
         );
 
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
@@ -133,11 +133,11 @@ public class ChefsApiKeyHandlerTests
         {
             Forms =
             {
-                ["legal"] = new ChefsFormOptions { FormId = LegalFormId, ApiKey = LegalApiKey },
-                ["nonlegal"] = new ChefsFormOptions
+                ["form-primary"] = new ChefsFormOptions { FormId = PrimaryFormId, ApiKey = PrimaryApiKey },
+                ["form-secondary"] = new ChefsFormOptions
                 {
-                    FormId = NonLegalFormId,
-                    ApiKey = "nonlegal-api-key",
+                    FormId = SecondaryFormId,
+                    ApiKey = "secondary-api-key",
                 },
             },
         };
