@@ -16,7 +16,7 @@
     "ghcr.io/devcontainers/features/node:1": {
       "version": "22"
     },
-    "ghcr.io/devcontainers/features/docker-from-docker:1.6.5": {
+    "ghcr.io/devcontainers/features/docker-from-docker:1.10.1": {
       "moby": false
     }
   },
