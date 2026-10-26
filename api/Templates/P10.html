@@ -103,6 +103,10 @@
         margin-left: 50px;
       }
 
+      .closing-block {
+        break-before: avoid;
+      }
+
       .closing-block,
       .closing-block table,
       .closing-block tr {
@@ -288,7 +292,8 @@
         that asset.
       </p>
 
-      {% if Model.additionalAssetInformation != '' %}
+      {% if Model.additionalAssetInformation and
+      Model.additionalAssetInformation != '' %}
       <p class="indent">7. {{ Model.additionalAssetInformation }}</p>
       {% endif %}
 
