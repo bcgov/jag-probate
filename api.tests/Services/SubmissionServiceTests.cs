@@ -207,12 +207,15 @@ public class SubmissionServiceTests
         };
     }
 
-    private static Task<ApiException> CreateApiException(HttpStatusCode statusCode)
+    private static async Task<ApiException> CreateApiException(HttpStatusCode statusCode)
     {
-        return ApiException.Create(
-            new HttpRequestMessage(),
+        using var request = new HttpRequestMessage();
+        using var response = new HttpResponseMessage(statusCode);
+
+        return await ApiException.Create(
+            request,
             HttpMethod.Delete,
-            new HttpResponseMessage(statusCode),
+            response,
             new RefitSettings()
         );
     }
