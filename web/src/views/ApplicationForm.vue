@@ -13,7 +13,6 @@
       <div v-else class="form-area">
         <ChefsFormViewer
           form-key="legal"
-          :submission-id="chefsSubmissionId"
           :db-id="dbId"
           :read-only="isReadOnly"
           @submitted="onSubmitted"
@@ -35,7 +34,6 @@
   const route = useRoute();
   const chefsService = inject<ChefsService>('chefsService')!;
 
-  const chefsSubmissionId = ref<string | undefined>(undefined);
   const dbId = ref<string | undefined>(undefined);
   const isReadOnly = ref(false);
   const loadingResume = ref(false);
@@ -48,7 +46,6 @@
     loadingResume.value = true;
     try {
       const submission = await chefsService.getSubmission(id);
-      chefsSubmissionId.value = submission.chefsSubmissionId;
       dbId.value = submission.publicId;
       isReadOnly.value = submission.status === 'submitted';
     } catch (err) {
