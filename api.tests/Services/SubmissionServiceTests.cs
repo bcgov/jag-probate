@@ -1,5 +1,4 @@
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging.Abstractions;
 using Probate.Api.Services;
 using Probate.Db.Models;
 
@@ -87,8 +86,7 @@ public class SubmissionServiceTests
         return new ProbateDbContext(options);
     }
 
-    private static SubmissionService CreateService(ProbateDbContext db) =>
-        new(db, NullLogger<SubmissionService>.Instance);
+    private static SubmissionService CreateService(ProbateDbContext db) => new(db);
 
     private static Submission CreateSubmission() =>
         new()

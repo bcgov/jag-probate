@@ -14,20 +14,12 @@ namespace Probate.Api.Services
 {
     public interface ISubmissionService
     {
-        Task<SubmissionResponseDto> CreateSubmissionAsync(
-            CreateSubmissionDto dto,
-            CancellationToken cancellationToken = default
-        );
         Task<SubmissionResponseDto?> GetSubmissionByIdAsync(
             Guid id,
             CancellationToken cancellationToken = default
         );
         Task<IReadOnlyList<SubmissionResponseDto>> GetSubmissionsByUserAsync(
             string username,
-            CancellationToken cancellationToken = default
-        );
-        Task<SubmissionResponseDto> UpsertSubmissionAsync(
-            CreateSubmissionDto dto,
             CancellationToken cancellationToken = default
         );
         Task DeleteSubmissionAsync(Guid id, CancellationToken cancellationToken = default);
@@ -63,29 +55,10 @@ namespace Probate.Api.Services
     public class SubmissionService : ISubmissionService
     {
         private readonly ProbateDbContext _db;
-        private readonly ILogger<SubmissionService> _logger;
 
-        public SubmissionService(ProbateDbContext db, ILogger<SubmissionService> logger)
+        public SubmissionService(ProbateDbContext db)
         {
             _db = db;
-            _logger = logger;
-        }
-
-        public async Task<SubmissionResponseDto> CreateSubmissionAsync(
-            CreateSubmissionDto dto,
-            CancellationToken cancellationToken = default
-        )
-        {
-            var submission = dto.Adapt<Submission>();
-            // Ensure a real PublicId is assigned; Mapster may leave it as Guid.Empty
-            // if dto.PublicId is null (first save).
-            if (submission.PublicId == Guid.Empty)
-                submission.PublicId = Guid.NewGuid();
-
-            _db.Submissions.Add(submission);
-            await _db.SaveChangesAsync(cancellationToken);
-
-            return submission.Adapt<SubmissionResponseDto>();
         }
 
         public async Task<SubmissionResponseDto?> GetSubmissionByIdAsync(
@@ -110,43 +83,6 @@ namespace Probate.Api.Services
                 .OrderByDescending(s => s.CreatedAt)
                 .ProjectToType<SubmissionResponseDto>()
                 .ToListAsync(cancellationToken);
-        }
-
-        public async Task<SubmissionResponseDto> UpsertSubmissionAsync(
-            CreateSubmissionDto dto,
-            CancellationToken cancellationToken = default
-        )
-        {
-            Submission? existing = null;
-
-            // Primary lookup by PublicId
-            if (dto.PublicId.HasValue)
-            {
-                existing = await _db.Submissions.FirstOrDefaultAsync(
-                    s => s.PublicId == dto.PublicId.Value && s.DeletedAt == null,
-                    cancellationToken
-                );
-            }
-
-            if (existing != null)
-            {
-                existing.ApplicantName = dto.ApplicantName;
-                existing.Status = dto.Status;
-                existing.LastUpdatedAt = dto.LastUpdatedAt;
-                existing.LastFiledAt = dto.LastFiledAt;
-                existing.SubmissionData = dto.SubmissionData;
-            }
-            else
-            {
-                existing = dto.Adapt<Submission>();
-                // Ensure a real PublicId is assigned for new records.
-                if (existing.PublicId == Guid.Empty)
-                    existing.PublicId = Guid.NewGuid();
-                _db.Submissions.Add(existing);
-            }
-
-            await _db.SaveChangesAsync(cancellationToken);
-            return existing.Adapt<SubmissionResponseDto>();
         }
 
         public async Task<Submission> GetSubmissionByIdAsync(

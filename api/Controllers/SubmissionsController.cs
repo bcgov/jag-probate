@@ -34,23 +34,8 @@ namespace Probate.Api.Controllers
         }
 
         /// <summary>
-        /// Creates a local submission record.
-        /// </summary>
-        [HttpPost]
-        [ProducesResponseType(typeof(SubmissionResponseDto), StatusCodes.Status201Created)]
-        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
-        public async Task<ActionResult<SubmissionResponseDto>> CreateSubmission(
-            [FromBody] CreateSubmissionDto dto,
-            CancellationToken cancellationToken = default
-        )
-        {
-            var result = await _submissionService.CreateSubmissionAsync(dto, cancellationToken);
-            return CreatedAtAction(nameof(CreateSubmission), new { id = result.PublicId }, result);
-        }
-
-        /// <summary>
         /// Creates a draft submission record for the step-based wizard flow.
-        /// No CHEFS submission ID is required — application data is stored only in our database.
+        /// Application data is stored only in our database.
         /// </summary>
         [HttpPost("draft")]
         [ProducesResponseType(typeof(SubmissionResponseDto), StatusCodes.Status201Created)]
@@ -115,23 +100,6 @@ namespace Probate.Api.Controllers
                 username
             );
             return Ok(submissions);
-        }
-
-        /// <summary>
-        /// Creates or updates a local submission record by PublicId.
-        /// If a record with the same PublicId exists, it is updated.
-        /// Otherwise a new record is created.
-        /// </summary>
-        [HttpPost("upsert")]
-        [ProducesResponseType(typeof(SubmissionResponseDto), StatusCodes.Status200OK)]
-        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
-        public async Task<ActionResult<SubmissionResponseDto>> UpsertSubmission(
-            [FromBody] CreateSubmissionDto dto,
-            CancellationToken cancellationToken = default
-        )
-        {
-            var result = await _submissionService.UpsertSubmissionAsync(dto, cancellationToken);
-            return Ok(result);
         }
 
         /// <summary>

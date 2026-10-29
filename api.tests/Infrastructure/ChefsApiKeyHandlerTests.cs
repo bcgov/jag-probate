@@ -14,8 +14,6 @@ public class ChefsApiKeyHandlerTests
     private const string SecondaryFormId = "22222222-2222-2222-2222-222222222222";
 
     [Theory]
-    [InlineData("/api/v1/forms/11111111-1111-1111-1111-111111111111/submissions")]
-    [InlineData("/app/api/v1/forms/11111111-1111-1111-1111-111111111111/submissions")]
     [InlineData("/gateway/v1/auth/token/forms/11111111-1111-1111-1111-111111111111")]
     [InlineData("/app/gateway/v1/auth/token/forms/11111111-1111-1111-1111-111111111111")]
     public async Task SendAsync_WithConfiguredForm_AddsBasicAuthorization(string path)
@@ -23,7 +21,7 @@ public class ChefsApiKeyHandlerTests
         var captureHandler = new CaptureHandler();
         using var invoker = CreateInvoker(captureHandler);
         using var request = new HttpRequestMessage(
-            HttpMethod.Get,
+            HttpMethod.Post,
             $"https://chefs.example.com{path}"
         );
 
@@ -43,8 +41,8 @@ public class ChefsApiKeyHandlerTests
         var captureHandler = new CaptureHandler();
         using var invoker = CreateInvoker(captureHandler);
         using var request = new HttpRequestMessage(
-            HttpMethod.Delete,
-            $"https://chefs.example.com/api/v1/forms/{SecondaryFormId}/submissions/submission-id"
+            HttpMethod.Post,
+            $"https://chefs.example.com/gateway/v1/auth/token/forms/{SecondaryFormId}"
         );
 
         using var response = await invoker.SendAsync(request, CancellationToken.None);
@@ -73,8 +71,8 @@ public class ChefsApiKeyHandlerTests
             }
         );
         using var request = new HttpRequestMessage(
-            HttpMethod.Get,
-            $"https://chefs.example.com/api/v1/forms/{PrimaryFormId}/submissions"
+            HttpMethod.Post,
+            $"https://chefs.example.com/gateway/v1/auth/token/forms/{PrimaryFormId}"
         );
 
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
@@ -89,8 +87,8 @@ public class ChefsApiKeyHandlerTests
     {
         using var invoker = CreateInvoker(new CaptureHandler());
         using var request = new HttpRequestMessage(
-            HttpMethod.Get,
-            "https://chefs.example.com/api/v1/forms/33333333-3333-3333-3333-333333333333/submissions"
+            HttpMethod.Post,
+            "https://chefs.example.com/gateway/v1/auth/token/forms/33333333-3333-3333-3333-333333333333"
         );
 
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
@@ -106,7 +104,7 @@ public class ChefsApiKeyHandlerTests
         using var invoker = CreateInvoker(new CaptureHandler());
         using var request = new HttpRequestMessage(
             HttpMethod.Get,
-            $"https://chefs.example.com/app/admin/forms/{PrimaryFormId}/submissions"
+            $"https://chefs.example.com/api/v1/forms/{PrimaryFormId}/submissions"
         );
 
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>

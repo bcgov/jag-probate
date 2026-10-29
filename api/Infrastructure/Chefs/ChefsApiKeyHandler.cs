@@ -12,15 +12,15 @@ using Probate.Api.Options;
 namespace Probate.Api.Infrastructure.Chefs;
 
 /// <summary>
-/// Adds Basic Authentication to every CHEFS request using the per-form API key.
-/// Credentials are attached only for approved CHEFS form API and gateway paths.
-/// The CHEFS form GUID is extracted from approved request paths and reverse-looked
+/// Adds Basic Authentication to CHEFS auth-token requests using the per-form API key.
+/// Credentials are attached only for the approved CHEFS gateway token path.
+/// The CHEFS form GUID is extracted from the request path and reverse-looked
 /// up against the configured form options to find the matching API key.
 /// </summary>
 public class ChefsApiKeyHandler : DelegatingHandler
 {
     private static readonly Regex FormIdPathRegex = new(
-        @"(?:/app)?(?:/api/v1/forms/|/gateway/v1/auth/token/forms/)([^/]+)",
+        @"(?:/app)?/gateway/v1/auth/token/forms/([^/]+)",
         RegexOptions.IgnoreCase | RegexOptions.Compiled
     );
 

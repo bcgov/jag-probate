@@ -47,42 +47,6 @@ public class SubmissionsControllerTests
         };
     }
 
-    // ── POST /api/Submissions ─────────────────────────────────────────────
-
-    [Fact]
-    public async Task CreateSubmission_WithValidDto_Returns201WithLocation()
-    {
-        // Arrange
-        var dto = new CreateSubmissionDto
-        {
-            ApplicantName = "Jane Doe",
-            CreatedBy = "user1",
-            Status = "draft",
-        };
-        var created = new SubmissionResponseDto
-        {
-            PublicId = Guid.NewGuid(),
-            ApplicantName = "Jane Doe",
-            CreatedBy = "user1",
-            Status = "draft",
-            CreatedAt = DateTime.UtcNow,
-        };
-
-        _mockService
-            .Setup(x => x.CreateSubmissionAsync(dto, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(created);
-
-        // Act
-        var result = await _controller.CreateSubmission(dto);
-
-        // Assert
-        var actionResult = Assert.IsType<ActionResult<SubmissionResponseDto>>(result);
-        var createdResult = Assert.IsType<CreatedAtActionResult>(actionResult.Result);
-        Assert.Equal(StatusCodes.Status201Created, createdResult.StatusCode);
-        var returned = Assert.IsType<SubmissionResponseDto>(createdResult.Value);
-        Assert.NotEqual(Guid.Empty, returned.PublicId);
-    }
-
     // ── GET /api/Submissions/{id} ─────────────────────────────────────────
 
     [Fact]
@@ -266,41 +230,6 @@ public class SubmissionsControllerTests
         var okResult = Assert.IsType<OkObjectResult>(actionResult.Result);
         var returned = Assert.IsType<List<SubmissionResponseDto>>(okResult.Value);
         Assert.Empty(returned);
-    }
-
-    // ── POST /api/Submissions/upsert ──────────────────────────────────────
-
-    [Fact]
-    public async Task UpsertSubmission_WithValidDto_ReturnsOkWithResult()
-    {
-        // Arrange
-        var dto = new CreateSubmissionDto
-        {
-            ApplicantName = "Jane Doe",
-            CreatedBy = "jdoe",
-            Status = "draft",
-        };
-        var upserted = new SubmissionResponseDto
-        {
-            PublicId = Guid.NewGuid(),
-            ApplicantName = "Jane Doe",
-            CreatedBy = "jdoe",
-            Status = "draft",
-        };
-
-        _mockService
-            .Setup(x => x.UpsertSubmissionAsync(dto, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(upserted);
-
-        // Act
-        var result = await _controller.UpsertSubmission(dto);
-
-        // Assert
-        var actionResult = Assert.IsType<ActionResult<SubmissionResponseDto>>(result);
-        var okResult = Assert.IsType<OkObjectResult>(actionResult.Result);
-        Assert.Equal(StatusCodes.Status200OK, okResult.StatusCode);
-        var returned = Assert.IsType<SubmissionResponseDto>(okResult.Value);
-        Assert.NotEqual(Guid.Empty, returned.PublicId);
     }
 
     // ── DELETE /api/Submissions/{id} ──────────────────────────────────────
