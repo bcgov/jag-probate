@@ -222,7 +222,6 @@
     try {
       const payload: UpsertSubmissionDto = {
         publicId: currentDbId.value,
-        chefsSubmissionId: newChefsId,
         createdBy,
         applicantName,
         status,
@@ -332,7 +331,6 @@
             const applicantName = currentData?.deceasedName || '';
             const autoSavePayload: UpsertSubmissionDto = {
               publicId: currentDbId.value,
-              chefsSubmissionId: newId,
               createdBy,
               applicantName,
               status: 'draft',

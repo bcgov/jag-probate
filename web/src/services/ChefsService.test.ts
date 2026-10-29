@@ -8,7 +8,6 @@ describe('ChefsService – upsertSubmission', () => {
   beforeEach(() => {
     mockPost = vi.fn().mockResolvedValue({
       publicId: 'a7b23b0f-ac4d-4f78-a9ca-39be6bbf5ac4',
-      chefsSubmissionId: 'abc',
     });
 
     const mockHttpService = {
@@ -24,7 +23,6 @@ describe('ChefsService – upsertSubmission', () => {
   it('calls POST api/Submissions/upsert with correct payload', async () => {
     const payload = {
       publicId: 'a7b23b0f-ac4d-4f78-a9ca-39be6bbf5ac4',
-      chefsSubmissionId: 'chefs-id-123',
       createdBy: 'testuser@idir',
       applicantName: 'John Doe',
       status: 'draft',
@@ -41,7 +39,6 @@ describe('ChefsService – upsertSubmission', () => {
     const guid = 'b1c23d4e-0000-0000-0000-000000000007';
     const payload = {
       publicId: guid,
-      chefsSubmissionId: 'new-chefs-id',
       createdBy: 'user@idir',
       applicantName: 'Jane',
       status: 'draft',
@@ -58,7 +55,6 @@ describe('ChefsService – upsertSubmission', () => {
   it('passes publicId as undefined for new submissions (create)', async () => {
     const payload = {
       publicId: undefined,
-      chefsSubmissionId: 'first-chefs-id',
       createdBy: 'user@idir',
       applicantName: '',
       status: 'draft',
@@ -74,7 +70,6 @@ describe('ChefsService – upsertSubmission', () => {
 
   it('returns response with publicId (Guid)', async () => {
     const result = await chefsService.upsertSubmission({
-      chefsSubmissionId: 'xyz',
       createdBy: 'u',
       applicantName: '',
       status: 'draft',
@@ -89,7 +84,6 @@ describe('ChefsService – upsertSubmission', () => {
     const now = '2026-05-28T12:00:00Z';
     const payload = {
       publicId: 'c0ffee00-0000-0000-0000-000000000010',
-      chefsSubmissionId: 'submit-id',
       createdBy: 'user@idir',
       applicantName: 'Filed Person',
       status: 'submitted',

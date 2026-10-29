@@ -135,7 +135,6 @@ describe('ChefsFormViewer – upsert payload construction', () => {
   it('builds correct payload for auto-save (draft)', () => {
     const payload = {
       publicId: GUID,
-      chefsSubmissionId: 'chefs-id-abc123',
       createdBy: 'testuser@idir',
       applicantName: 'John Doe',
       status: 'draft',
@@ -146,14 +145,12 @@ describe('ChefsFormViewer – upsert payload construction', () => {
     expect(payload.publicId).toBe(GUID);
     expect(payload.status).toBe('draft');
     expect(payload.lastFiledAt).toBeNull();
-    expect(payload.chefsSubmissionId).toBe('chefs-id-abc123');
   });
 
   it('builds correct payload for explicit submit', () => {
     const now = '2026-05-28T12:00:00Z';
     const payload = {
       publicId: GUID,
-      chefsSubmissionId: 'chefs-id-def456',
       createdBy: 'testuser@idir',
       applicantName: 'Jane Doe',
       status: 'submitted',
@@ -169,7 +166,6 @@ describe('ChefsFormViewer – upsert payload construction', () => {
   it('sends publicId as undefined for first-time save (new session)', () => {
     const payload = {
       publicId: undefined,
-      chefsSubmissionId: 'new-chefs-id',
       createdBy: 'user@idir',
       applicantName: '',
       status: 'draft',
