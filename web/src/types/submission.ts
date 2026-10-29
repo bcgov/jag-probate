@@ -1,7 +1,6 @@
 /** API response shape returned by GET /api/Submissions and GET /api/Submissions/{id}. */
 export interface SubmissionResponseDto {
   publicId: string; // Guid
-  chefsSubmissionId: string;
   applicantName: string;
   createdBy: string;
   status: string;
@@ -13,7 +12,6 @@ export interface SubmissionResponseDto {
 /** Payload sent to POST /api/Submissions/upsert. */
 export interface UpsertSubmissionDto {
   publicId?: string;
-  chefsSubmissionId: string;
   createdBy: string | undefined;
   applicantName: string;
   status: string | undefined;
@@ -44,12 +42,11 @@ export interface PreviousApplication {
   deceased_name: string;
   app_type: string;
   status: string;
-  /** Displayed Package# column (equals chefsSubmissionId). */
+  /** Displayed Package# column (populated by future efiling integration). */
   packageNum: string;
   /** Alias for publicId – kept for template compatibility. */
   id: string;
   publicId: string;
-  chefsSubmissionId: string;
   /** Minutes since epoch (used for sorting). */
   lastUpdated: number;
   lastUpdatedDate: string;

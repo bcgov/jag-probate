@@ -33,18 +33,6 @@ class ChefsService {
   }
 
   /**
-   * Fetches all submitted applications for the given logical form key.
-   * Calls GET /api/Chefs/Applications?formKey=...
-   *
-   * @param formKey Logical form key (e.g. "probate").
-   */
-  async getApplications(formKey: string): Promise<any[]> {
-    return await this.httpService.get<any[]>(
-      `api/Chefs/Applications?formKey=${encodeURIComponent(formKey)}`
-    );
-  }
-
-  /**
    * Fetches the sidebar steps and substeps.
    */
   async getSidebarStructure(): Promise<SidebarStepDto[]> {
