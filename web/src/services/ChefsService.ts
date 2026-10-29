@@ -4,7 +4,6 @@ import type {
   StepDataResponseDto,
   SubmissionResponseDto,
   UpsertStepDataDto,
-  UpsertSubmissionDto,
 } from '@/types';
 import HttpService from './HttpService';
 
@@ -46,15 +45,6 @@ class ChefsService {
   async getSubmission(id: string): Promise<SubmissionResponseDto> {
     return await this.httpService.get<SubmissionResponseDto>(
       `api/Submissions/${id}`
-    );
-  }
-
-  async upsertSubmission(
-    data: UpsertSubmissionDto
-  ): Promise<SubmissionResponseDto> {
-    return await this.httpService.post<SubmissionResponseDto>(
-      'api/Submissions/upsert',
-      data
     );
   }
 

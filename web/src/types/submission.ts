@@ -9,17 +9,6 @@ export interface SubmissionResponseDto {
   createdAt: string;
 }
 
-/** Payload sent to POST /api/Submissions/upsert. */
-export interface UpsertSubmissionDto {
-  publicId?: string;
-  createdBy: string | undefined;
-  applicantName: string;
-  status: string | undefined;
-  lastUpdatedAt: string;
-  lastFiledAt: string | null;
-  submissionData: string | null;
-}
-
 /** API response shape for step data (GET /api/submissions/{id}/steps/{formId}). */
 export interface StepDataResponseDto {
   publicId: string;
