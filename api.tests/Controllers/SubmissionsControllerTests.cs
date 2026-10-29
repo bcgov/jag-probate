@@ -55,7 +55,6 @@ public class SubmissionsControllerTests
         // Arrange
         var dto = new CreateSubmissionDto
         {
-            ChefsSubmissionId = "chefs-new-001",
             ApplicantName = "Jane Doe",
             CreatedBy = "user1",
             Status = "draft",
@@ -63,7 +62,6 @@ public class SubmissionsControllerTests
         var created = new SubmissionResponseDto
         {
             PublicId = Guid.NewGuid(),
-            ChefsSubmissionId = "chefs-new-001",
             ApplicantName = "Jane Doe",
             CreatedBy = "user1",
             Status = "draft",
@@ -83,79 +81,6 @@ public class SubmissionsControllerTests
         Assert.Equal(StatusCodes.Status201Created, createdResult.StatusCode);
         var returned = Assert.IsType<SubmissionResponseDto>(createdResult.Value);
         Assert.NotEqual(Guid.Empty, returned.PublicId);
-        Assert.Equal("chefs-new-001", returned.ChefsSubmissionId);
-    }
-
-    [Fact]
-    public async Task CreateSubmission_WithEmptyChefsSubmissionId_ReturnsBadRequest()
-    {
-        // Arrange
-        var dto = new CreateSubmissionDto
-        {
-            ChefsSubmissionId = "",
-            ApplicantName = "",
-            CreatedBy = "user1",
-            Status = "draft",
-        };
-
-        // Act
-        var result = await _controller.CreateSubmission(dto);
-
-        // Assert
-        var actionResult = Assert.IsType<ActionResult<SubmissionResponseDto>>(result);
-        var badRequest = Assert.IsType<BadRequestObjectResult>(actionResult.Result);
-        var message = badRequest
-            .Value?.GetType()
-            .GetProperty("message")
-            ?.GetValue(badRequest.Value)
-            ?.ToString();
-        Assert.Equal("ChefsSubmissionId is required.", message);
-    }
-
-    [Fact]
-    public async Task CreateSubmission_WithWhitespaceChefsSubmissionId_ReturnsBadRequest()
-    {
-        // Arrange
-        var dto = new CreateSubmissionDto
-        {
-            ChefsSubmissionId = "   ",
-            ApplicantName = "",
-            CreatedBy = "user1",
-            Status = "draft",
-        };
-
-        // Act
-        var result = await _controller.CreateSubmission(dto);
-
-        // Assert
-        var actionResult = Assert.IsType<ActionResult<SubmissionResponseDto>>(result);
-        Assert.IsType<BadRequestObjectResult>(actionResult.Result);
-    }
-
-    [Fact]
-    public async Task CreateSubmission_DoesNotCallService_WhenValidationFails()
-    {
-        // Arrange
-        var dto = new CreateSubmissionDto
-        {
-            ChefsSubmissionId = "",
-            ApplicantName = "",
-            CreatedBy = "user1",
-            Status = "draft",
-        };
-
-        // Act
-        await _controller.CreateSubmission(dto);
-
-        // Assert
-        _mockService.Verify(
-            x =>
-                x.CreateSubmissionAsync(
-                    It.IsAny<CreateSubmissionDto>(),
-                    It.IsAny<CancellationToken>()
-                ),
-            Times.Never
-        );
     }
 
     // ── GET /api/Submissions/{id} ─────────────────────────────────────────
@@ -168,7 +93,6 @@ public class SubmissionsControllerTests
         var expected = new SubmissionResponseDto
         {
             PublicId = submissionId,
-            ChefsSubmissionId = "chefs-abc-123",
             ApplicantName = "Jane Doe",
             CreatedBy = "jdoe",
             Status = "draft",
@@ -188,7 +112,6 @@ public class SubmissionsControllerTests
         Assert.Equal(StatusCodes.Status200OK, okResult.StatusCode);
         var dto = Assert.IsType<SubmissionResponseDto>(okResult.Value);
         Assert.Equal(submissionId, dto.PublicId);
-        Assert.Equal("chefs-abc-123", dto.ChefsSubmissionId);
         Assert.Equal("Jane Doe", dto.ApplicantName);
         Assert.Equal("draft", dto.Status);
     }
@@ -229,7 +152,6 @@ public class SubmissionsControllerTests
                 new SubmissionResponseDto
                 {
                     PublicId = submissionId,
-                    ChefsSubmissionId = "",
                     ApplicantName = "",
                     CreatedBy = "jdoe",
                     Status = "draft",
@@ -255,7 +177,6 @@ public class SubmissionsControllerTests
             new()
             {
                 PublicId = Guid.NewGuid(),
-                ChefsSubmissionId = "chefs-001",
                 ApplicantName = "",
                 CreatedBy = "jdoe",
                 Status = "draft",
@@ -263,7 +184,6 @@ public class SubmissionsControllerTests
             new()
             {
                 PublicId = Guid.NewGuid(),
-                ChefsSubmissionId = "chefs-002",
                 ApplicantName = "",
                 CreatedBy = "jdoe",
                 Status = "submitted",
@@ -356,7 +276,6 @@ public class SubmissionsControllerTests
         // Arrange
         var dto = new CreateSubmissionDto
         {
-            ChefsSubmissionId = "chefs-upd-001",
             ApplicantName = "Jane Doe",
             CreatedBy = "jdoe",
             Status = "draft",
@@ -364,7 +283,6 @@ public class SubmissionsControllerTests
         var upserted = new SubmissionResponseDto
         {
             PublicId = Guid.NewGuid(),
-            ChefsSubmissionId = "chefs-upd-001",
             ApplicantName = "Jane Doe",
             CreatedBy = "jdoe",
             Status = "draft",
@@ -383,58 +301,6 @@ public class SubmissionsControllerTests
         Assert.Equal(StatusCodes.Status200OK, okResult.StatusCode);
         var returned = Assert.IsType<SubmissionResponseDto>(okResult.Value);
         Assert.NotEqual(Guid.Empty, returned.PublicId);
-        Assert.Equal("chefs-upd-001", returned.ChefsSubmissionId);
-    }
-
-    [Fact]
-    public async Task UpsertSubmission_WithEmptyChefsSubmissionId_ReturnsBadRequest()
-    {
-        // Arrange
-        var dto = new CreateSubmissionDto
-        {
-            ChefsSubmissionId = "",
-            ApplicantName = "",
-            CreatedBy = "jdoe",
-            Status = "draft",
-        };
-
-        // Act
-        var result = await _controller.UpsertSubmission(dto);
-
-        // Assert
-        var actionResult = Assert.IsType<ActionResult<SubmissionResponseDto>>(result);
-        var badRequest = Assert.IsType<BadRequestObjectResult>(actionResult.Result);
-        var message = badRequest
-            .Value?.GetType()
-            .GetProperty("message")
-            ?.GetValue(badRequest.Value)
-            ?.ToString();
-        Assert.Equal("ChefsSubmissionId is required.", message);
-    }
-
-    [Fact]
-    public async Task UpsertSubmission_DoesNotCallService_WhenValidationFails()
-    {
-        // Arrange
-        var dto = new CreateSubmissionDto
-        {
-            ChefsSubmissionId = "  ",
-            ApplicantName = "",
-            CreatedBy = "jdoe",
-        };
-
-        // Act
-        await _controller.UpsertSubmission(dto);
-
-        // Assert
-        _mockService.Verify(
-            x =>
-                x.UpsertSubmissionAsync(
-                    It.IsAny<CreateSubmissionDto>(),
-                    It.IsAny<CancellationToken>()
-                ),
-            Times.Never
-        );
     }
 
     // ── DELETE /api/Submissions/{id} ──────────────────────────────────────
@@ -503,7 +369,6 @@ public class SubmissionsControllerTests
         var finalized = new SubmissionResponseDto
         {
             PublicId = publicId,
-            ChefsSubmissionId = "chefs-final",
             ApplicantName = "Jane Doe",
             CreatedBy = "jdoe",
             Status = "submitted",
@@ -566,7 +431,6 @@ public class SubmissionsControllerTests
                 new SubmissionResponseDto
                 {
                     PublicId = publicId,
-                    ChefsSubmissionId = "chefs-final",
                     ApplicantName = "Jane Doe",
                     CreatedBy = "jdoe",
                     Status = "submitted",
@@ -593,7 +457,6 @@ public class SubmissionsControllerTests
         var created = new SubmissionResponseDto
         {
             PublicId = Guid.NewGuid(),
-            ChefsSubmissionId = "",
             ApplicantName = "",
             CreatedBy = "jdoe",
             Status = "draft",
