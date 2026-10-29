@@ -7,7 +7,7 @@ namespace Probate.Api.Tests.Infrastructure;
 
 public class ChefsServiceCollectionExtensionsTests
 {
-    private const string LegalFormId = "11111111-1111-1111-1111-111111111111";
+    private const string FormId = "11111111-1111-1111-1111-111111111111";
 
     [Fact]
     public void AddChefsApi_RegistersChefsApiWithValidConfiguration()
@@ -45,8 +45,8 @@ public class ChefsServiceCollectionExtensionsTests
             new Dictionary<string, string?>
             {
                 ["Chefs:BaseUrl"] = "https://chefs.example.com/app",
-                ["Chefs:Forms: :FormId"] = LegalFormId,
-                ["Chefs:Forms: :ApiKey"] = "legal-api-key",
+                ["Chefs:Forms: :FormId"] = FormId,
+                ["Chefs:Forms: :ApiKey"] = "test-api-key",
             }
         );
 
@@ -65,8 +65,8 @@ public class ChefsServiceCollectionExtensionsTests
             new Dictionary<string, string?>
             {
                 ["Chefs:BaseUrl"] = "https://chefs.example.com/app",
-                ["Chefs:Forms:legal:FormId"] = "",
-                ["Chefs:Forms:legal:ApiKey"] = "legal-api-key",
+                ["Chefs:Forms:form-test:FormId"] = "",
+                ["Chefs:Forms:form-test:ApiKey"] = "test-api-key",
             }
         );
 
@@ -74,8 +74,8 @@ public class ChefsServiceCollectionExtensionsTests
             services.AddChefsApi(configuration)
         );
 
-        Assert.Contains("Chefs:Forms:legal:FormId", exception.Message);
-        Assert.Contains("Chefs__Forms__legal__FormId", exception.Message);
+        Assert.Contains("Chefs:Forms:form-test:FormId", exception.Message);
+        Assert.Contains("Chefs__Forms__form-test__FormId", exception.Message);
     }
 
     [Fact]
@@ -86,8 +86,8 @@ public class ChefsServiceCollectionExtensionsTests
             new Dictionary<string, string?>
             {
                 ["Chefs:BaseUrl"] = "https://chefs.example.com/app",
-                ["Chefs:Forms:legal:FormId"] = LegalFormId,
-                ["Chefs:Forms:legal:ApiKey"] = " ",
+                ["Chefs:Forms:form-test:FormId"] = FormId,
+                ["Chefs:Forms:form-test:ApiKey"] = " ",
             }
         );
 
@@ -95,8 +95,8 @@ public class ChefsServiceCollectionExtensionsTests
             services.AddChefsApi(configuration)
         );
 
-        Assert.Contains("Chefs:Forms:legal:ApiKey", exception.Message);
-        Assert.Contains("Chefs__Forms__legal__ApiKey", exception.Message);
+        Assert.Contains("Chefs:Forms:form-test:ApiKey", exception.Message);
+        Assert.Contains("Chefs__Forms__form-test__ApiKey", exception.Message);
     }
 
     private static IConfiguration BuildConfiguration(Dictionary<string, string?>? overrides = null)
@@ -106,8 +106,8 @@ public class ChefsServiceCollectionExtensionsTests
             ?? new Dictionary<string, string?>
             {
                 ["Chefs:BaseUrl"] = "https://chefs.example.com/app",
-                ["Chefs:Forms:legal:FormId"] = LegalFormId,
-                ["Chefs:Forms:legal:ApiKey"] = "legal-api-key",
+                ["Chefs:Forms:form-test:FormId"] = FormId,
+                ["Chefs:Forms:form-test:ApiKey"] = "test-api-key",
             };
 
         return new ConfigurationBuilder().AddInMemoryCollection(configData).Build();

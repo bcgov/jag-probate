@@ -31,6 +31,11 @@ namespace Probate.Db.Models
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             modelBuilder.ApplyAllConfigurations();
+            modelBuilder.Entity<StepData>().HasIndex(stepData => stepData.SubmissionId);
+            modelBuilder
+                .Entity<StepData>()
+                .HasIndex(stepData => new { stepData.SubmissionId, stepData.FormId })
+                .IsUnique();
         }
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)

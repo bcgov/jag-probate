@@ -19,7 +19,10 @@ public class TemplateServiceTests
     [InlineData("${{ Model.amount | money }}", "$1,134.65")]
     [InlineData("${{ Model.amount | money: 'CAD' }}", "$1,134.65")]
     [InlineData("${{ Model.amount | money_with_currency }}", "$1,134.65 CAD")]
-    public void RenderTemplates_FormatsMoneyWithOneTemplateDollarSign(string source, string expected)
+    public void RenderTemplates_FormatsMoneyWithOneTemplateDollarSign(
+        string source,
+        string expected
+    )
     {
         var temporaryDirectory = Directory.CreateTempSubdirectory();
         try
@@ -29,7 +32,9 @@ public class TemplateServiceTests
             File.WriteAllText(Path.Join(templatesPath, "test.html"), source);
 
             var environment = new Mock<IWebHostEnvironment>();
-            environment.SetupGet(value => value.ContentRootPath).Returns(temporaryDirectory.FullName);
+            environment
+                .SetupGet(value => value.ContentRootPath)
+                .Returns(temporaryDirectory.FullName);
             var options = Microsoft.Extensions.Options.Options.Create(
                 new TemplateOptions
                 {
@@ -140,14 +145,17 @@ public class TemplateServiceTests
     [InlineData("deceasedAddressProvinceText", "Bavaria")]
     public void RenderTemplates_P18IncludesAddressRegion(string field, string region)
     {
-        var document = RenderTemplate("P18.html", new Dictionary<string, object>
-        {
-            ["deceasedAddressStreet"] = "123 Test Street",
-            ["deceasedAddressCity"] = "Test City",
-            [field] = region,
-            ["deceasedAddressPostalCode"] = "12345",
-            ["deceasedAddressCountry"] = "Test Country",
-        });
+        var document = RenderTemplate(
+            "P18.html",
+            new Dictionary<string, object>
+            {
+                ["deceasedAddressStreet"] = "123 Test Street",
+                ["deceasedAddressCity"] = "Test City",
+                [field] = region,
+                ["deceasedAddressPostalCode"] = "12345",
+                ["deceasedAddressCountry"] = "Test Country",
+            }
+        );
         Assert.Contains(
             $"123 Test Street, Test City, {region}, 12345, Test Country",
             NormalizeText(ParseDocument(document).Root!.Value)
@@ -157,9 +165,16 @@ public class TemplateServiceTests
     [Fact]
     public void RenderTemplates_P10ConfiguredFilesMatchExactCaseAndRender()
     {
-        using var config = JsonDocument.Parse(File.ReadAllText(Path.Join(AppContext.BaseDirectory, "appsettings.json")));
-        var files = config.RootElement.GetProperty("Templates").GetProperty("Groups").GetProperty("P10");
-        var actualNames = Directory.GetFiles(Path.Join(AppContext.BaseDirectory, "Templates")).Select(Path.GetFileName);
+        using var config = JsonDocument.Parse(
+            File.ReadAllText(Path.Join(AppContext.BaseDirectory, "appsettings.json"))
+        );
+        var files = config
+            .RootElement.GetProperty("Templates")
+            .GetProperty("Groups")
+            .GetProperty("P10");
+        var actualNames = Directory
+            .GetFiles(Path.Join(AppContext.BaseDirectory, "Templates"))
+            .Select(Path.GetFileName);
         foreach (var entry in files.EnumerateArray())
         {
             var fileName = entry.GetString()!;
@@ -177,30 +192,31 @@ public class TemplateServiceTests
         if (foreignOnly)
         {
             data["hasOutsideBcProperty"] = true;
-            data["realPropertyOutsideBCEntries"] = new[] { Asset("Foreign real property", 150m, 125m) };
-            data["tangiblePersonalPropertyOutsideBCEntries"] = new[] { Asset("Foreign tangible property", 275m, 250m) };
+            data["realPropertyOutsideBCEntries"] = new[]
+            {
+                Asset("Foreign real property", 150m, 125m),
+            };
+            data["tangiblePersonalPropertyOutsideBCEntries"] = new[]
+            {
+                Asset("Foreign tangible property", 275m, 250m),
+            };
         }
         var document = RenderTemplate("P11-exhibits.html", data);
 
         Assert.Contains("<b>EXHIBIT A</b>", document);
-        Assert.Contains(
-            "This is <b>Exhibit A</b> referred to in the affidavit of",
-            document
-        );
-        Assert.Contains(
-            "A commissioner for taking affidavits for British Columbia",
-            document
-        );
+        Assert.Contains("This is <b>Exhibit A</b> referred to in the affidavit of", document);
+        Assert.Contains("A commissioner for taking affidavits for British Columbia", document);
         Assert.DoesNotContain("EXHIBIT B", document);
         Assert.DoesNotContain("Foreign real property", document);
         Assert.DoesNotContain("Foreign tangible property", document);
-        Assert.Equal(3, ParseDocument(document).Descendants("td").Count(cell => NormalizeText(cell.Value) == "None"));
-        AssertRow(document, "TOTAL REAL PROPERTY WITHIN BRITISH COLUMBIA", "$0.00");
-        AssertRow(
-            document,
-            "TOTAL TANGIBLE PERSONAL PROPERTY WITHIN BRITISH COLUMBIA",
-            "$0.00"
+        Assert.Equal(
+            3,
+            ParseDocument(document)
+                .Descendants("td")
+                .Count(cell => NormalizeText(cell.Value) == "None")
         );
+        AssertRow(document, "TOTAL REAL PROPERTY WITHIN BRITISH COLUMBIA", "$0.00");
+        AssertRow(document, "TOTAL TANGIBLE PERSONAL PROPERTY WITHIN BRITISH COLUMBIA", "$0.00");
         AssertRow(document, "TOTAL INTANGIBLE PERSONAL PROPERTY", "$0.00");
         AssertRow(document, "GROSS VALUE OF ASSETS LESS SECURED DEBTS", "$0.00");
     }
@@ -208,7 +224,8 @@ public class TemplateServiceTests
     [Fact]
     public void RenderTemplates_P11RendersAllExhibitAAssetTypesAndTotals()
     {
-        var document = RenderTemplate("P11-exhibits.html",
+        var document = RenderTemplate(
+            "P11-exhibits.html",
             new Dictionary<string, object>
             {
                 ["applicant"] = new Dictionary<string, object>
@@ -217,14 +234,8 @@ public class TemplateServiceTests
                 },
                 ["deceasedName"] = "Deceased Name",
                 ["otherNameYN"] = "yes",
-                ["deceasedOtherNames"] = new[]
-                {
-                    Name("Former", "Middle", "Name"),
-                },
-                ["realPropertyEntries"] = new[]
-                {
-                    Asset("BC real property", 110m, 100m),
-                },
+                ["deceasedOtherNames"] = new[] { Name("Former", "Middle", "Name") },
+                ["realPropertyEntries"] = new[] { Asset("BC real property", 110m, 100m) },
                 ["tangiblePersonalPropertyEntries"] = new[]
                 {
                     Asset("BC tangible property", 220m, 200m),
@@ -248,11 +259,7 @@ public class TemplateServiceTests
         AssertAssetValues(document, "BC intangible property", "$330.00", "$300.00");
         AssertAssetValues(document, "Foreign intangible property", "$440.00", "$400.00");
         AssertRow(document, "TOTAL REAL PROPERTY WITHIN BRITISH COLUMBIA", "$100.00");
-        AssertRow(
-            document,
-            "TOTAL TANGIBLE PERSONAL PROPERTY WITHIN BRITISH COLUMBIA",
-            "$200.00"
-        );
+        AssertRow(document, "TOTAL TANGIBLE PERSONAL PROPERTY WITHIN BRITISH COLUMBIA", "$200.00");
         AssertRow(document, "TOTAL INTANGIBLE PERSONAL PROPERTY", "$700.00");
         AssertRow(document, "GROSS VALUE OF ASSETS LESS SECURED DEBTS", "$1,000.00");
         Assert.DoesNotContain("EXHIBIT B", document);
@@ -261,7 +268,8 @@ public class TemplateServiceTests
     [Fact]
     public void RenderTemplates_P11RendersDebtsAndOptionalLabels()
     {
-        var document = RenderTemplate("P11-exhibits.html",
+        var document = RenderTemplate(
+            "P11-exhibits.html",
             new Dictionary<string, object>
             {
                 ["realPropertyEntries"] = new[]
@@ -311,31 +319,30 @@ public class TemplateServiceTests
         decimal valueAtDeath,
         string marketValueSource = "",
         params Dictionary<string, object>[] securedDebts
-    ) => new()
-    {
-        ["propertyDescription"] = description,
-        ["marketValue"] = marketValue,
-        ["valueAtDeath"] = valueAtDeath,
-        ["marketValueSource"] = marketValueSource,
-        ["securedDebts"] = securedDebts,
-    };
+    ) =>
+        new()
+        {
+            ["propertyDescription"] = description,
+            ["marketValue"] = marketValue,
+            ["valueAtDeath"] = valueAtDeath,
+            ["marketValueSource"] = marketValueSource,
+            ["securedDebts"] = securedDebts,
+        };
 
-    private static Dictionary<string, object> Debt(string description, decimal amount) => new()
-    {
-        ["debtDescription"] = description,
-        ["debtAmount"] = amount,
-    };
+    private static Dictionary<string, object> Debt(string description, decimal amount) =>
+        new() { ["debtDescription"] = description, ["debtAmount"] = amount };
 
     private static Dictionary<string, object> Name(
         string firstName,
         string middleName,
         string lastName
-    ) => new()
-    {
-        ["firstNameGivenName1"] = firstName,
-        ["middleNameS1"] = middleName,
-        ["lastNameFamilyNameOrSurname1"] = lastName,
-    };
+    ) =>
+        new()
+        {
+            ["firstNameGivenName1"] = firstName,
+            ["middleNameS1"] = middleName,
+            ["lastNameFamilyNameOrSurname1"] = lastName,
+        };
 
     private static void AssertAssetValues(
         string document,
@@ -346,25 +353,38 @@ public class TemplateServiceTests
     {
         var group = Assert.Single(
             ParseDocument(document).Descendants("tbody"),
-            body => NormalizeText(body.Elements("tr").FirstOrDefault()?.Elements("td").FirstOrDefault()?.Value ?? "") == description);
-        var values = group.Elements("tr").ElementAt(1).Elements("td").Skip(1)
+            body =>
+                NormalizeText(
+                    body.Elements("tr").FirstOrDefault()?.Elements("td").FirstOrDefault()?.Value
+                        ?? ""
+                ) == description
+        );
+        var values = group
+            .Elements("tr")
+            .ElementAt(1)
+            .Elements("td")
+            .Skip(1)
             .Select(cell => NormalizeText(cell.Value));
         Assert.Equal(new[] { expectedMarketValue, expectedValueAtDeath }, values);
     }
 
-    private static void AssertRow(string document, params string[] expected) => Assert.Contains(
-        ParseDocument(document).Descendants("tr"),
-        row => row.Elements("td").Select(cell => NormalizeText(cell.Value)).SequenceEqual(expected)
-    );
+    private static void AssertRow(string document, params string[] expected) =>
+        Assert.Contains(
+            ParseDocument(document).Descendants("tr"),
+            row =>
+                row.Elements("td").Select(cell => NormalizeText(cell.Value)).SequenceEqual(expected)
+        );
 
-    private static XDocument ParseDocument(string document) => XDocument.Parse(
-        document
-            .Replace("<!doctype html>", "", StringComparison.OrdinalIgnoreCase)
-            .Replace("&nbsp;", "&#160;", StringComparison.Ordinal)
-    );
+    private static XDocument ParseDocument(string document) =>
+        XDocument.Parse(
+            document
+                .Replace("<!doctype html>", "", StringComparison.OrdinalIgnoreCase)
+                .Replace("&nbsp;", "&#160;", StringComparison.Ordinal)
+        );
 
-    private static string NormalizeText(string value) => string.Join(
-        " ",
-        value.Replace('\u00a0', ' ').Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries)
-    );
+    private static string NormalizeText(string value) =>
+        string.Join(
+            " ",
+            value.Replace('\u00a0', ' ').Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries)
+        );
 }

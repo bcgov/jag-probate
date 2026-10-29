@@ -32,11 +32,11 @@ public class ChefsApplicationServiceTests
             Forms = new Dictionary<string, ChefsFormOptions>(StringComparer.OrdinalIgnoreCase)
             {
                 {
-                    "legal",
+                    "form-test",
                     new ChefsFormOptions
                     {
                         FormId = "12345678-1234-1234-1234-123456789012",
-                        ApiKey = "legal-api-key",
+                        ApiKey = "test-api-key",
                     }
                 },
                 {
@@ -58,7 +58,7 @@ public class ChefsApplicationServiceTests
     public async Task GetAuthTokenAsync_WithValidFormKey_ReturnsToken()
     {
         // Arrange
-        var formKey = "legal";
+        var formKey = "form-test";
         var expectedToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.test.token";
         var expectedFormId = "12345678-1234-1234-1234-123456789012";
         var response = new ChefsAuthTokenResponse { Token = expectedToken };
@@ -121,7 +121,7 @@ public class ChefsApplicationServiceTests
     public async Task GetAuthTokenAsync_WhenChefsApiReturns404_ThrowsChefsApiException()
     {
         // Arrange
-        var formKey = "legal";
+        var formKey = "form-test";
         var apiException = await ApiException.Create(
             new HttpRequestMessage(),
             HttpMethod.Post,
@@ -154,7 +154,7 @@ public class ChefsApplicationServiceTests
     public async Task GetAuthTokenAsync_WhenChefsApiReturns401_ThrowsChefsApiException()
     {
         // Arrange
-        var formKey = "legal";
+        var formKey = "form-test";
         var apiException = await ApiException.Create(
             new HttpRequestMessage(),
             HttpMethod.Post,
@@ -186,7 +186,7 @@ public class ChefsApplicationServiceTests
     public async Task GetAuthTokenAsync_WhenHttpRequestFails_ThrowsChefsApiException()
     {
         // Arrange
-        var formKey = "legal";
+        var formKey = "form-test";
         _mockChefsApi
             .Setup(x =>
                 x.GetAuthTokenAsync(
@@ -209,7 +209,7 @@ public class ChefsApplicationServiceTests
     public async Task GetAuthTokenAsync_WhenCancellationRequested_ThrowsOperationCanceledException()
     {
         // Arrange
-        var formKey = "legal";
+        var formKey = "form-test";
         var cts = new CancellationTokenSource();
         cts.Cancel();
 
@@ -233,7 +233,7 @@ public class ChefsApplicationServiceTests
     public async Task GetAuthTokenAsync_CaseInsensitiveFormKey_ReturnsToken()
     {
         // Arrange
-        var formKey = "LEGAL"; // uppercase
+        var formKey = "FORM-TEST"; // uppercase
         var expectedToken = "test-token";
         var expectedFormId = "12345678-1234-1234-1234-123456789012";
         var response = new ChefsAuthTokenResponse { Token = expectedToken };
