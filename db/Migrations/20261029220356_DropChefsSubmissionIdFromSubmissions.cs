@@ -10,9 +10,7 @@ namespace Probate.Db.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.DropColumn(
-                name: "chefs_submission_id",
-                table: "submissions");
+            migrationBuilder.DropColumn(name: "chefs_submission_id", table: "submissions");
         }
 
         /// <inheritdoc />
@@ -24,7 +22,8 @@ namespace Probate.Db.Migrations
                 type: "character varying(100)",
                 maxLength: 100,
                 nullable: false,
-                defaultValue: "");
+                defaultValue: ""
+            );
         }
     }
 }
