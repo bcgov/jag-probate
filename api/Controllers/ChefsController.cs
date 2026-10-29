@@ -11,7 +11,7 @@ using Probate.Api.Services;
 namespace Probate.Api.Controllers;
 
 /// <summary>
-/// Exposes CHEFS applications (current and previous submissions) for the dashboard.
+/// Exposes CHEFS web-component auth tokens and the sidebar structure.
 /// The frontend passes a logical form key; the backend resolves it to the actual CHEFS form GUID (never exposed to callers).
 /// </summary>
 [Route("api/[controller]")]
@@ -30,36 +30,6 @@ public class ChefsController : ControllerBase
     public ChefsController(IChefsApplicationService chefsApplicationService)
     {
         _chefsApplicationService = chefsApplicationService;
-    }
-
-    /// <summary>
-    /// Gets all applications (submissions) for the given CHEFS form.
-    /// </summary>
-    /// <param name="formKey">Logical form key (e.g. "probate"). Resolved to the actual CHEFS form GUID server-side via Chefs:Forms config.</param>
-    /// <param name="cancellationToken">Cancellation token.</param>
-    /// <response code="200">List of applications.</response>
-    /// <response code="400">formKey missing, invalid characters, or not a recognised form key.</response>
-    /// <response code="502">CHEFS API unreachable or returned an error.</response>
-    [HttpGet("Applications")]
-    [ProducesResponseType(typeof(IReadOnlyList<ApplicationDto>), StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status502BadGateway)]
-    public async Task<ActionResult<IReadOnlyList<ApplicationDto>>> GetApplications(
-        [FromQuery] string formKey,
-        CancellationToken cancellationToken = default
-    )
-    {
-        if (string.IsNullOrWhiteSpace(formKey))
-            return BadRequest(new { message = "formKey is required." });
-
-        if (!FormKeyPattern.IsMatch(formKey))
-            return BadRequest(new { message = "formKey contains invalid characters." });
-
-        var applications = await _chefsApplicationService.GetApplicationsAsync(
-            formKey,
-            cancellationToken
-        );
-        return Ok(applications);
     }
 
     /// <summary>

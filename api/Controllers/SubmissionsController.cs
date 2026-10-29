@@ -34,7 +34,7 @@ namespace Probate.Api.Controllers
         }
 
         /// <summary>
-        /// Creates a local submission record after a successful CHEFS form submission.
+        /// Creates a local submission record.
         /// </summary>
         [HttpPost]
         [ProducesResponseType(typeof(SubmissionResponseDto), StatusCodes.Status201Created)]
@@ -44,16 +44,13 @@ namespace Probate.Api.Controllers
             CancellationToken cancellationToken = default
         )
         {
-            if (string.IsNullOrWhiteSpace(dto.ChefsSubmissionId))
-                return BadRequest(new { message = "ChefsSubmissionId is required." });
-
             var result = await _submissionService.CreateSubmissionAsync(dto, cancellationToken);
             return CreatedAtAction(nameof(CreateSubmission), new { id = result.PublicId }, result);
         }
 
         /// <summary>
         /// Creates a draft submission record for the step-based wizard flow.
-        /// No CHEFS submission ID is required — CHEFS is only contacted on final submit.
+        /// No CHEFS submission ID is required — application data is stored only in our database.
         /// </summary>
         [HttpPost("draft")]
         [ProducesResponseType(typeof(SubmissionResponseDto), StatusCodes.Status201Created)]
@@ -121,8 +118,8 @@ namespace Probate.Api.Controllers
         }
 
         /// <summary>
-        /// Creates or updates a local submission record by ChefsSubmissionId.
-        /// If a record with the same ChefsSubmissionId exists, it is updated.
+        /// Creates or updates a local submission record by PublicId.
+        /// If a record with the same PublicId exists, it is updated.
         /// Otherwise a new record is created.
         /// </summary>
         [HttpPost("upsert")]
@@ -133,9 +130,6 @@ namespace Probate.Api.Controllers
             CancellationToken cancellationToken = default
         )
         {
-            if (string.IsNullOrWhiteSpace(dto.ChefsSubmissionId))
-                return BadRequest(new { message = "ChefsSubmissionId is required." });
-
             var result = await _submissionService.UpsertSubmissionAsync(dto, cancellationToken);
             return Ok(result);
         }
@@ -174,7 +168,7 @@ namespace Probate.Api.Controllers
         }
 
         /// <summary>
-        /// Soft deletes a local submission record and deletes it from CHEFS.
+        /// Soft deletes a local submission record.
         /// </summary>
         [HttpDelete("{id}")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
