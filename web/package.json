@@ -47,7 +47,7 @@
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-vue": "^10.11.1",
     "globals": "^17.13.0",
-    "happy-dom": "^20.11.1",
+    "happy-dom": "^21.0.4",
     "prettier": "^3.9.10",
     "sass": "^1.106.1",
     "@typescript/native": "npm:typescript@^7.0.2",
