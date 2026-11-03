@@ -287,7 +287,34 @@
         can secure the information necessary to prepare and submit an affidavit
         of assets and liabilities for estate grant.
       </p>
-      {% endif %}
+      {% endif %} {% if Model.estateGrantCopies > 0 %}
+      <p>
+        I request <b>{{ Model.estateGrantCopies | escape }}</b> certified {% if
+        Model.estateGrantCopies == 1 %}copy{% else %}copies{% endif %} of the
+        estate grant.
+      </p>
+      {% endif %} {% if generateP18 and Model.estateAuthCopies > 0 %}
+      <p>
+        I request <b>{{ Model.estateAuthCopies | escape }}</b> certified {% if
+        Model.estateAuthCopies == 1 %}copy{% else %}copies{% endif %} of the
+        authorization to obtain estate information.
+      </p>
+      {% endif %} {% if hasAssetsAffidavit %} {% if Model.deceasedAddressCountry
+      == 'Canada' and Model.deceasedAddressProvince == 'British Columbia' %} {%
+      if Model.estateDomiciledCopies > 0 %}
+      <p>
+        I request <b>{{ Model.estateDomiciledCopies | escape }}</b> certified {%
+        if Model.estateDomiciledCopies == 1 %}copy{% else %}copies{% endif %} of
+        the affidavit of assets and liabilities for domiciled estate grant.
+      </p>
+      {% endif %} {% elsif Model.estateNonDomiciledCopies > 0 %}
+      <p>
+        I request <b>{{ Model.estateNonDomiciledCopies | escape }}</b> certified
+        {% if Model.estateNonDomiciledCopies == 1 %}copy{% else %}copies{% endif
+        %} of the affidavit of assets and liabilities for non-domiciled estate
+        grant.
+      </p>
+      {% endif %} {% endif %}
 
       <div class="tail-group">
         <p>This submission for estate grant has 4 Parts:</p>
