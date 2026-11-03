@@ -103,7 +103,7 @@ services:
       - Chefs__Forms__form-application-documents__Children__3__Title=${CHEFS_FORM_APPLICATION_DOCUMENTS_CHILD_3_TITLE:-Preview P10}
       - Chefs__Forms__form-application-documents__Children__4__Title=${CHEFS_FORM_APPLICATION_DOCUMENTS_CHILD_4_TITLE:-Preview P11}
       - Chefs__Forms__form-application-documents__Children__5__Title=${CHEFS_FORM_APPLICATION_DOCUMENTS_CHILD_5_TITLE:-Fill out an Application for Search of Wills Notice}
-      - Chefs__Forms__form-application-documents__Children__6__Title=${CHEFS_FORM_APPLICATION_DOCUMENTS_CHILD_6_TITLE:-Fill out a Form P2}
+      - Chefs__Forms__form-application-documents__Children__6__Title=${CHEFS_FORM_APPLICATION_DOCUMENTS_CHILD_6_TITLE:-Preview P2}
       - Chefs__Forms__form-filing__FormId=${CHEFS_FORM_FILING_FORMID}
       - Chefs__Forms__form-filing__ApiKey=${CHEFS_FORM_FILING_API_KEY}
       - Chefs__Forms__form-filing__Order=${CHEFS_FORM_FILING_ORDER:-8}
