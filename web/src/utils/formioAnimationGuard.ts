@@ -83,10 +83,13 @@ export function guardFormioAnimations(
         // A component suppressed while hidden is revealed after its
         // cooldown ended: let it animate.
         const el = m.target as Element;
-        const wasHidden = (m.oldValue ?? '').split(/\s+/).includes(HIDDEN_CLASS);
+        const wasHidden = (m.oldValue ?? '')
+          .split(/\s+/)
+          .includes(HIDDEN_CLASS);
         if (!wasHidden || el.classList.contains(HIDDEN_CLASS)) continue;
         for (const t of collectTargets(el, selector)) {
-          if (!inCooldown(getAnimationKey(t))) t.classList.remove(NO_ANIM_CLASS);
+          if (!inCooldown(getAnimationKey(t)))
+            t.classList.remove(NO_ANIM_CLASS);
         }
         continue;
       }
