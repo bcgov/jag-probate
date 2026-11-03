@@ -12,7 +12,14 @@ import StepFormViewer from './StepFormViewer.vue';
  */
 class FakeFormioInstance {
   data: Record<string, any> = {};
+  components: Record<string, any> = {};
   private listeners: Record<string, Array<(detail?: any) => void>> = {};
+  getComponent(key: string) {
+    return this.components[key];
+  }
+  get root() {
+    return this;
+  }
   on(event: string, cb: (detail?: any) => void) {
     (this.listeners[event] ??= []).push(cb);
   }
@@ -122,7 +129,8 @@ describe('StepFormViewer cross-step hydration on resume', () => {
 
   function mountViewer(
     chefsService: unknown,
-    onHydrationComplete?: () => void
+    onHydrationComplete?: () => void,
+    courtLocationService?: unknown
   ) {
     app = createApp(StepFormViewer, {
       activeStep: 'form-filing',
@@ -134,7 +142,7 @@ describe('StepFormViewer cross-step hydration on resume', () => {
     app.config.warnHandler = () => {};
     app.provide('chefsService', chefsService);
     app.provide('reportService', {});
-    app.provide('courtLocationService', undefined);
+    app.provide('courtLocationService', courtLocationService);
     app.mount(host);
   }
 
@@ -262,6 +270,128 @@ describe('StepFormViewer cross-step hydration on resume', () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+
+  it('loads courthouse options after form hydration and restores the saved selection', async () => {
+    const getCourtLocations = vi.fn(async () => ({
+      courts: [
+        {
+          name: 'Vancouver Law Courts',
+          identifierCode: '6011',
+          isSupremeCourt: true,
+        },
+      ],
+    }));
+    const service = { getCourtLocations };
+    const chefsService = makeChefsService(async () => []);
+    app = createApp(StepFormViewer, {
+      activeStep: 'form-applicant',
+      stepKeys: ['form-applicant'],
+    });
+    app.config.warnHandler = () => {};
+    app.provide('chefsService', chefsService);
+    app.provide('reportService', {});
+    app.provide('courtLocationService', service);
+    app.mount(host);
+
+    const el = await getFakeFilingElement();
+    const courthouse = {
+      component: {
+        data: { values: [] as Array<{ label: string; value: string }> },
+      },
+      dataValue: '',
+      redraw: vi.fn(),
+      setValue: vi.fn(function (this: { dataValue: unknown }, value: unknown) {
+        this.dataValue = value;
+      }),
+      on: vi.fn(),
+    };
+    const nameField = { setValue: vi.fn() };
+    el.formioInstance.components.applicantCourthouse = courthouse;
+    el.formioInstance.components.applicantCourthouseName = nameField;
+    el.formioInstance.data.applicant = { applicantCourthouse: 6011 };
+
+    el.dispatchEvent(new CustomEvent('formio:ready'));
+    await nextTick();
+    await Promise.resolve();
+
+    expect(getCourtLocations).toHaveBeenCalledOnce();
+    expect(courthouse.component.data.values).toEqual([
+      { label: 'Vancouver Law Courts', value: '6011' },
+    ]);
+    expect(courthouse.setValue).toHaveBeenCalledWith(6011, {
+      modified: false,
+    });
+    expect(nameField.setValue).toHaveBeenCalledWith('Vancouver Law Courts', {
+      modified: true,
+    });
+  });
+
+  it('shows a retry after a location fetch fails and succeeds on retry', async () => {
+    const getCourtLocations = vi
+      .fn()
+      .mockRejectedValueOnce(new Error('Unavailable'))
+      .mockResolvedValueOnce({
+        courts: [
+          {
+            name: 'Vancouver Law Courts',
+            identifierCode: '6011',
+            isSupremeCourt: true,
+          },
+        ],
+      });
+    const service = { getCourtLocations };
+    const chefsService = makeChefsService(async () => []);
+    app = createApp(StepFormViewer, {
+      activeStep: 'form-applicant',
+      stepKeys: ['form-applicant'],
+    });
+    app.config.warnHandler = () => {};
+    app.provide('chefsService', chefsService);
+    app.provide('reportService', {});
+    app.provide('courtLocationService', service);
+    app.mount(host);
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    const el = await getFakeFilingElement();
+    const courthouse = {
+      component: {
+        data: { values: [] as Array<{ label: string; value: string }> },
+      },
+      dataValue: '',
+      redraw: vi.fn(),
+      setValue: vi.fn(),
+      on: vi.fn(),
+    };
+    el.formioInstance.components.applicantCourthouse = courthouse;
+    el.formioInstance.components.applicantCourthouseName = {
+      setValue: vi.fn(),
+    };
+    el.dispatchEvent(new CustomEvent('formio:ready'));
+    el.formioInstance.data.applicant = {};
+    el.formioInstance.emit('change', { data: el.formioInstance.data });
+
+    await vi.waitFor(() => expect(host.textContent).toContain('Retry'));
+
+    const retryButton = [...host.querySelectorAll('button')].find(
+      (button) => button.textContent?.trim() === 'Retry'
+    );
+    expect(retryButton).toBeDefined();
+    retryButton!.click();
+
+    for (let i = 0; i < 10 && getCourtLocations.mock.calls.length < 2; i++) {
+      await nextTick();
+      await Promise.resolve();
+    }
+    await nextTick();
+
+    expect(getCourtLocations).toHaveBeenCalledTimes(2);
+    expect(courthouse.component.data.values).toEqual([
+      { label: 'Vancouver Law Courts', value: '6011' },
+    ]);
+    expect(host.textContent).not.toContain(
+      'Courthouse locations could not be loaded.'
+    );
   });
 
   it("drops a stale flat copy of another step's container field instead of re-saving it", async () => {
