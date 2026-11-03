@@ -107,7 +107,7 @@
                   </td>
                   <td class="border-top">{{ app.status }}</td>
                   <td class="border-top d-none d-lg-table-cell">
-                    {{ app.chefsSubmissionId }}
+                    {{ app.packageNum }}
                   </td>
                   <td class="border-top">
                     <!-- Trash: only shown when application has never been filed -->
@@ -356,10 +356,9 @@
           deceased_name: appJson.applicantName || '(the person who died)',
           app_type: 'Probate Grant',
           status: appJson.status ?? '',
-          packageNum: appJson.chefsSubmissionId ?? '',
+          packageNum: '',
           id: appJson.publicId,
           publicId: appJson.publicId,
-          chefsSubmissionId: appJson.chefsSubmissionId,
           lastUpdated: appJson.lastUpdatedAt
             ? moment(appJson.lastUpdatedAt)
                 .tz('America/Vancouver')

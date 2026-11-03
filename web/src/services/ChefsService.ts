@@ -4,7 +4,6 @@ import type {
   StepDataResponseDto,
   SubmissionResponseDto,
   UpsertStepDataDto,
-  UpsertSubmissionDto,
 } from '@/types';
 import HttpService from './HttpService';
 
@@ -24,23 +23,11 @@ class ChefsService {
    * The backend resolves the key to the actual CHEFS form GUID, keeping it
    * server-side and never exposing it to the client directly.
    *
-   * @param formKey Logical form key (e.g. "legal", "nonlegal").
+   * @param formKey Logical form key (e.g. "form-deceased", "form-related-people").
    */
   async getAuthToken(formKey: string): Promise<ChefsAuthToken> {
     return await this.httpService.get<ChefsAuthToken>(
       `api/chefs/auth?formKey=${encodeURIComponent(formKey)}`
-    );
-  }
-
-  /**
-   * Fetches all submitted applications for the given logical form key.
-   * Calls GET /api/Chefs/Applications?formKey=...
-   *
-   * @param formKey Logical form key (e.g. "probate").
-   */
-  async getApplications(formKey: string): Promise<any[]> {
-    return await this.httpService.get<any[]>(
-      `api/Chefs/Applications?formKey=${encodeURIComponent(formKey)}`
     );
   }
 
@@ -58,15 +45,6 @@ class ChefsService {
   async getSubmission(id: string): Promise<SubmissionResponseDto> {
     return await this.httpService.get<SubmissionResponseDto>(
       `api/Submissions/${id}`
-    );
-  }
-
-  async upsertSubmission(
-    data: UpsertSubmissionDto
-  ): Promise<SubmissionResponseDto> {
-    return await this.httpService.post<SubmissionResponseDto>(
-      'api/Submissions/upsert',
-      data
     );
   }
 

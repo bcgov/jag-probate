@@ -31,13 +31,12 @@ describe('PreviousActivity – resumeApplication', () => {
     });
   });
 
-  it('uses the Guid publicId (not chefsSubmissionId) as the route param', () => {
+  it('uses the Guid publicId as the route param', () => {
     const router = makeRouter();
     resumeApplication(router, { publicId: GUID_A });
 
     const location = router.push.mock.calls[0][0];
     expect(location.params.id).toBe(GUID_A);
-    expect(location.params).not.toHaveProperty('chefsSubmissionId');
   });
 
   it('passes different publicIds for different records', () => {
@@ -72,48 +71,5 @@ describe('PreviousActivity – createCase', () => {
 
     const location = router.push.mock.calls[0][0];
     expect(location).not.toContain('resume');
-  });
-});
-
-describe('ApplicationForm – onSaved URL replace', () => {
-  const GUID = 'a7b23b0f-ac4d-4f78-a9ca-39be6bbf5ac4';
-
-  function makeRouter() {
-    return { replace: vi.fn(), push: vi.fn() };
-  }
-
-  function onSaved(
-    router: { replace: (loc: any) => void; push: (loc: any) => void },
-    routeName: string,
-    publicId: string
-  ) {
-    if (routeName === 'NewApplication') {
-      router.replace({ name: 'ResumeApplication', params: { id: publicId } });
-    }
-  }
-
-  it('replaces URL to ResumeApplication after first save on NewApplication route', () => {
-    const router = makeRouter();
-    onSaved(router, 'NewApplication', GUID);
-
-    expect(router.replace).toHaveBeenCalledWith({
-      name: 'ResumeApplication',
-      params: { id: GUID },
-    });
-  });
-
-  it('does not replace URL when already on ResumeApplication route', () => {
-    const router = makeRouter();
-    onSaved(router, 'ResumeApplication', GUID);
-
-    expect(router.replace).not.toHaveBeenCalled();
-  });
-
-  it('uses replace (not push) so no extra history entry is created', () => {
-    const router = makeRouter();
-    onSaved(router, 'NewApplication', GUID);
-
-    expect(router.replace).toHaveBeenCalledOnce();
-    expect(router.push).not.toHaveBeenCalled();
   });
 });
