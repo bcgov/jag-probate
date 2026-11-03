@@ -59,6 +59,11 @@ p {
   margin-bottom: 0 !important;
 }
 
+/* Conditionally hidden components render as empty blocks; drop their margin so they don't shift visible siblings. */
+.formio-component.formio-hidden {
+  margin-bottom: 0 !important;
+}
+
 .formio-component-panel {
   margin-bottom: var(--space-4) !important;
 }
