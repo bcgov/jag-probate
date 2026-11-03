@@ -4,7 +4,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Logging;
 using Moq;
 using Probate.Api.Controllers;
 using Probate.Api.Helpers.Exceptions;
@@ -17,21 +16,19 @@ namespace Probate.Api.Tests.Controllers;
 public class ChefsControllerTests
 {
     private readonly Mock<IChefsApplicationService> _mockService;
-    private readonly Mock<ILogger<ChefsController>> _mockLogger;
     private readonly ChefsController _controller;
 
     public ChefsControllerTests()
     {
         _mockService = new Mock<IChefsApplicationService>();
-        _mockLogger = new Mock<ILogger<ChefsController>>();
-        _controller = new ChefsController(_mockService.Object, _mockLogger.Object);
+        _controller = new ChefsController(_mockService.Object);
     }
 
     [Fact]
     public async Task GetAuthToken_WithValidFormKey_ReturnsOkWithToken()
     {
         // Arrange
-        var formKey = "legal";
+        var formKey = "form-test";
         var expectedToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.test.token";
         var expectedFormId = "form-guid-123";
         var authTokenDto = new ChefsAuthTokenDto { Token = expectedToken, FormId = expectedFormId };
@@ -76,7 +73,7 @@ public class ChefsControllerTests
     public async Task GetAuthToken_WithSpecialCharactersInFormKey_ReturnsBadRequest()
     {
         // Arrange
-        var formKey = "legal;DROP TABLE users;--"; // SQL injection attempt
+        var formKey = "form-test;DROP TABLE users;--"; // SQL injection attempt
 
         // Act
         var result = await _controller.GetAuthToken(formKey);
@@ -91,7 +88,7 @@ public class ChefsControllerTests
     public async Task GetAuthToken_WithValidCharacters_ReturnsOk()
     {
         // Arrange
-        var formKey = "legal-form_123"; // hyphens and underscores are allowed
+        var formKey = "form-test_123"; // hyphens and underscores are allowed
         var authTokenDto = new ChefsAuthTokenDto { Token = "test-token", FormId = "form-guid-123" };
 
         _mockService
@@ -110,7 +107,7 @@ public class ChefsControllerTests
     }
 
     [Fact]
-    public async Task GetAuthToken_WhenFormKeyNotConfigured_ReturnsBadRequest()
+    public async Task GetAuthToken_WhenFormKeyNotConfigured_ThrowsInvalidOperationException()
     {
         // Arrange
         var formKey = "nonexistent";
@@ -121,42 +118,33 @@ public class ChefsControllerTests
             );
 
         // Act
-        var result = await _controller.GetAuthToken(formKey);
-
-        // Assert
-        var badRequestResult = Assert.IsType<ActionResult<ChefsAuthTokenDto>>(result);
-        var badRequest = Assert.IsType<BadRequestObjectResult>(badRequestResult.Result);
-        var message = badRequest
-            .Value.GetType()
-            .GetProperty("message")
-            ?.GetValue(badRequest.Value)
-            ?.ToString();
-        Assert.Contains("not configured", message);
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            _controller.GetAuthToken(formKey)
+        );
+        Assert.Contains("not configured", exception.Message);
     }
 
     [Fact]
-    public async Task GetAuthToken_WhenChefsApiReturns404_ReturnsProblemDetails()
+    public async Task GetAuthToken_WhenChefsApiReturns404_ThrowsChefsApiException()
     {
         // Arrange
-        var formKey = "legal";
+        var formKey = "form-test";
         _mockService
             .Setup(x => x.GetAuthTokenAsync(formKey, It.IsAny<CancellationToken>()))
             .ThrowsAsync(new ChefsApiException("Form not found", HttpStatusCode.NotFound));
 
         // Act
-        var result = await _controller.GetAuthToken(formKey);
-
-        // Assert
-        var objectResult = Assert.IsType<ActionResult<ChefsAuthTokenDto>>(result);
-        var problemResult = Assert.IsType<ObjectResult>(objectResult.Result);
-        Assert.Equal(StatusCodes.Status404NotFound, problemResult.StatusCode);
+        var exception = await Assert.ThrowsAsync<ChefsApiException>(() =>
+            _controller.GetAuthToken(formKey)
+        );
+        Assert.Equal(HttpStatusCode.NotFound, exception.StatusCode);
     }
 
     [Fact]
-    public async Task GetAuthToken_WhenChefsApiReturns500_ReturnsProblemDetails()
+    public async Task GetAuthToken_WhenChefsApiReturns500_ThrowsChefsApiException()
     {
         // Arrange
-        var formKey = "legal";
+        var formKey = "form-test";
         _mockService
             .Setup(x => x.GetAuthTokenAsync(formKey, It.IsAny<CancellationToken>()))
             .ThrowsAsync(
@@ -164,19 +152,17 @@ public class ChefsControllerTests
             );
 
         // Act
-        var result = await _controller.GetAuthToken(formKey);
-
-        // Assert
-        var objectResult = Assert.IsType<ActionResult<ChefsAuthTokenDto>>(result);
-        var problemResult = Assert.IsType<ObjectResult>(objectResult.Result);
-        Assert.Equal(StatusCodes.Status500InternalServerError, problemResult.StatusCode);
+        var exception = await Assert.ThrowsAsync<ChefsApiException>(() =>
+            _controller.GetAuthToken(formKey)
+        );
+        Assert.Equal(HttpStatusCode.InternalServerError, exception.StatusCode);
     }
 
     [Fact]
-    public async Task GetAuthToken_WhenChefsApiUnreachable_Returns502()
+    public async Task GetAuthToken_WhenChefsApiUnreachable_ThrowsBadGateway()
     {
         // Arrange
-        var formKey = "legal";
+        var formKey = "form-test";
         _mockService
             .Setup(x => x.GetAuthTokenAsync(formKey, It.IsAny<CancellationToken>()))
             .ThrowsAsync(
@@ -184,19 +170,17 @@ public class ChefsControllerTests
             );
 
         // Act
-        var result = await _controller.GetAuthToken(formKey);
-
-        // Assert
-        var objectResult = Assert.IsType<ActionResult<ChefsAuthTokenDto>>(result);
-        var problemResult = Assert.IsType<ObjectResult>(objectResult.Result);
-        Assert.Equal(StatusCodes.Status502BadGateway, problemResult.StatusCode);
+        var exception = await Assert.ThrowsAsync<ChefsApiException>(() =>
+            _controller.GetAuthToken(formKey)
+        );
+        Assert.Equal(HttpStatusCode.BadGateway, exception.StatusCode);
     }
 
     [Fact]
     public async Task GetAuthToken_VerifiesServiceIsCalledOnce()
     {
         // Arrange
-        var formKey = "legal";
+        var formKey = "form-test";
         var authTokenDto = new ChefsAuthTokenDto { Token = "test-token", FormId = "form-guid-123" };
 
         _mockService

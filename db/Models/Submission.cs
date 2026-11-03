@@ -12,10 +12,6 @@ namespace Probate.Db.Models
         public Guid PublicId { get; set; } = Guid.NewGuid();
 
         [Required]
-        [MaxLength(100)]
-        public string ChefsSubmissionId { get; set; }
-
-        [Required]
         [MaxLength(255)]
         public string ApplicantName { get; set; }
 

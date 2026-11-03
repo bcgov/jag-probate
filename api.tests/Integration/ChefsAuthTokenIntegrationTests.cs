@@ -62,28 +62,28 @@ public class ChefsAuthTokenIntegrationTests : IDisposable
 
     [Fact]
     [Trait("Category", "Integration")]
-    public async Task GetAuthToken_WithLegalFormKey_ReturnsValidToken()
+    public async Task GetAuthToken_WithConfiguredFormKey_ReturnsValidToken()
     {
         // Arrange
-        var formKey = "legal";
-        var legalFormOptions = _chefsOptions.Forms.TryGetValue(formKey, out var options)
+        var formKey = "form-prequalifying-survey";
+        var formOptions = _chefsOptions.Forms.TryGetValue(formKey, out var options)
             ? options
             : null;
         // Skip test if form key is not configured
-        if (legalFormOptions == null || string.IsNullOrWhiteSpace(legalFormOptions.FormId))
+        if (formOptions == null || string.IsNullOrWhiteSpace(formOptions.FormId))
         {
             _output.WriteLine($"Skipping test: Form key '{formKey}' is not configured.");
             return;
         }
 
-        if (string.IsNullOrWhiteSpace(legalFormOptions.ApiKey))
+        if (string.IsNullOrWhiteSpace(formOptions.ApiKey))
         {
             _output.WriteLine("Skipping test: CHEFS API key is not configured.");
             return;
         }
 
         _output.WriteLine($"Testing with form key: {formKey}");
-        _output.WriteLine($"Form GUID: {legalFormOptions.FormId}");
+        _output.WriteLine($"Form GUID: {formOptions.FormId}");
         _output.WriteLine($"Base URL: {_chefsOptions.BaseUrl}");
 
         // Act
@@ -95,7 +95,7 @@ public class ChefsAuthTokenIntegrationTests : IDisposable
         Assert.NotEmpty(result.Token);
         Assert.NotNull(result.FormId);
         Assert.NotEmpty(result.FormId);
-        Assert.Equal(legalFormOptions.FormId, result.FormId);
+        Assert.Equal(formOptions.FormId, result.FormId);
 
         _output.WriteLine(
             $"Token received (first 50 chars): {result.Token.Substring(0, Math.Min(50, result.Token.Length))}..."
@@ -130,7 +130,7 @@ public class ChefsAuthTokenIntegrationTests : IDisposable
     public async Task GetAuthToken_MultipleCalls_ReturnsNewTokenEachTime()
     {
         // Arrange
-        var formKey = "legal";
+        var formKey = "form-prequalifying-survey";
 
         // Skip test if form key is not configured
         if (
@@ -176,7 +176,7 @@ public class ChefsAuthTokenIntegrationTests : IDisposable
     public async Task GetAuthToken_VerifyTokenStructure()
     {
         // Arrange
-        var formKey = "legal";
+        var formKey = "form-prequalifying-survey";
 
         // Skip test if form key is not configured
         if (
@@ -223,7 +223,7 @@ public class ChefsAuthTokenIntegrationTests : IDisposable
     public async Task GetAuthToken_WithCancellation_ThrowsOperationCanceledException()
     {
         // Arrange
-        var formKey = "legal";
+        var formKey = "form-prequalifying-survey";
 
         // Skip test if form key is not configured
         if (
