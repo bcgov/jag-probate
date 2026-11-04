@@ -86,7 +86,6 @@
     getSupremeCourtOptions,
   } from '@/utils/courtLocations';
   import { pinia } from '@/stores/pinia';
-  import { guardFormioAnimations } from '@/utils/formioAnimationGuard';
   import { recalculateForm } from '@/utils/formioRecalculate';
   import { useWizardDataStore } from '@/stores/WizardDataStore';
   import { useWizardStateStore } from '@/stores/WizardStateStore';
@@ -427,7 +426,6 @@
     changeVersion: number;
     savedVersion: number;
     submissionId: string | undefined;
-    animationGuard?: { root: Node; dispose: () => void };
   }
   const stepRuntime: Record<string, StepRuntime> = {};
 
@@ -806,15 +804,6 @@
     shadowRoot.appendChild(link);
   }
 
-  /** Stops formio redraws (e.g. on every keystroke) from replaying entrance animations. */
-  function attachAnimationGuard(stepKey: string, el: HTMLElement) {
-    const rt = getRuntime(stepKey);
-    const root: Node = (el as any).shadowRoot ?? el;
-    if (rt.animationGuard?.root === root) return;
-    rt.animationGuard?.dispose();
-    rt.animationGuard = { root, dispose: guardFormioAnimations(root) };
-  }
-
   function loadWebComponentScript(baseUrl: string): Promise<void> {
     const scriptSrc = `${baseUrl}/embed/chefs-form-viewer.min.js`;
     if (
@@ -916,7 +905,6 @@
         'formio:ready',
         () => {
           injectChefsStyles(el);
-          attachAnimationGuard(stepKey, el);
           if (rt.readyTimer) {
             clearTimeout(rt.readyTimer);
             rt.readyTimer = null;
@@ -1026,7 +1014,6 @@
             el.addEventListener('formio:error', settle, { once: true });
             setTimeout(settle, 15000);
             container.appendChild(el);
-            attachAnimationGuard(stepKey, el);
             el.load();
           })
       );
@@ -1409,8 +1396,6 @@
       clearTimeout(rt.debounceTimer);
       rt.debounceTimer = null;
     }
-    rt.animationGuard?.dispose();
-    rt.animationGuard = undefined;
   }
 
   // ── Watch active step ─────────────────────────────────────────────────────

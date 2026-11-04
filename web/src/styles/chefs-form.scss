@@ -102,6 +102,13 @@ p {
   box-shadow: 0 0 0 3px rgba(220, 53, 69, 0.18) !important;
 }
 
+/* Workaround: in Chrome, a native (html5 widget) select stretched across a
+   wide screen opens with an empty options list (e.g. the step 4 courthouse
+   dropdown). Firefox is unaffected. Capping the width keeps the list visible. */
+select.form-control {
+  max-width: 40rem !important;
+}
+
 .input-group:has(.input-group-append) .form-control {
   border-right: none !important;
   border-radius: var(--radius-sm) 0 0 var(--radius-sm) !important;
@@ -763,40 +770,25 @@ th.formio-component-type {
   }
 }
 
-@keyframes formioFadeIn {
-  from {
-    opacity: 0;
-  }
-
-  to {
-    opacity: 1;
-  }
-}
-
+/* Only stable containers animate. formio redraws conditional fieldsets and
+   the FAQ info-panels nested in them on every change, so animating those
+   replays the fade on each keystroke. */
 .step-container {
   animation: formioFadeUp 0.22s ease-out forwards;
   margin-top: 1em;
 }
 
-.formio-component-panel,
-.formio-component-fieldset {
+.formio-component-panel:not(.info-panel) {
   animation: formioFadeUp 0.22s ease-out forwards;
 }
 
-.blue-background,
 .red-background {
   animation: formioFadeUp 0.25s ease-out forwards;
 }
 
-.no-anim {
-  animation: none !important;
-  opacity: 1 !important;
-  transform: none !important;
-}
-
 @media (prefers-reduced-motion: reduce) {
+  .step-container,
   .formio-component,
-  .blue-background,
   .red-background {
     animation: none !important;
     transition: none !important;
