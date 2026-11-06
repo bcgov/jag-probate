@@ -32,6 +32,33 @@
           </div>
         </div>
 
+        <div
+          v-if="stepKey === 'form-applicant' && courtLocationLoading[stepKey]"
+          class="text-muted mb-2"
+          role="status"
+          aria-live="polite"
+        >
+          Loading courthouse locations…
+        </div>
+
+        <div
+          v-if="stepKey === 'form-applicant' && courtLocationErrors[stepKey]"
+          class="alert alert-warning"
+          role="alert"
+          aria-live="polite"
+        >
+          <strong>Courthouse locations could not be loaded.</strong>
+          {{ courtLocationErrors[stepKey] }}
+          <button
+            class="btn btn-sm btn-outline-primary ms-2"
+            type="button"
+            :disabled="courtLocationLoading[stepKey]"
+            @click="loadCourtLocations(stepKey, stepEls[stepKey], true)"
+          >
+            Retry
+          </button>
+        </div>
+
         <!-- CHEFS form mount point — persists in DOM once created -->
         <div
           v-show="stepStates[stepKey] === 'ready'"
@@ -54,6 +81,10 @@
   import ChefsService from '@/services/ChefsService';
   import CourtLocationService from '@/services/CourtLocationService';
   import ReportService from '@/services/ReportService';
+  import {
+    applyCourtLocationOptions,
+    getSupremeCourtOptions,
+  } from '@/utils/courtLocations';
   import { pinia } from '@/stores/pinia';
   import { recalculateForm } from '@/utils/formioRecalculate';
   import { useWizardDataStore } from '@/stores/WizardDataStore';
@@ -265,11 +296,75 @@
   /** Error message per step. */
   const stepErrors = reactive<Record<string, string>>({});
 
+  const courtLocationErrors = reactive<Record<string, string>>({});
+  const courtLocationLoading = reactive<Record<string, boolean>>({});
+  const courtLocationRequests = new WeakMap<object, Promise<void>>();
+  const courtLocationLoaded = new WeakSet<object>();
+
   /** DOM container refs — populated by the :ref callback once the div mounts. */
   const containers: Record<string, HTMLElement | null> = {};
 
   /** CHEFS web-component element per step. */
   const stepEls: Record<string, any> = {};
+
+  async function loadCourtLocations(
+    stepKey: string,
+    el: any,
+    retry = false
+  ): Promise<void> {
+    const form = el?.formioInstance;
+    if (
+      stepKey !== 'form-applicant' ||
+      !form ||
+      unmounted ||
+      stepEls[stepKey] !== el
+    ) {
+      return;
+    }
+    if (courtLocationRequests.has(form)) {
+      return courtLocationRequests.get(form);
+    }
+    if (courtLocationLoaded.has(form) && !retry) return;
+
+    courtLocationErrors[stepKey] = '';
+    courtLocationLoading[stepKey] = true;
+
+    const request = (async () => {
+      try {
+        if (!courtLocationService) {
+          throw new Error('The court location service is unavailable.');
+        }
+
+        const result = await courtLocationService.getCourtLocations();
+        const options = getSupremeCourtOptions(result?.courts ?? []);
+        if (options.length === 0) {
+          throw new Error('No Supreme Court locations were returned.');
+        }
+
+        if (unmounted || stepEls[stepKey] !== el) return;
+        applyCourtLocationOptions(form, options);
+        courtLocationLoaded.add(form);
+      } catch (error) {
+        if (unmounted || stepEls[stepKey] !== el) return;
+        console.error('Failed to load courthouse locations:', error);
+        courtLocationErrors[stepKey] =
+          'Please check your connection and try again.';
+      } finally {
+        if (!unmounted && stepEls[stepKey] === el) {
+          courtLocationLoading[stepKey] = false;
+        }
+      }
+    })();
+
+    courtLocationRequests.set(form, request);
+    try {
+      await request;
+    } finally {
+      if (courtLocationRequests.get(form) === request) {
+        courtLocationRequests.delete(form);
+      }
+    }
+  }
 
   /**
    * Snapshot of each step's own field keys, captured in formio:ready BEFORE
@@ -767,11 +862,6 @@
 
       await loadWebComponentScript(baseUrl);
 
-      // Step schemas call window.courtLocationService.
-      if (courtLocationService) {
-        window.courtLocationService = courtLocationService;
-      }
-
       await nextTick();
 
       const container = containers[stepKey];
@@ -858,6 +948,7 @@
                   Object.assign(el.formioInstance.data, accumulated);
                 }
                 syncFormNavigationContext();
+                void loadCourtLocations(stepKey, el);
               };
 
               if (Object.keys(el.formioInstance.data).length === 0) {
