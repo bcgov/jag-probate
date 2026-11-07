@@ -23,25 +23,35 @@
               </h2>
               <ul class="list-unstyled mb-0 checklist">
                 <li>
-                  <font-awesome-icon icon="fas-solid fa-circle-check" class="text-success me-2" aria-hidden="true" />The
-                  <strong>deceased did not leave a will</strong>.
+                  <font-awesome-icon
+                    icon="fas-solid fa-circle-check"
+                    class="text-success me-2"
+                    aria-hidden="true"
+                  />The <strong>deceased did not leave a will</strong>.
                 </li>
                 <li>
-                  <font-awesome-icon icon="fas-solid fa-circle-check" class="text-success me-2"
-                    aria-hidden="true" /><strong>Only one person</strong> is applying for the
+                  <font-awesome-icon
+                    icon="fas-solid fa-circle-check"
+                    class="text-success me-2"
+                    aria-hidden="true"
+                  /><strong>Only one person</strong> is applying for the
                   Representation Grant.
                 </li>
                 <li class="d-block">
                   <p>
-                    <font-awesome-icon icon="fas-solid fa-circle-check" class="text-success me-2"
-                      aria-hidden="true" />You are applying as one of the following, or on behalf of
+                    <font-awesome-icon
+                      icon="fas-solid fa-circle-check"
+                      class="text-success me-2"
+                      aria-hidden="true"
+                    />You are applying as one of the following, or on behalf of
                     someone who is:
                   </p>
                   <ul class="disc-list ms-4">
                     <li>The spouse of the deceased</li>
                     <li>A child of the deceased</li>
                     <li>
-                      An <strong>
+                      An
+                      <strong>
                         <ToolTip term="intestate successor" />
                       </strong>
                       of the deceased
@@ -80,9 +90,12 @@
                 with your application package when filing.
               </p>
               <p class="mb-0">
-                <a href="https://www2.gov.bc.ca/gov/content/justice/courthouse-services/documents-forms-records/court-forms/probate-forms"
-                  target="_blank" rel="noopener noreferrer">View all probate forms under the Supreme Court Civil
-                  Rules</a>
+                <a
+                  href="https://www2.gov.bc.ca/gov/content/justice/courthouse-services/documents-forms-records/court-forms/probate-forms"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  >View all probate forms under the Supreme Court Civil Rules</a
+                >
                 <br />
                 <em>(This link opens in a new tab.)</em>
               </p>
@@ -91,7 +104,9 @@
         </div>
       </div>
 
-      <div class="card shadow-sm border-0 info-card info-card-blue text-white mb-4">
+      <div
+        class="card shadow-sm border-0 info-card info-card-blue text-white mb-4"
+      >
         <div class="card-body">
           <div class="row align-items-start">
             <div class="col-12 text-center">
@@ -120,9 +135,13 @@
               <p>
                 Once you're done with the questionnaire, you will need to print
                 your court forms and file them at your local
-                <a class="link-light fw-semibold"
+                <a
+                  class="link-light fw-semibold"
                   href="https://www2.gov.bc.ca/gov/content/justice/courthouse-services/courthouse-locations"
-                  target="_blank" rel="noreferrer">Supreme Court registry</a>.
+                  target="_blank"
+                  rel="noreferrer"
+                  >Supreme Court registry</a
+                >.
               </p>
             </div>
           </div>
@@ -132,7 +151,11 @@
       <div class="row g-4 align-items-center text-center">
         <div class="col-12 col-lg-6">
           <h3 class="text-uppercase fw-semibold text-white mb-1">New Users</h3>
-          <button type="button" class="px-4 mt-2 landing-cta-btn landing-cta-btn-primary" @click="handleRegister">
+          <button
+            type="button"
+            class="px-4 mt-2 landing-cta-btn landing-cta-btn-primary"
+            @click="handleRegister"
+          >
             Register for a <strong>Basic</strong> BCeID
           </button>
         </div>
@@ -140,7 +163,11 @@
           <h3 class="text-uppercase fw-semibold text-white mb-1">
             Returning Users
           </h3>
-          <button type="button" class="px-4 mt-2 landing-cta-btn landing-cta-btn-warning" @click="handleReturning">
+          <button
+            type="button"
+            class="px-4 mt-2 landing-cta-btn landing-cta-btn-warning"
+            @click="handleReturning"
+          >
             Use an existing <strong>Basic</strong> BCeID
           </button>
         </div>
@@ -152,98 +179,97 @@
 </template>
 
 <script setup lang="ts">
-import ToolTip from '@/components/shared/glossary/ToolTip.vue';
-import { useLayoutStore, useRuntimeConfigStore } from '@/stores';
-import { useRouter } from 'vue-router';
+  import ToolTip from '@/components/shared/glossary/ToolTip.vue';
+  import { useLayoutStore, useRuntimeConfigStore } from '@/stores';
+  import { useRouter } from 'vue-router';
 
-const layoutStore = useLayoutStore();
-const runtimeConfigStore = useRuntimeConfigStore();
-layoutStore.setBackdropClass('bd-legislature-dome');
-layoutStore.setNavHeader('Probate Application');
+  const layoutStore = useLayoutStore();
+  const runtimeConfigStore = useRuntimeConfigStore();
+  layoutStore.setBackdropClass('bd-legislature-dome');
+  layoutStore.setNavHeader('Probate Application');
 
-const router = useRouter();
+  const router = useRouter();
 
-const handleRegister = () => {
-  globalThis.location.assign(runtimeConfigStore.bceidRegisterUrl);
-};
+  const handleRegister = () => {
+    globalThis.location.assign(runtimeConfigStore.bceidRegisterUrl);
+  };
 
-const handleReturning = () => {
-  router.push({ name: 'PreviousActivity' });
-};
+  const handleReturning = () => {
+    router.push({ name: 'PreviousActivity' });
+  };
 </script>
 
 <style scoped lang="scss">
-.info-card {
-  border-radius: 1rem;
-  background-color: rgba(255, 255, 255, 0.8);
-}
-
-.info-card-blue {
-  background-color: rgba(0, 51, 102, 0.8);
-}
-
-ul.disc-list li {
-  list-style-type: disc;
-}
-
-.landing-cta-btn {
-  display: inline-block;
-  padding: 0.5rem 1.5rem;
-  font-size: 1.25rem;
-  line-height: 1.5;
-  border: 1px solid transparent;
-  border-radius: 0.5rem;
-  font-weight: 400;
-  text-align: center;
-  text-decoration: none;
-  cursor: pointer;
-  appearance: none;
-  letter-spacing: normal;
-  box-shadow: none;
-  transition:
-    background-color 0.2s ease,
-    border-color 0.2s ease,
-    color 0.2s ease,
-    box-shadow 0.2s ease;
-}
-
-.landing-cta-btn-primary {
-  background: #38598a;
-  border-color: #38598a;
-  color: #fff;
-  margin-bottom: 0.5rem;
-}
-
-.landing-cta-btn-primary:hover,
-.landing-cta-btn-primary:focus,
-.landing-cta-btn-primary:active {
-  background: #304c75;
-  border-color: #304c75;
-  color: #fff;
-  box-shadow: none;
-}
-
-.landing-cta-btn-warning {
-  background: #ffc107;
-  border-color: #ffc107;
-  color: #212529;
-  margin-bottom: 0.5rem;
-}
-
-.landing-cta-btn-warning:hover,
-.landing-cta-btn-warning:focus,
-.landing-cta-btn-warning:active {
-  background: #ffca2c;
-  border-color: #ffc720;
-  color: #212529;
-  box-shadow: none;
-}
-
-@media (max-width: 767.98px) {
-
-  .info-card,
-  .cta-card {
-    border-radius: 0.75rem;
+  .info-card {
+    border-radius: 1rem;
+    background-color: rgba(255, 255, 255, 0.8);
   }
-}
+
+  .info-card-blue {
+    background-color: rgba(0, 51, 102, 0.8);
+  }
+
+  ul.disc-list li {
+    list-style-type: disc;
+  }
+
+  .landing-cta-btn {
+    display: inline-block;
+    padding: 0.5rem 1.5rem;
+    font-size: 1.25rem;
+    line-height: 1.5;
+    border: 1px solid transparent;
+    border-radius: 0.5rem;
+    font-weight: 400;
+    text-align: center;
+    text-decoration: none;
+    cursor: pointer;
+    appearance: none;
+    letter-spacing: normal;
+    box-shadow: none;
+    transition:
+      background-color 0.2s ease,
+      border-color 0.2s ease,
+      color 0.2s ease,
+      box-shadow 0.2s ease;
+  }
+
+  .landing-cta-btn-primary {
+    background: #38598a;
+    border-color: #38598a;
+    color: #fff;
+    margin-bottom: 0.5rem;
+  }
+
+  .landing-cta-btn-primary:hover,
+  .landing-cta-btn-primary:focus,
+  .landing-cta-btn-primary:active {
+    background: #304c75;
+    border-color: #304c75;
+    color: #fff;
+    box-shadow: none;
+  }
+
+  .landing-cta-btn-warning {
+    background: #ffc107;
+    border-color: #ffc107;
+    color: #212529;
+    margin-bottom: 0.5rem;
+  }
+
+  .landing-cta-btn-warning:hover,
+  .landing-cta-btn-warning:focus,
+  .landing-cta-btn-warning:active {
+    background: #ffca2c;
+    border-color: #ffc720;
+    color: #212529;
+    box-shadow: none;
+  }
+
+  @media (max-width: 767.98px) {
+    .info-card,
+    .cta-card {
+      border-radius: 0.75rem;
+    }
+  }
 </style>
