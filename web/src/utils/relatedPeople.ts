@@ -210,8 +210,7 @@ export function forEachRelatedPerson(
     const containerKey = config.dataPath[0];
     const arrayKey = config.dataPath[1];
     const container = data?.[containerKey] as
-      | Record<string, unknown>
-      | undefined;
+      Record<string, unknown> | undefined;
     visit(container?.[arrayKey], config, null);
   }
 }
@@ -283,8 +282,7 @@ export function clearNestedRelatedPeopleType(
   const [containerKey] = parentConfig.dataPath;
   const container = data[containerKey] as Record<string, unknown> | undefined;
   const scratch = container?.[`_${parentConfig.prefix}AddEdit`] as
-    | Record<string, unknown>
-    | undefined;
+    Record<string, unknown> | undefined;
   if (!scratch) return;
 
   scratch[config.nestedArrayKey] = [];

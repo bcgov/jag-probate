@@ -5,11 +5,7 @@
 // instead of each re-implementing the same per-type loop.
 
 export type RelatedPersonStatus =
-  | 'org'
-  | 'deceased'
-  | 'adult-competent'
-  | 'minor'
-  | 'incompetent-adult';
+  'org' | 'deceased' | 'adult-competent' | 'minor' | 'incompetent-adult';
 
 export type RepresentativeRole = 'guardian' | 'nominee' | 'personalRep';
 
@@ -74,8 +70,7 @@ export interface NestedRelatedPeopleTypeConfig {
 }
 
 export type RelatedPeopleTypeConfig =
-  | FlatRelatedPeopleTypeConfig
-  | NestedRelatedPeopleTypeConfig;
+  FlatRelatedPeopleTypeConfig | NestedRelatedPeopleTypeConfig;
 
 export function isFlatRelatedPeopleType(
   config: RelatedPeopleTypeConfig
