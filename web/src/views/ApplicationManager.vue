@@ -468,7 +468,7 @@
 <style scoped>
   .wizard-preview-layout {
     display: flex;
-    min-height: calc(100vh - 62px);
+    min-height: calc(100vh - var(--app-header-offset, 62px));
     font-family: BCSans, 'Noto Sans', Verdana, Arial, sans-serif;
     /* Pull up to cancel the app-main padding-top (2rem) and container gutter */
     margin-top: -2rem;

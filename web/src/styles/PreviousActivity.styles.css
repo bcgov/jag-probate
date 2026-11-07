@@ -161,15 +161,7 @@
   border-top: 1px solid #dee2e6;
 }
 
-/* Align process map and session button row items to center vertically */
+/* Align session button row items to center vertically */
 .button-content .row {
   align-items: flex-end;
-}
-
-/* Process map intro text sits just above its button, no extra gap */
-.process-map-intro-text {
-  margin-bottom: 0.4rem;
-}
-.process-map-button {
-  color: #fff !important;
 }
