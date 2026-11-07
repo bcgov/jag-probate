@@ -16,7 +16,7 @@
               </p>
             </div>
           </div>
-          <div class="row g-4 align-items-start">
+          <div class="row g-4 align-items-start mt-1">
             <div class="col-12 col-lg-6 fs-5">
               <h2 class="h4 fw-bold mb-3">
                 Presently, this service can only be used if:
@@ -43,54 +43,62 @@
                       icon="fas-solid fa-circle-check"
                       class="text-success me-2"
                       aria-hidden="true"
-                    />You are <strong>one of the following</strong>:
+                    />You are applying as one of the following, or on behalf of
+                    someone who is:
                   </p>
                   <ul class="disc-list ms-4">
-                    <li>The <strong>spouse</strong> of the deceased</li>
-                    <li>A <strong>child</strong> of the deceased</li>
-                    <li>
-                      A
-                      <strong
-                        >legal guardian, nominee, or personal
-                        representative</strong
-                      >
-                      acting for someone listed above
-                    </li>
+                    <li>The spouse of the deceased</li>
+                    <li>A child of the deceased</li>
                     <li>
                       An
                       <strong>
-                        <ToolTip term="intestate successor" /> or someone
-                        nominated by an intestate successor
+                        <ToolTip term="intestate successor" />
                       </strong>
+                      of the deceased
                     </li>
-                    <li>A <strong>person appointed by the court</strong></li>
+                    <li>
+                      A person nominated by an eligible spouse, child, or
+                      intestate successor
+                    </li>
+                    <li>
+                      A legal guardian or personal representative authorized to
+                      act on behalf of an eligible applicant
+                    </li>
+                    <li>
+                      A person appointed by the court under section 130(g) of
+                      the <em>Wills, Estates and Succession Act</em>
+                    </li>
                   </ul>
                 </li>
               </ul>
             </div>
 
             <div class="col-12 col-lg-6 fs-5">
-              <h2 class="h4 fw-bold mb-3">This service CANNOT be used if:</h2>
-              <ul class="list-unstyled mb-0 checklist">
-                <li>
-                  <font-awesome-icon
-                    icon="fas-solid fa-circle-xmark"
-                    class="text-danger me-2"
-                    aria-hidden="true"
-                  />One of the deceased's
-                  <strong>children passed away before them</strong> and that
-                  child has children of their own.
-                </li>
-                <li>
-                  <font-awesome-icon
-                    icon="fas-solid fa-circle-xmark"
-                    class="text-danger me-2"
-                    aria-hidden="true"
-                  />There is
-                  <strong>no surviving spouse, descendant, or creditor</strong>
-                  (other than yourself) who can be identified at this time.
-                </li>
-              </ul>
+              <p>
+                This service currently supports only certain application
+                circumstances. If your situation does not fit the criteria on
+                the left, you may still be able to apply for a Representation
+                Grant through the regular court process.
+              </p>
+              <p>
+                This service does not generate every probate form that may be
+                required for your application.
+              </p>
+              <p>
+                If you need a probate form that is not provided through this
+                service, you must complete that form separately and include it
+                with your application package when filing.
+              </p>
+              <p class="mb-0">
+                <a
+                  href="https://www2.gov.bc.ca/gov/content/justice/courthouse-services/documents-forms-records/court-forms/probate-forms"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  >View all probate forms under the Supreme Court Civil Rules</a
+                >
+                <br />
+                <em>(This link opens in a new tab.)</em>
+              </p>
             </div>
           </div>
         </div>

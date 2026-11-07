@@ -107,6 +107,8 @@
       </div>
     </nav>
 
+    <div class="beta-banner">Beta</div>
+
     <div
       v-if="saveAndExitError"
       class="alert alert-danger m-0 rounded-0 text-center"

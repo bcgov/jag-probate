@@ -632,9 +632,9 @@
   .wiz-sidebar {
     position: fixed;
     left: 0;
-    top: 62px;
+    top: var(--app-header-offset, 62px);
     z-index: 1;
-    height: calc(100vh - 62px);
+    height: calc(100vh - var(--app-header-offset, 62px));
     width: 320px;
     min-width: 320px;
     background: #f0f4f8;

@@ -30,7 +30,7 @@
         </div>
 
         <!-- Applications Table -->
-        <div v-else class="card bg-white border-white table-section">
+        <div v-else class="card bg-white border-white table-section mb-4">
           <div
             class="mx-0 b-table-sticky-header table-responsive-sm"
             style="max-height: 600px; overflow-y: auto"
@@ -174,27 +174,51 @@
             </table>
           </div>
         </div>
+
+        <section
+          class="blue-background"
+          aria-labelledby="about-service-heading"
+        >
+          <h2 id="about-service-heading" class="h5 fw-bold">
+            About this service
+          </h2>
+          <p>
+            This service does not generate every probate form that may be
+            required for your application.
+          </p>
+          <p>
+            If you need a probate form that is not provided through this
+            service, you must complete that form separately and include it with
+            your application package when filing.
+          </p>
+          <p>
+            <a
+              href="https://www2.gov.bc.ca/gov/content/justice/courthouse-services/documents-forms-records/court-forms/probate-forms"
+              target="_blank"
+              rel="noopener noreferrer"
+              >View all probate forms under the Supreme Court Civil Rules</a
+            >
+            <br />
+            <em>(This link opens in a new tab.)</em>
+          </p>
+          <p class="mb-0">
+            <a
+              href="https://www2.gov.bc.ca/assets/gov/law-crime-and-justice/courthouse-services/court-files-records/court-forms/supreme-civil/109.pdf?forcedownload=true"
+              target="_blank"
+              rel="noopener noreferrer"
+              >Click to download Form 109 - Affidavit under the Supreme Court
+              Civil Rules</a
+            >
+            <br />
+            <em>(This link opens in a new tab.)</em>
+          </p>
+        </section>
       </div>
     </div>
 
     <div name="button-menu" class="card button-content border-white bg-white">
       <div class="card-body">
-        <p class="process-map-intro-text">
-          <strong
-            >The Process Map provides a general overview for a Representation
-            Grant.</strong
-          >
-        </p>
-        <div class="d-flex align-items-center justify-content-between">
-          <button
-            type="button"
-            class="btn btn-success process-map-button"
-            @click="showProcessMap = true"
-            aria-haspopup="dialog"
-          >
-            View/Print Process Map
-            <span class="fa fa-print ms-1" aria-hidden="true"></span>
-          </button>
+        <div class="d-flex align-items-center justify-content-end">
           <div class="d-flex align-items-center gap-3">
             <button
               type="button"

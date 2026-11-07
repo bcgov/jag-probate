@@ -18,6 +18,13 @@ $bcgov-blue: #003366;
 $bcgov-gold: #fcba19;
 $bcgov-white: #ffffff;
 $app-header-height: 62px;
+$beta-banner-height: 24px;
+
+// Total height of the fixed header (navbar + beta banner); used to offset
+// page content and fixed-position elements below the header.
+:root {
+  --app-header-offset: #{$app-header-height + $beta-banner-height};
+}
 
 // Layout
 .app-outer {
@@ -28,7 +35,7 @@ $app-header-height: 62px;
 
 .app-main {
   flex: 1 0 auto;
-  padding: calc(#{$app-header-height} + 2rem) 0 0;
+  padding: calc(var(--app-header-offset) + 2rem) 0 0;
   display: flex;
   flex-direction: column;
   min-height: 0;
@@ -64,6 +71,16 @@ $app-header-height: 62px;
       color: $bcgov-white;
       margin: 0;
     }
+  }
+
+  .beta-banner {
+    height: $beta-banner-height;
+    line-height: $beta-banner-height;
+    background-color: $bcgov-gold;
+    color: $bcgov-blue;
+    font-size: 0.875rem;
+    font-weight: 700;
+    text-align: center;
   }
 }
 
