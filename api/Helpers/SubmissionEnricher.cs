@@ -15,9 +15,9 @@ public static class SubmissionEnricher
 {
     /// <summary>
     /// Enriches PGT submission data with computed fields:
-    /// - hasMinors / computedMinors: alive minors from spouseData + childData + siblingData + gchildData
+    /// - hasMinors / computedMinors: alive minors from spouseData + childData + siblingData + gchildData + creditorPersonData
     /// - hasIncapableAdults / computedIncapableAdults: alive incapable adults from
-    ///   spouseData + childData + parentData + siblingData + gchildData
+    ///   spouseData + childData + parentData + siblingData + gchildData + creditorPersonData
     /// Parent has no isAdult/minor concept (always adult) - only the
     /// incapable-adult branch applies to it. Grandchildren (nested under each
     /// child row) are only collected when their parent child was bypassed as a
@@ -39,6 +39,7 @@ public static class SubmissionEnricher
         CollectFromChildData(root, deceasedName, minors, incapableAdults);
         CollectFromParentData(root, deceasedName, minors, incapableAdults);
         CollectFromSiblingData(root, deceasedName, minors, incapableAdults);
+        CollectFromCreditorPersonData(root, deceasedName, minors, incapableAdults);
 
         root["hasMinors"] = minors.Count > 0;
         root["computedMinors"] = new JArray(minors);
@@ -222,6 +223,50 @@ public static class SubmissionEnricher
         }
     }
 
+    private static void CollectFromCreditorPersonData(
+        JObject root,
+        string deceasedName,
+        List<JObject> minors,
+        List<JObject> incapableAdults
+    )
+    {
+        var creditorPersonData = root.SelectToken("creditor.creditorPersonData") as JArray;
+        if (creditorPersonData == null)
+            return;
+
+        for (int i = 1; i < creditorPersonData.Count; i++)
+        {
+            var creditor = creditorPersonData[i] as JObject;
+            if (
+                creditor == null
+                || string.IsNullOrWhiteSpace(creditor.Value<string>("creditorPersonName"))
+            )
+                continue;
+            if (creditor.Value<string>("creditorPersonIsAlive") != "yes")
+                continue;
+
+            if (creditor.Value<string>("creditorPersonIsAdult") == "no")
+            {
+                minors.Add(BuildMinor(creditor, "creditorPerson", deceasedName, "creditor"));
+            }
+            else if (
+                creditor.Value<string>("creditorPersonIsAdult") == "yes"
+                && creditor.Value<string>("creditorPersonIsCompetent") == "no"
+            )
+            {
+                incapableAdults.Add(
+                    BuildIncapableAdult(
+                        creditor,
+                        "creditorPerson",
+                        deceasedName,
+                        "creditor",
+                        "creditorPersonIncompetent"
+                    )
+                );
+            }
+        }
+    }
+
     private static JObject BuildMinor(JObject src, string prefix, string deceasedName, string role)
     {
         var name = src.Value<string>($"{prefix}Name") ?? "";
@@ -230,17 +275,15 @@ public static class SubmissionEnricher
 
         var resAddress = ExtractFormatAddress(src, p);
 
-        var postalAddress =
-            src.Value<string>($"{p}HasDiffMail") == "yes"
-                ? ExtractFormatAddress(src, p, "Mail")
-                : resAddress;
+        var postalAddress = HasDifferentMail(src, p)
+            ? ExtractFormatAddress(src, p, "Mail")
+            : resAddress;
 
         var guardianResAddress = ExtractFormatAddress(src, g);
 
-        var guardianPostalAddress =
-            src.Value<string>($"{g}HasDiffMail") == "yes"
-                ? ExtractFormatAddress(src, g, "Mail")
-                : guardianResAddress;
+        var guardianPostalAddress = HasDifferentMail(src, g)
+            ? ExtractFormatAddress(src, g, "Mail")
+            : guardianResAddress;
 
         return new JObject
         {
@@ -279,26 +322,25 @@ public static class SubmissionEnricher
         JObject src,
         string prefix,
         string deceasedName,
-        string role
+        string role,
+        string? incapablePrefix = null
     )
     {
         var name = src.Value<string>($"{prefix}Name") ?? "";
-        var p = $"{prefix}Incomp";
+        var p = incapablePrefix ?? $"{prefix}Incomp";
         var n = $"{prefix}Nominee";
 
         var resAddress = ExtractFormatAddress(src, p);
 
-        var postalAddress =
-            src.Value<string>($"{p}HasDiffMail") == "yes"
-                ? ExtractFormatAddress(src, p, "Mail")
-                : resAddress;
+        var postalAddress = HasDifferentMail(src, p)
+            ? ExtractFormatAddress(src, p, "Mail")
+            : resAddress;
 
         var nomineeResAddress = ExtractFormatAddress(src, n);
 
-        var nomineePostalAddress =
-            src.Value<string>($"{n}HasDiffMail") == "yes"
-                ? ExtractFormatAddress(src, n, "Mail")
-                : nomineeResAddress;
+        var nomineePostalAddress = HasDifferentMail(src, n)
+            ? ExtractFormatAddress(src, n, "Mail")
+            : nomineeResAddress;
 
         return new JObject
         {
@@ -339,15 +381,35 @@ public static class SubmissionEnricher
         string fieldPrefix = ""
     )
     {
+        var addressPrefix = $"{dataNamePrefix}{fieldPrefix}";
         return FormatAddress(
-            src.Value<string>($"{dataNamePrefix}{fieldPrefix}Street"),
-            src.Value<string>($"{dataNamePrefix}{fieldPrefix}City"),
-            src.Value<string>($"{dataNamePrefix}{fieldPrefix}Province"),
-            src.Value<string>($"{dataNamePrefix}{fieldPrefix}State"),
-            src.Value<string>($"{dataNamePrefix}{fieldPrefix}ProvinceText"),
-            src.Value<string>($"{dataNamePrefix}{fieldPrefix}Postal"),
-            src.Value<string>($"{dataNamePrefix}{fieldPrefix}Country")
+            AddressValue(src, addressPrefix, "Street"),
+            AddressValue(src, addressPrefix, "City"),
+            AddressValue(src, addressPrefix, "Province"),
+            src.Value<string>($"{addressPrefix}State"),
+            src.Value<string>($"{addressPrefix}ProvinceText"),
+            AddressValue(src, addressPrefix, "Postal"),
+            AddressValue(src, addressPrefix, "Country")
         );
+    }
+
+    private static string? AddressValue(JObject src, string prefix, string field)
+    {
+        return FirstNonEmpty(
+            src.Value<string>($"{prefix}Res{field}"),
+            src.Value<string>($"{prefix}{field}")
+        );
+    }
+
+    private static bool HasDifferentMail(JObject src, string prefix)
+    {
+        return src.Value<string>($"{prefix}HasDiffMail") == "yes"
+            || src.Value<string>($"{prefix}HasMailing") == "yes";
+    }
+
+    private static string? FirstNonEmpty(params string?[] values)
+    {
+        return values.FirstOrDefault(value => !string.IsNullOrWhiteSpace(value));
     }
 
     private static string FormatAddress(
