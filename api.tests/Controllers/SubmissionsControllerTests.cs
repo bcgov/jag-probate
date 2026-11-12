@@ -150,7 +150,7 @@ public class SubmissionsControllerTests
                 PublicId = Guid.NewGuid(),
                 ApplicantName = "",
                 CreatedBy = "jdoe",
-                Status = "submitted",
+                Status = "ready_to_print",
             },
         };
 
@@ -300,7 +300,7 @@ public class SubmissionsControllerTests
             PublicId = publicId,
             ApplicantName = "Jane Doe",
             CreatedBy = "jdoe",
-            Status = "submitted",
+            Status = "ready_to_print",
             CreatedAt = DateTime.UtcNow,
         };
 
@@ -320,7 +320,7 @@ public class SubmissionsControllerTests
         var actionResult = Assert.IsType<ActionResult<SubmissionResponseDto>>(result);
         var okResult = Assert.IsType<OkObjectResult>(actionResult.Result);
         var returned = Assert.IsType<SubmissionResponseDto>(okResult.Value);
-        Assert.Equal("submitted", returned.Status);
+        Assert.Equal("ready_to_print", returned.Status);
         Assert.Equal(publicId, returned.PublicId);
     }
 
@@ -362,7 +362,7 @@ public class SubmissionsControllerTests
                     PublicId = publicId,
                     ApplicantName = "Jane Doe",
                     CreatedBy = "jdoe",
-                    Status = "submitted",
+                    Status = "ready_to_print",
                 }
             );
 
