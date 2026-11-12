@@ -294,6 +294,7 @@
   import SortIcon from '@/components/shared/SortIcon.vue';
   import ChefsService from '@/services/ChefsService';
   import type { PreviousApplication, SubmissionResponseDto } from '@/types';
+  import { formatSubmissionStatus } from '@/types';
   import moment from 'moment-timezone';
   import { computed, inject, onMounted, onUnmounted, ref } from 'vue';
   import { useRouter } from 'vue-router';
@@ -379,7 +380,7 @@
         (appJson: SubmissionResponseDto) => ({
           deceased_name: appJson.applicantName || '(the person who died)',
           app_type: 'Probate Grant',
-          status: appJson.status ?? '',
+          status: formatSubmissionStatus(appJson.status),
           packageNum: '',
           id: appJson.publicId,
           publicId: appJson.publicId,
