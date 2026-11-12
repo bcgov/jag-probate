@@ -83,8 +83,8 @@ namespace Probate.Api.Controllers
 
             var baseUri = XForwardedForHelper.ResolveBaseHref(HttpContext.Request);
 
-            var forwardedProto =
-                HttpContext.Request.Headers["X-Forwarded-Proto"].FirstOrDefault() ?? Request.Scheme;
+            var forwardedProto = HttpContext.Request.Headers["X-Forwarded-Proto"].FirstOrDefault()
+                ?? Request.Scheme;
 
             var applicationUrl =
                 $"{XForwardedForHelper.BuildUrlString(forwardedHost, "", baseUri, scheme: forwardedProto)}";

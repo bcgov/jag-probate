@@ -14,8 +14,9 @@ public static class WeasyPrintServiceCollectionExtensions
         IConfiguration configuration
     )
     {
-        var options =
-            configuration.GetSection(WeasyPrintOptions.SectionName).Get<WeasyPrintOptions>()
+        var options = configuration
+            .GetSection(WeasyPrintOptions.SectionName)
+            .Get<WeasyPrintOptions>()
             ?? throw new InvalidOperationException("Missing required WeasyPrint configuration.");
 
         if (!Uri.TryCreate(options.BaseUrl, UriKind.Absolute, out var baseUrl))
