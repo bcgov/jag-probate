@@ -351,13 +351,10 @@ public class TemplateServiceTests
         string expectedValueAtDeath
     )
     {
-        var group = Assert.Single(
-            ParseDocument(document).Descendants("tbody"),
-            body =>
-                NormalizeText(
-                    body.Elements("tr").FirstOrDefault()?.Elements("td").FirstOrDefault()?.Value
-                        ?? ""
-                ) == description
+        var group = Assert.Single(ParseDocument(document).Descendants("tbody"), body =>
+            NormalizeText(
+                body.Elements("tr").FirstOrDefault()?.Elements("td").FirstOrDefault()?.Value ?? ""
+            ) == description
         );
         var values = group
             .Elements("tr")
@@ -369,10 +366,8 @@ public class TemplateServiceTests
     }
 
     private static void AssertRow(string document, params string[] expected) =>
-        Assert.Contains(
-            ParseDocument(document).Descendants("tr"),
-            row =>
-                row.Elements("td").Select(cell => NormalizeText(cell.Value)).SequenceEqual(expected)
+        Assert.Contains(ParseDocument(document).Descendants("tr"), row =>
+            row.Elements("td").Select(cell => NormalizeText(cell.Value)).SequenceEqual(expected)
         );
 
     private static XDocument ParseDocument(string document) =>

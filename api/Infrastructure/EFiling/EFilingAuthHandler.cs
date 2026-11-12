@@ -97,8 +97,7 @@ public class EFilingAuthHandler : DelegatingHandler
         var json = await response.Content.ReadAsStringAsync(ct);
         using var doc = JsonDocument.Parse(json);
 
-        var token =
-            doc.RootElement.GetProperty("access_token").GetString()
+        var token = doc.RootElement.GetProperty("access_token").GetString()
             ?? throw new InvalidOperationException("Token response missing access_token");
         var expiresIn = doc.RootElement.GetProperty("expires_in").GetInt32();
 

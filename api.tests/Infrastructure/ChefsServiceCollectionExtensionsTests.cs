@@ -101,8 +101,7 @@ public class ChefsServiceCollectionExtensionsTests
 
     private static IConfiguration BuildConfiguration(Dictionary<string, string?>? overrides = null)
     {
-        var configData =
-            overrides
+        var configData = overrides
             ?? new Dictionary<string, string?>
             {
                 ["Chefs:BaseUrl"] = "https://chefs.example.com/app",

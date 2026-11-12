@@ -128,11 +128,10 @@ namespace Probate.Api.Services
             CancellationToken cancellationToken = default
         )
         {
-            var submission =
-                await _db.Submissions.FirstOrDefaultAsync(
-                    s => s.PublicId == publicId && s.DeletedAt == null,
-                    cancellationToken
-                ) ?? throw new KeyNotFoundException($"Submission {publicId} not found.");
+            var submission = await _db.Submissions.FirstOrDefaultAsync(
+                s => s.PublicId == publicId && s.DeletedAt == null,
+                cancellationToken
+            ) ?? throw new KeyNotFoundException($"Submission {publicId} not found.");
 
             submission.SubmissionData = compiledData;
             submission.Status = "submitted";
@@ -149,9 +148,10 @@ namespace Probate.Api.Services
             CancellationToken cancellationToken = default
         )
         {
-            var submission =
-                await _db.Submissions.FirstOrDefaultAsync(s => s.PublicId == id, cancellationToken)
-                ?? throw new KeyNotFoundException($"Submission {id} not found.");
+            var submission = await _db.Submissions.FirstOrDefaultAsync(
+                s => s.PublicId == id,
+                cancellationToken
+            ) ?? throw new KeyNotFoundException($"Submission {id} not found.");
 
             submission.DeletedAt ??= DateTime.UtcNow;
             await _db.SaveChangesAsync(cancellationToken);
