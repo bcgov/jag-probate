@@ -110,6 +110,111 @@
     </style>
   </head>
   <body>
+    {% assign isOrganization = false %} {% assign isCreditorOrganization = false
+    %} {% if Model.applicant.applicantNameSelection != '__other__' %} {% if
+    Model.applicant.applicantCreditorType == 'organization' %} {% assign
+    isOrganization = true %} {% assign isCreditorOrganization = true %} {% elsif
+    Model.applicant.applicantCreditorType != 'individual' and
+    Model.applicant.applicantIsOrg == true %} {% assign isOrganization = true %}
+    {% assign isCreditorOrganization = true %} {% elsif
+    Model.applicant.applicantCreditorType != 'individual' and
+    Model.isApplicantOrg == 'yes' %} {% assign isOrganization = true %} {%
+    assign isCreditorOrganization = true %} {% endif %} {% elsif
+    Model.applicant.applicantHasBeenNominated == 'yes' and
+    Model.applicant.applicantNomineeIsOrg == 'yes' %} {% assign isOrganization =
+    true %} {% elsif Model.applicant.applicantHasBeenNominated == 'no' and
+    Model.applicant.applicantIsOtherSuccessor == 'no' and
+    Model.applicant.applicantCourtAppointed == 'yes' and
+    Model.applicant.applicantCourtOrg == 'yes' %} {% assign isOrganization =
+    true %} {% endif %} {% capture applicantDisplayName %}{{
+    Model.applicant.applicantName | strip | default: '[Applicant name missing]'
+    | escape }}{% endcapture %} {% if isOrganization %} {% unless
+    isCreditorOrganization %} {% capture applicantDisplayName %}{{
+    Model.applicant.applicantOrgName | strip | default: '[Organization name
+    missing]' | escape }}{% endcapture %} {% endunless %} {% endif %} {% capture
+    applicantSignerName %}{{ Model.applicant.applicantName | strip | default:
+    '[Applicant name missing]' | escape }}{% endcapture %} {% if
+    isCreditorOrganization %} {% capture applicantSignerName %}{{
+    Model.applicant.applicantCreditorRepName | strip | default: '[Representative
+    name missing]' | escape }}{% endcapture %} {% endif %} {% assign
+    hasMailingAddressSelection = true %} {% if isOrganization %} {% capture
+    addressStreet %}{{ Model.applicant.applicantOrgAddressStreet | strip |
+    escape }}{% endcapture %} {% capture addressCity %}{{
+    Model.applicant.applicantOrgAddressCity | strip | escape }}{% endcapture %}
+    {% capture addressProvince %}{{ Model.applicant.applicantOrgAddressProvince
+    | strip | escape }}{% endcapture %} {% capture addressState %}{{
+    Model.applicant.applicantOrgAddressState | strip | escape }}{% endcapture %}
+    {% capture addressProvinceText %}{{
+    Model.applicant.applicantOrgAddressProvinceText | strip | escape }}{%
+    endcapture %} {% capture addressPostal %}{{
+    Model.applicant.applicantOrgAddressPostalCode | strip | escape }}{%
+    endcapture %} {% capture addressCountry %}{{
+    Model.applicant.applicantOrgAddressCountry | strip | escape }}{% endcapture
+    %} {% elsif Model.applicant.applicantOrdinaryAddressReceiveMail == 'yes' %}
+    {% capture addressStreet %}{{ Model.applicant.applicantOrdinaryAddressStreet
+    | strip | escape }}{% endcapture %} {% capture addressCity %}{{
+    Model.applicant.applicantOrdinaryAddressCity | strip | escape }}{%
+    endcapture %} {% capture addressProvince %}{{
+    Model.applicant.applicantOrdinaryAddressProvince | strip | escape }}{%
+    endcapture %} {% capture addressState %}{{
+    Model.applicant.applicantOrdinaryAddressState | strip | escape }}{%
+    endcapture %} {% capture addressProvinceText %}{{
+    Model.applicant.applicantOrdinaryAddressProvinceText | strip | escape }}{%
+    endcapture %} {% capture addressPostal %}{{
+    Model.applicant.applicantOrdinaryAddressPostalCode | strip | escape }}{%
+    endcapture %} {% capture addressCountry %}{{
+    Model.applicant.applicantOrdinaryAddressCountry | strip | escape }}{%
+    endcapture %} {% elsif Model.applicant.applicantOrdinaryAddressReceiveMail
+    == 'no' %} {% capture addressStreet %}{{
+    Model.applicant.applicantMailingAddressStreet | strip | escape }}{%
+    endcapture %} {% capture addressCity %}{{
+    Model.applicant.applicantMailingAddressCity | strip | escape }}{% endcapture
+    %} {% capture addressProvince %}{{
+    Model.applicant.applicantMailingAddressProvince | strip | escape }}{%
+    endcapture %} {% capture addressState %}{{
+    Model.applicant.applicantMailingAddressState | strip | escape }}{%
+    endcapture %} {% capture addressProvinceText %}{{
+    Model.applicant.applicantMailingAddressProvinceText | strip | escape }}{%
+    endcapture %} {% capture addressPostal %}{{
+    Model.applicant.applicantMailingAddressPostalCode | strip | escape }}{%
+    endcapture %} {% capture addressCountry %}{{
+    Model.applicant.applicantMailingAddressCountry | strip | escape }}{%
+    endcapture %} {% else %} {% assign hasMailingAddressSelection = false %} {%
+    endif %} {% assign addressRegion = addressProvinceText %} {% if
+    addressCountry == 'Canada' %} {% assign addressRegion = addressProvince |
+    default: '[Province missing]' %} {% elsif addressCountry == 'United States'
+    %} {% assign addressRegion = addressState | default: '[State missing]' %} {%
+    endif %} {% if hasMailingAddressSelection %} {% capture
+    applicantMailingAddress %}{{ addressStreet | default: '[Street address
+    missing]' }}, {{ addressCity | default: '[City missing]' }}{% if
+    addressRegion != '' %}, {{ addressRegion }}{% endif %}{% if addressPostal !=
+    '' %}, {{ addressPostal }}{% elsif addressCountry == 'Canada' or
+    addressCountry == 'United States' %}, [Postal code missing]{% endif %}, {{
+    addressCountry | default: '[Country missing]' }}{% endcapture %} {% else %}
+    {% assign applicantMailingAddress = '[Mailing address selection missing]' %}
+    {% endif %} {% assign eligibleForNominationOrAppointment = false %} {% if
+    Model.applicant.applicantNameSelection == '__other__' or
+    Model.applicant.applicantCreditorType == 'organization' or
+    Model.applicant.applicantCreditorType == 'individual' %} {% assign
+    eligibleForNominationOrAppointment = true %} {% elsif
+    Model.applicant.applicantIsChild == true and
+    Model.applicant.applicantChildHasSpouse == true %} {% assign
+    eligibleForNominationOrAppointment = true %} {% elsif
+    Model.applicant.applicantIsGrandchild == true %} {% if
+    Model.applicant.applicantGrandchildHasSpouse == true or
+    Model.applicant.applicantGrandchildHasChild == true %} {% assign
+    eligibleForNominationOrAppointment = true %} {% endif %} {% endif %} {%
+    assign isNominated = false %} {% assign isCourtAppointed = false %} {% if
+    eligibleForNominationOrAppointment %} {% if
+    Model.applicant.applicantHasBeenNominated == 'yes' %} {% assign isNominated
+    = true %} {% elsif Model.applicant.applicantHasBeenNominated == 'no' and
+    Model.applicant.applicantCourtAppointed == 'yes' %} {% if
+    Model.applicant.applicantNameSelection != '__other__' or
+    Model.applicant.applicantIsOtherSuccessor == 'no' %} {% assign
+    isCourtAppointed = true %} {% endif %} {% endif %} {% endif %} {% assign
+    nominatorParts = Model.applicant.applicantNominator | split: '::' %} {%
+    assign nominatorRole = nominatorParts | first %} {% assign nominatorName =
+    nominatorParts | last | strip %}
     <div class="letter-container">
       <p class="text-right text-small">
         Letter to the Public Guardian &amp; Trustee (PGT) of British Columbia
@@ -122,9 +227,25 @@
       </p>
 
       <p>
-        I, <b>{{ Model.applicant.applicantName }}</b> ({{ Model.deceasedName
-        }}'s {{ Model.applicantRelationship }}), am requesting you review my
-        application for a Representation Grant for
+        I, <b>{{ applicantSignerName }}</b>{% if isOrganization %},
+        <b
+          >{{ Model.applicant.applicantOrgTitle | strip | default:
+          '[Organization role missing]' | escape }}</b
+        >
+        for <b>{{ applicantDisplayName }}</b>{% endif %} ( {%- if
+        isCreditorOrganization -%} {{ Model.deceasedName | escape }}'s creditor
+        {%- elsif isNominated -%} {%- if nominatorParts.size >= 2 and
+        nominatorName != '' -%} {%- if nominatorRole == 'spouse' or
+        nominatorRole == 'child' or nominatorRole == 'grandchild' or
+        nominatorRole == 'parent' or nominatorRole == 'sibling' -%} nominated by
+        {{ Model.deceasedName | escape }}'s {{ nominatorRole | escape }} {%-
+        else -%} [Nominator relationship missing or unrecognized] {%- endif -%}
+        {%- else -%} [Nominator relationship missing or unrecognized] {%- endif
+        -%} {%- elsif isCourtAppointed -%} Court-appointed applicant {%- elsif
+        Model.applicantRelationship and Model.applicantRelationship != '' -%} {{
+        Model.deceasedName | escape }}'s {{ Model.applicantRelationship | escape
+        }} {%- else -%} [Applicant relationship missing] {%- endif -%} ), am
+        requesting you review my application for a Representation Grant for
         <b>{{ Model.deceasedName }}</b>, of
         <b
           >{{ Model.deceasedAddressStreet }}, {{ Model.deceasedAddressCity }},
@@ -226,8 +347,12 @@
       </p>
 
       <p>Sincerely,</p>
-      <p><u>Signed Electronically by {{ Model.applicant.applicantName }}</u></p>
-      <p>{{ Model.applicant.applicantName }}</p>
+      <p><u>Signed Electronically by {{ applicantSignerName }}</u></p>
+      <p>
+        {{ applicantSignerName }}{% if isOrganization %}, {{
+        Model.applicant.applicantOrgTitle | strip | default: '[Organization role
+        missing]' | escape }} for {{ applicantDisplayName }}{% endif %}
+      </p>
     </div>
 
     <!-- ==================== FORM P1 NOTICE (continues the same page count) ==================== -->
@@ -240,9 +365,8 @@
       <p><b>TAKE NOTICE THAT:</b></p>
 
       <p>
-        The applicant <b>{{ Model.applicant.applicantName }}</b> proposes to
-        apply, in the
-        <b>{{ Model.applicant.applicantCourthouseName }}</b> registry, for a
+        The applicant <b>{{ applicantDisplayName }}</b> proposes to apply, in
+        the <b>{{ Model.applicant.applicantCourthouseName }}</b> registry, for a
         <b>Grant of Administration Without Will Annexed</b> in relation to the
         estate of the deceased described below who died on {{
         Model.deceasedDeathDate | date: "%B %d, %Y" }}.
@@ -349,33 +473,10 @@
 
       <h2>INFORMATION ABOUT EACH APPLICANT</h2>
 
-      <p><b>Name: {{ Model.applicant.applicantName }}</b></p>
+      <p><b>Name: {{ applicantDisplayName }}</b></p>
+      <p><b>Mailing address: {{ applicantMailingAddress }}</b></p>
 
-      {% if Model.applicant.applicantOrdinaryAddressReceiveMail == 'yes' %}
-      <p>
-        <b
-          >Mailing address: {{ Model.applicant.applicantOrdinaryAddressStreet
-          }}, {{ Model.applicant.applicantOrdinaryAddressCity }}, {{
-          Model.applicant.applicantOrdinaryAddressProvince }}{{
-          Model.applicant.applicantOrdinaryAddressState }}{{
-          Model.applicant.applicantOrdinaryAddressProvinceText }}, {{
-          Model.applicant.applicantOrdinaryAddressPostalCode }}, {{
-          Model.applicant.applicantOrdinaryAddressCountry }}</b
-        >
-      </p>
-      {% else %}
-      <p>
-        <b
-          >Mailing address: {{ Model.applicant.applicantMailingAddressStreet }},
-          {{ Model.applicant.applicantMailingAddressCity }}, {{
-          Model.applicant.applicantMailingAddressProvince }}{{
-          Model.applicant.applicantMailingAddressState }}{{
-          Model.applicant.applicantMailingAddressProvinceText }}, {{
-          Model.applicant.applicantMailingAddressPostalCode }}, {{
-          Model.applicant.applicantMailingAddressCountry }}</b
-        >
-      </p>
-      {% endif %} {% if Model.isApplicantOrg == 'yes' %}
+      {% if isOrganization %}
       <p>This applicant is not an individual.</p>
       {% else %} {% if Model.applicant.applicantOrdinaryAddressReceiveMail ==
       'yes' %}
@@ -386,8 +487,10 @@
       {% else %}
       <p>
         This applicant is an individual and lives in the following city and
-        country: {{ Model.applicant.applicantOrdinaryAddressCity }}, {{
-        Model.applicant.applicantOrdinaryAddressCountry }}
+        country: {{ Model.applicant.applicantOrdinaryAddressCity | strip |
+        default: '[City missing]' | escape }}, {{
+        Model.applicant.applicantOrdinaryAddressCountry | strip | default:
+        '[Country missing]' | escape }}
       </p>
       {% endif %} {% endif %}
 
@@ -421,12 +524,8 @@
             Date: <b><u>{{ "now" | date: "%B %d, %Y" }}</u></b>
           </td>
           <td style="width: 50%">
-            <b
-              ><u
-                >Signed Electronically by {{ Model.applicant.applicantName }}</u
-              ></b
-            >
-            <br />Signature of {{ Model.applicant.applicantName }}
+            <b><u>Signed Electronically by {{ applicantSignerName }}</u></b>
+            <br />Signature of {{ applicantSignerName }}
           </td>
         </tr>
       </table>

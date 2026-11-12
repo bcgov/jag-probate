@@ -262,11 +262,24 @@
     </style>
   </head>
   <body>
-    {% assign realPropertyTotal = 0 %} {% assign tangiblePropertyTotal = 0 %} {%
-    assign intangiblePropertyTotal = 0 %} {% assign realPropertyCount = 0 %} {%
-    assign tangiblePropertyCount = 0 %} {% assign intangiblePropertyCount = 0 %}
-    {% assign hasOutsideBcProperty = false %} {% if
-    Model.realPropertyOutsideBCExists == 'yes' or
+    {% assign isCreditorOrganization = false %} {% if
+    Model.applicant.applicantNameSelection != '__other__' %} {% if
+    Model.applicant.applicantCreditorType == 'organization' %} {% assign
+    isCreditorOrganization = true %} {% elsif
+    Model.applicant.applicantCreditorType != 'individual' and
+    Model.applicant.applicantIsOrg == true %} {% assign isCreditorOrganization =
+    true %} {% elsif Model.applicant.applicantCreditorType != 'individual' and
+    Model.isApplicantOrg == 'yes' %} {% assign isCreditorOrganization = true %}
+    {% endif %} {% endif %} {% capture applicantSignerName %}{{
+    Model.applicant.applicantName | strip | default: '[Applicant name missing]'
+    | escape }}{% endcapture %} {% if isCreditorOrganization %} {% capture
+    applicantSignerName %}{{ Model.applicant.applicantCreditorRepName | strip |
+    default: '[Representative name missing]' | escape }}{% endcapture %} {%
+    endif %} {% assign realPropertyTotal = 0 %} {% assign tangiblePropertyTotal
+    = 0 %} {% assign intangiblePropertyTotal = 0 %} {% assign realPropertyCount
+    = 0 %} {% assign tangiblePropertyCount = 0 %} {% assign
+    intangiblePropertyCount = 0 %} {% assign hasOutsideBcProperty = false %} {%
+    if Model.realPropertyOutsideBCExists == 'yes' or
     Model.tangiblePersonalPropertyOutsideBCExists == 'yes' %} {% assign
     hasOutsideBcProperty = true %} {% endif %}
 
@@ -277,7 +290,7 @@
           <p>This is <b>Exhibit A</b> referred to in the affidavit of</p>
           <div class="certificate-name-row">
             <span class="certificate-name"
-              ><b>{{ Model.applicant.applicantName }}</b></span
+              ><b>{{ applicantSignerName }}</b></span
             >
             <span class="certificate-name-suffix">, sworn/affirmed</span>
           </div>
@@ -611,7 +624,7 @@
           <p>This is <b>Exhibit B</b> referred to in the affidavit of</p>
           <div class="certificate-name-row">
             <span class="certificate-name"
-              ><b>{{ Model.applicant.applicantName }}</b></span
+              ><b>{{ applicantSignerName }}</b></span
             >
             <span class="certificate-name-suffix">, sworn/affirmed</span>
           </div>
@@ -734,8 +747,8 @@
           </tr>
         </thead>
         {% for item in Model.tangiblePersonalPropertyOutsideBCEntries %} {% if
-        item.propertyDescription != '' %} {% assign outsideTangiblePropertyTotal =
-        outsideTangiblePropertyTotal | plus: item.valueAtDeath %} {% assign
+        item.propertyDescription != '' %} {% assign outsideTangiblePropertyTotal
+        = outsideTangiblePropertyTotal | plus: item.valueAtDeath %} {% assign
         outsideTangiblePropertyCount = outsideTangiblePropertyCount | plus: 1 %}
         <tbody class="asset-detail-group">
           <tr class="asset-detail-start">
@@ -763,7 +776,9 @@
           </tr>
           {% endif %}
           <tr class="total-row">
-            <td colspan="2">TOTAL TANGIBLE PERSONAL PROPERTY OUTSIDE BRITISH COLUMBIA</td>
+            <td colspan="2">
+              TOTAL TANGIBLE PERSONAL PROPERTY OUTSIDE BRITISH COLUMBIA
+            </td>
             <td>${{ outsideTangiblePropertyTotal | money: 'CAD' }}</td>
           </tr>
         </tbody>

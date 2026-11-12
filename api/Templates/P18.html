@@ -131,6 +131,20 @@
     </style>
   </head>
   <body>
+    {% capture applicantDisplayName %}{{ Model.applicant.applicantName | strip |
+    default: '[Applicant name missing]' | escape }}{% endcapture %} {% if
+    Model.applicant.applicantNameSelection == '__other__' %} {% if
+    Model.applicant.applicantHasBeenNominated == 'yes' and
+    Model.applicant.applicantNomineeIsOrg == 'yes' %} {% capture
+    applicantDisplayName %}{{ Model.applicant.applicantOrgName | strip |
+    default: '[Organization name missing]' | escape }}{% endcapture %} {% elsif
+    Model.applicant.applicantHasBeenNominated == 'no' and
+    Model.applicant.applicantIsOtherSuccessor == 'no' and
+    Model.applicant.applicantCourtAppointed == 'yes' and
+    Model.applicant.applicantCourtOrg == 'yes' %} {% capture
+    applicantDisplayName %}{{ Model.applicant.applicantOrgName | strip |
+    default: '[Organization name missing]' | escape }}{% endcapture %} {% endif
+    %} {% endif %}
     <div class="p18-container">
       <p class="form-heading"><b>FORM P18</b> (RULE 25-4 (1) )</p>
 
@@ -148,8 +162,7 @@
       <p class="document-heading">AUTHORIZATION TO OBTAIN ESTATE INFORMATION</p>
 
       <p class="notice-heading">
-        TAKE NOTICE THAT <b>{{ Model.applicant.applicantName }}</b> (the
-        applicant)
+        TAKE NOTICE THAT <b>{{ applicantDisplayName }}</b> (the applicant)
       </p>
 
       <p class="numbered-paragraph">
