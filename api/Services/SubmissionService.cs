@@ -33,7 +33,9 @@ namespace Probate.Api.Services
         );
 
         /// <summary>
-        /// Compiles all step data into the submission record and marks it as submitted.
+        /// Compiles all step data into the submission record and marks it as
+        /// <see cref="SubmissionStatus.ReadyToPrint"/>. The submission stays
+        /// editable; <c>LastFiledAt</c> is only set once the package is eFiled.
         /// </summary>
         Task<SubmissionResponseDto> FinalizeSubmissionAsync(
             Guid publicId,
@@ -50,6 +52,20 @@ namespace Probate.Api.Services
             string username,
             CancellationToken cancellationToken = default
         );
+    }
+
+    /// <summary>
+    /// Status codes stored in <see cref="Submission.Status"/>.
+    /// </summary>
+    public static class SubmissionStatus
+    {
+        public const string Draft = "draft";
+
+        /// <summary>
+        /// All steps completed and data compiled; forms can be printed. The
+        /// application remains open for editing until it is eFiled.
+        /// </summary>
+        public const string ReadyToPrint = "ready_to_print";
     }
 
     public class SubmissionService : ISubmissionService
@@ -112,7 +128,7 @@ namespace Probate.Api.Services
                 PublicId = Guid.NewGuid(),
                 ApplicantName = string.Empty,
                 CreatedBy = username,
-                Status = "draft",
+                Status = SubmissionStatus.Draft,
                 LastUpdatedAt = DateTime.UtcNow,
             };
 
@@ -134,8 +150,7 @@ namespace Probate.Api.Services
             ) ?? throw new KeyNotFoundException($"Submission {publicId} not found.");
 
             submission.SubmissionData = compiledData;
-            submission.Status = "submitted";
-            submission.LastFiledAt = DateTime.UtcNow;
+            submission.Status = SubmissionStatus.ReadyToPrint;
             submission.LastUpdatedAt = DateTime.UtcNow;
 
             await _db.SaveChangesAsync(cancellationToken);
