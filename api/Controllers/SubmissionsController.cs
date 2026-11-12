@@ -104,7 +104,8 @@ namespace Probate.Api.Controllers
 
         /// <summary>
         /// Compiles all step data into a full data model, stores it in the
-        /// submission record, and marks the submission as submitted.
+        /// submission record, and marks the submission as ready to print.
+        /// The submission remains editable.
         /// </summary>
         [HttpPost("{id}/submit")]
         [ProducesResponseType(typeof(SubmissionResponseDto), StatusCodes.Status200OK)]
