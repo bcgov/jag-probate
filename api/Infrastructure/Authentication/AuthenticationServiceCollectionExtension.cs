@@ -186,9 +186,9 @@ namespace Probate.Api.Infrastructure.Authentication
                             var forwardedHost = request
                                 .Headers["X-Forwarded-Host"]
                                 .FirstOrDefault();
-                            var forwardedProto =
-                                request.Headers["X-Forwarded-Proto"].FirstOrDefault()
-                                ?? request.Scheme;
+                            var forwardedProto = request
+                                .Headers["X-Forwarded-Proto"]
+                                .FirstOrDefault() ?? request.Scheme;
 
                             var baseHref = XForwardedForHelper.ResolveBaseHref(request);
                             var callbackPathWithBase =

@@ -55,11 +55,10 @@ namespace Probate.Api.Services
             CancellationToken cancellationToken = default
         )
         {
-            var submission =
-                await _db.Submissions.FirstOrDefaultAsync(
-                    s => s.PublicId == submissionPublicId && s.DeletedAt == null,
-                    cancellationToken
-                ) ?? throw new KeyNotFoundException($"Submission {submissionPublicId} not found.");
+            var submission = await _db.Submissions.FirstOrDefaultAsync(
+                s => s.PublicId == submissionPublicId && s.DeletedAt == null,
+                cancellationToken
+            ) ?? throw new KeyNotFoundException($"Submission {submissionPublicId} not found.");
 
             var existing = await _db.StepData.FirstOrDefaultAsync(
                 sd => sd.SubmissionId == submission.Id && sd.FormId == dto.FormId,
@@ -159,11 +158,10 @@ namespace Probate.Api.Services
             CancellationToken cancellationToken = default
         )
         {
-            var submission =
-                await _db.Submissions.FirstOrDefaultAsync(
-                    s => s.PublicId == submissionPublicId && s.DeletedAt == null,
-                    cancellationToken
-                ) ?? throw new KeyNotFoundException($"Submission {submissionPublicId} not found.");
+            var submission = await _db.Submissions.FirstOrDefaultAsync(
+                s => s.PublicId == submissionPublicId && s.DeletedAt == null,
+                cancellationToken
+            ) ?? throw new KeyNotFoundException($"Submission {submissionPublicId} not found.");
 
             var stepDataRows = await _db
                 .StepData.Where(sd => sd.SubmissionId == submission.Id)
