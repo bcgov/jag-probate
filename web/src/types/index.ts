@@ -38,6 +38,7 @@ export type {
   SubmissionResponseDto,
   UpsertStepDataDto,
 } from './submission';
+export { SUBMISSION_STATUS_LABELS, formatSubmissionStatus } from './submission';
 
 export interface CourtAddress {
   addressLine1?: string;
