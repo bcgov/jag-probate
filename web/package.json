@@ -27,16 +27,16 @@
     "axios": "^1.21.0",
     "base64url": "^3.0.1",
     "bootstrap": "^5.3.3",
-    "bootstrap-vue-next": "^1.2.2",
+    "bootstrap-vue-next": "^1.2.3",
     "luxon": "^3.7.2",
     "moment-timezone": "^0.6.6",
     "pinia": "^4.1.0",
     "underscore": "^1.13.7",
     "uuid": "^14.0.3",
-    "vue": "^3.5.44",
+    "vue": "^3.5.45",
     "vue-router": "^5.4.0",
     "vuedraggable": "^4.1.0",
-    "vuetify": "^4.3.1"
+    "vuetify": "^4.3.2"
   },
   "devDependencies": {
     "@vitejs/plugin-basic-ssl": "^2.3.0",
