@@ -30,8 +30,13 @@
 
       <slot v-if="isLastStep" name="submit">
         <!-- Default submit button rendered when no override slot provided -->
-        <button type="button" class="btn btn-success" @click="$emit('submit')">
-          Submit Application
+        <button
+          type="button"
+          class="btn btn-success"
+          title="You can still edit the application"
+          @click="$emit('submit')"
+        >
+          Save Completed Application
         </button>
       </slot>
     </div>

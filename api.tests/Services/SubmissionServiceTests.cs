@@ -7,7 +7,7 @@ namespace Probate.Api.Tests.Services;
 public class SubmissionServiceTests
 {
     [Fact]
-    public async Task FinalizeSubmissionAsync_StoresCompiledData_AndMarksSubmitted()
+    public async Task FinalizeSubmissionAsync_StoresCompiledData_AndMarksReadyToPrint()
     {
         await using var db = CreateDbContext();
         var submission = CreateSubmission();
@@ -19,9 +19,10 @@ public class SubmissionServiceTests
 
         var stored = await db.Submissions.SingleAsync();
         Assert.Equal("{\"a\":1}", stored.SubmissionData);
-        Assert.Equal("submitted", stored.Status);
-        Assert.NotNull(stored.LastFiledAt);
-        Assert.Equal("submitted", result.Status);
+        Assert.Equal(SubmissionStatus.ReadyToPrint, stored.Status);
+        // Not eFiled yet – the application must stay editable/deletable.
+        Assert.Null(stored.LastFiledAt);
+        Assert.Equal(SubmissionStatus.ReadyToPrint, result.Status);
     }
 
     [Fact]
