@@ -221,8 +221,8 @@
     '' %} {% assign nameKey = applicantSuccessorName | prepend: '|' | append:
     '|' %} {% unless listedNames contains nameKey %}
     <li>
-      <b>{{ applicantSuccessorName | escape }}</b>,
-      <b>{{ applicantSuccessorRelationship | escape }}</b>.
+      <b>{{ applicantSuccessorName | escape }}</b>, {{
+      applicantSuccessorRelationship | escape }}.
     </li>
     {% assign listedNames = listedNames | append: applicantSuccessorName |
     append: '|' %} {% endunless %} {% endif %} {% for successor in
