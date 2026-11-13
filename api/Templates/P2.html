@@ -210,8 +210,23 @@
     contains nameKey %}
     <li><b>{{ sibling.siblingName | escape }}</b>, Deceased's sibling.</li>
     {% assign listedNames = listedNames | append: sibling.siblingName | append:
-    '|' %} {% endunless %} {% endif %} {% endfor %} {% endif %} {% for successor
-    in applicant.applicantSuccessorData %} {% if successor.successorName and
+    '|' %} {% endunless %} {% endif %} {% endfor %} {% endif %} {% assign
+    applicantSuccessorName = applicant.applicantName | strip %} {% assign
+    applicantSuccessorRelationship = applicant.applicantOtherRelationship |
+    strip %} {% if applicantSuccessorRelationship == '' %} {% assign
+    applicantSuccessorRelationship = 'Applicant' %} {% endif %} {% if
+    applicant.applicantNameSelection == '__other__' and
+    applicant.applicantHasBeenNominated == 'no' and
+    applicant.applicantIsOtherSuccessor == 'yes' and applicantSuccessorName !=
+    '' %} {% assign nameKey = applicantSuccessorName | prepend: '|' | append:
+    '|' %} {% unless listedNames contains nameKey %}
+    <li>
+      <b>{{ applicantSuccessorName | escape }}</b>,
+      <b>{{ applicantSuccessorRelationship | escape }}</b>.
+    </li>
+    {% assign listedNames = listedNames | append: applicantSuccessorName |
+    append: '|' %} {% endunless %} {% endif %} {% for successor in
+    applicant.applicantSuccessorData %} {% if successor.successorName and
     successor.successorName != '' %} {% assign nameKey = successor.successorName
     | prepend: '|' | append: '|' %} {% unless listedNames contains nameKey %}
     <li>

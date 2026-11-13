@@ -267,14 +267,14 @@
     applicant.applicantNomineeIsOrg == 'yes' or applicant.applicantCreditorType
     == 'organization' or applicant.applicantCourtOrg == 'yes' %} {% assign
     isOrganization = true %} {% endif %} {% for recipient in
-    Model.notifyPeople.notifyPeopleData %} {%
-    if recipient.isPGT == true %}{% assign isPgtDeliveryRequired = true %}{%
-    endif %} {% endfor %} {% if Model.willExists == 'yes' %}{% assign
-    hasTestamentaryDocuments = true %}{% endif %} {% if
-    Model.HaveYouLookedForDeceasedWillWellYN == 'yes' and Model.willExists ==
-    'no' %} {% assign documentSearchKnown = true %} {% endif %} {% if
-    Model.willsNoticeResultsReceived == 'yes' and Model.willsNoticeHasResults ==
-    'yes' %} {% if Model.willsNoticeFoundIndicatedWills == 'yes' %} {% assign
+    Model.notifyPeople.notifyPeopleData %} {% if recipient.isPGT == true %}{%
+    assign isPgtDeliveryRequired = true %}{% endif %} {% endfor %} {% if
+    Model.willExists == 'yes' %}{% assign hasTestamentaryDocuments = true %}{%
+    endif %} {% if Model.HaveYouLookedForDeceasedWillWellYN == 'yes' and
+    Model.willExists == 'no' %} {% assign documentSearchKnown = true %} {% endif
+    %} {% if Model.willsNoticeResultsReceived == 'yes' and
+    Model.willsNoticeHasResults == 'yes' %} {% if
+    Model.willsNoticeFoundIndicatedWills == 'yes' %} {% assign
     hasTestamentaryDocuments = true %} {% if
     Model.willsNoticeIndicatedWillsOtherDocExists == 'yes' %} {% assign
     testamentaryDocuments =
