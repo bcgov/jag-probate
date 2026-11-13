@@ -50,6 +50,78 @@ public static class SubmissionEnricher
         return root;
     }
 
+    /// <summary>
+    /// Enriches P5 submission data with the WESA s.130 paragraph for the applicant.
+    /// The CHEFS-calculated applicant.applicantSection130Pathway only covers the
+    /// direct child/grandchild/parent/sibling/other-successor paths (b, d, e, f), so
+    /// spouse, nominated and court-appointed paths are derived here:
+    /// - court appointed (not nominated) -> g
+    /// - nominated by spouse -> a
+    /// - nominated by child with consent -> c
+    /// - nominated by another intestate successor with consent -> e.1
+    /// - applicant is the spouse -> a
+    /// Otherwise the CHEFS value is kept. applicant.applicantSection130Nominated is
+    /// true when the paragraph is a nomination paragraph.
+    /// </summary>
+    public static object EnrichP5(object submissionData)
+    {
+        var root = submissionData is JObject jo
+            ? jo
+            : JObject.Parse(JsonSerializer.Serialize(submissionData));
+
+        if (root["applicant"] is not JObject applicant)
+            return root;
+
+        var (pathway, nominated) = DeduceSection130Pathway(root, applicant);
+        if (pathway != null)
+            applicant["applicantSection130Pathway"] = pathway;
+        applicant["applicantSection130Nominated"] = nominated;
+
+        return root;
+    }
+
+    private static (string? Pathway, bool Nominated) DeduceSection130Pathway(
+        JObject root,
+        JObject applicant
+    )
+    {
+        if (applicant.Value<string>("applicantHasBeenNominated") == "yes")
+        {
+            var nominator = applicant.Value<string>("applicantNominator") ?? "";
+            var role = nominator.Contains("::", StringComparison.Ordinal)
+                ? nominator[..nominator.IndexOf("::", StringComparison.Ordinal)]
+                : "";
+
+            return role switch
+            {
+                "spouse" => ("s130a", true),
+                "child" when applicant.Value<string>("applicantChildConsent") == "yes" => (
+                    "s130c",
+                    true
+                ),
+                "grandchild"
+                or "parent"
+                or "sibling" when applicant.Value<string>("applicantIntestateConsent") == "yes" => (
+                    "s130e1",
+                    true
+                ),
+                _ => (null, false),
+            };
+        }
+
+        if (applicant.Value<string>("applicantCourtAppointed") == "yes")
+            return ("s130g", false);
+
+        var applicantName = applicant.Value<string>("applicantName")?.Trim();
+        if (
+            !string.IsNullOrEmpty(applicantName)
+            && NameExistsInArray(root, "spouse.spouseData", "spouseName", applicantName)
+        )
+            return ("s130a", false);
+
+        return (null, false);
+    }
+
     private static void CollectFromSpouseData(
         JObject root,
         string deceasedName,

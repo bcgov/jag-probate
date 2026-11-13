@@ -8,6 +8,8 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Moq;
+using Newtonsoft.Json.Linq;
+using Probate.Api.Helpers;
 using Probate.Api.Infrastructure.Options;
 using Probate.Api.Services;
 
@@ -320,7 +322,136 @@ public class TemplateServiceTests
         Assert.DoesNotContain("[Applicant relationship missing]", text);
     }
 
-    private static string RenderTemplate(string fileName, Dictionary<string, object> submissionData)
+    [Theory]
+    [InlineData(
+        "creditorOrg",
+        "Creditor Org Test Ltd. is a person referred to in paragraph (g) of section 130 of the Wills, Estates and Succession Act. I am the Director of Creditor Org Test Ltd."
+    )]
+    [InlineData(
+        "courtOrg",
+        "Court Appointed Org Test Ltd. is a person referred to in paragraph (g) of section 130 of the Wills, Estates and Succession Act. I am the Director of Court Appointed Org Test Ltd."
+    )]
+    [InlineData(
+        "nominatedOrg",
+        "Nominee Org Test Ltd. is a person referred to in paragraph (a) of section 130 of the Wills, Estates and Succession Act. I am the Director of Nominee Org Test Ltd."
+    )]
+    [InlineData(
+        "courtIndividual",
+        "I am a person referred to in paragraph (g) of section 130 of the Wills, Estates and Succession Act."
+    )]
+    [InlineData(
+        "nominatedBySpouse",
+        "I am a person nominated under paragraph (a) of section 130 of the Wills, Estates and Succession Act."
+    )]
+    [InlineData(
+        "nominatedByChild",
+        "I am a person nominated under paragraph (c) of section 130 of the Wills, Estates and Succession Act."
+    )]
+    [InlineData(
+        "nominatedByGrandchild",
+        "I am a person nominated under paragraph (e.1) of section 130 of the Wills, Estates and Succession Act."
+    )]
+    [InlineData(
+        "spouse",
+        "I am a person referred to in paragraph (a) of section 130 of the Wills, Estates and Succession Act."
+    )]
+    public void RenderTemplates_P5MapsSection130Paragraph(string scenario, string expected)
+    {
+        var applicant = scenario switch
+        {
+            "creditorOrg" => new JObject
+            {
+                ["applicantName"] = "Creditor Org Test Ltd.",
+                ["applicantNameSelection"] = "Creditor Org Test Ltd.",
+                ["applicantCreditorType"] = "organization",
+                ["applicantHasBeenNominated"] = "no",
+                ["applicantCourtAppointed"] = "yes",
+                ["applicantOrgName"] = "Creditor Org Test Ltd.",
+                ["applicantOrgTitle"] = "Director",
+            },
+            "courtOrg" => new JObject
+            {
+                ["applicantName"] = "Olivia Court Rep",
+                ["applicantNameSelection"] = "__other__",
+                ["applicantHasBeenNominated"] = "no",
+                ["applicantCourtAppointed"] = "yes",
+                ["applicantCourtOrg"] = "yes",
+                ["applicantOrgName"] = "Court Appointed Org Test Ltd.",
+                ["applicantOrgTitle"] = "Director",
+            },
+            "nominatedOrg" => new JObject
+            {
+                ["applicantName"] = "Nina Nomrep",
+                ["applicantNameSelection"] = "__other__",
+                ["applicantHasBeenNominated"] = "yes",
+                ["applicantNominator"] = "spouse::Nora Nominator",
+                ["applicantNomineeIsOrg"] = "yes",
+                ["applicantOrgName"] = "Nominee Org Test Ltd.",
+                ["applicantOrgTitle"] = "Director",
+            },
+            "courtIndividual" => new JObject
+            {
+                ["applicantName"] = "Ivan Courtind",
+                ["applicantNameSelection"] = "__other__",
+                ["applicantHasBeenNominated"] = "no",
+                ["applicantCourtAppointed"] = "yes",
+                ["applicantCourtOrg"] = "no",
+            },
+            "nominatedBySpouse" => new JObject
+            {
+                ["applicantName"] = "Nick Nominee",
+                ["applicantNameSelection"] = "__other__",
+                ["applicantHasBeenNominated"] = "yes",
+                ["applicantNominator"] = "spouse::Nolan Nominator",
+                ["applicantNomineeIsOrg"] = "no",
+            },
+            "nominatedByChild" => new JObject
+            {
+                ["applicantName"] = "Nick Nominee",
+                ["applicantNameSelection"] = "__other__",
+                ["applicantHasBeenNominated"] = "yes",
+                ["applicantNominator"] = "child::Cal Child",
+                ["applicantChildConsent"] = "yes",
+                ["applicantNomineeIsOrg"] = "no",
+            },
+            "nominatedByGrandchild" => new JObject
+            {
+                ["applicantName"] = "Nick Nominee",
+                ["applicantNameSelection"] = "__other__",
+                ["applicantHasBeenNominated"] = "yes",
+                ["applicantNominator"] = "grandchild::Gail Grand",
+                ["applicantIntestateConsent"] = "yes",
+                ["applicantNomineeIsOrg"] = "no",
+                ["applicantSection130Pathway"] = "s130e",
+            },
+            _ => new JObject
+            {
+                ["applicantName"] = "Basil Baseline",
+                ["applicantNameSelection"] = "Basil Baseline",
+            },
+        };
+        var payload = new JObject
+        {
+            ["applicant"] = applicant,
+            ["deceasedName"] = "Alex Test",
+            ["spouse"] = new JObject
+            {
+                ["spouseData"] = new JArray
+                {
+                    new JObject { ["spouseName"] = "" },
+                    new JObject { ["spouseName"] = "Basil Baseline" },
+                },
+            },
+        };
+
+        var document = RenderTemplate("P5.html", SubmissionEnricher.EnrichP5(payload));
+
+        var text = NormalizeText(ParseDocument(document).Root!.Value);
+        Assert.Contains(expected, text);
+        Assert.DoesNotContain("[section 130 paragraph]", text);
+    }
+
+    private static string RenderTemplate(string fileName, object submissionData)
     {
         var environment = new Mock<IWebHostEnvironment>();
         environment.SetupGet(value => value.ContentRootPath).Returns(AppContext.BaseDirectory);

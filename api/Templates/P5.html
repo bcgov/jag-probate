@@ -255,18 +255,19 @@
     have been destroyed' %} {% when 'willsNoticeInError' %} {% assign
     willsNoticeResult = 'The Wills Notice filed in relation to an alleged
     testamentary document is believed to be in error' %} {% endcase %} {% case
-    applicant.applicantSection130Pathway %} {% when 's130a' %} {% assign
-    roleLetter = 'a' %} {% if applicant.applicantHasBeenNominated == 'yes' %}{%
-    assign isNominated = true %}{% endif %} {% when 's130b' %}{% assign
-    roleLetter = 'b' %} {% when 's130c' %} {% assign roleLetter = 'c' %} {%
-    assign isNominated = true %} {% when 's130d' %}{% assign roleLetter = 'd' %}
-    {% when 's130e' %}{% assign roleLetter = 'e' %} {% when 's130e1', 's130e.1'
-    %} {% assign roleLetter = 'e.1' %} {% assign isNominated = true %} {% when
-    's130f' %}{% assign roleLetter = 'f' %} {% when 's130f1', 's130f.1' %}{%
-    assign roleLetter = 'f.1' %} {% when 's130g' %}{% assign roleLetter = 'g' %}
-    {% endcase %} {% if applicant.applicantIsOrg == true or
-    applicant.applicantNomineeIsOrg == 'yes' %} {% assign isOrganization = true
-    %} {% endif %} {% for recipient in Model.notifyPeople.notifyPeopleData %} {%
+    applicant.applicantSection130Pathway %} {% when 's130a' %}{% assign
+    roleLetter = 'a' %} {% when 's130b' %}{% assign roleLetter = 'b' %} {% when
+    's130c' %}{% assign roleLetter = 'c' %} {% when 's130d' %}{% assign
+    roleLetter = 'd' %} {% when 's130e' %}{% assign roleLetter = 'e' %} {% when
+    's130e1', 's130e.1' %}{% assign roleLetter = 'e.1' %} {% when 's130f' %}{%
+    assign roleLetter = 'f' %} {% when 's130f1', 's130f.1' %}{% assign
+    roleLetter = 'f.1' %} {% when 's130g' %}{% assign roleLetter = 'g' %} {%
+    endcase %} {% if applicant.applicantSection130Nominated == true %}{% assign
+    isNominated = true %}{% endif %} {% if applicant.applicantIsOrg == true or
+    applicant.applicantNomineeIsOrg == 'yes' or applicant.applicantCreditorType
+    == 'organization' or applicant.applicantCourtOrg == 'yes' %} {% assign
+    isOrganization = true %} {% endif %} {% for recipient in
+    Model.notifyPeople.notifyPeopleData %} {%
     if recipient.isPGT == true %}{% assign isPgtDeliveryRequired = true %}{%
     endif %} {% endfor %} {% if Model.willExists == 'yes' %}{% assign
     hasTestamentaryDocuments = true %}{% endif %} {% if
