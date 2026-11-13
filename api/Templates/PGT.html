@@ -208,10 +208,8 @@
     eligibleForNominationOrAppointment %} {% if
     Model.applicant.applicantHasBeenNominated == 'yes' %} {% assign isNominated
     = true %} {% elsif Model.applicant.applicantHasBeenNominated == 'no' and
-    Model.applicant.applicantCourtAppointed == 'yes' %} {% if
-    Model.applicant.applicantNameSelection != '__other__' or
-    Model.applicant.applicantIsOtherSuccessor == 'no' %} {% assign
-    isCourtAppointed = true %} {% endif %} {% endif %} {% endif %} {% assign
+    Model.applicant.applicantCourtAppointed == 'yes' %} {% assign
+    isCourtAppointed = true %} {% endif %} {% endif %} {% assign
     nominatorParts = Model.applicant.applicantNominator | split: '::' %} {%
     assign nominatorRole = nominatorParts | first %} {% assign nominatorName =
     nominatorParts | last | strip %}

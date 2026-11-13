@@ -294,6 +294,32 @@ public class TemplateServiceTests
         AssertRow(document, "GROSS VALUE OF ASSETS LESS SECURED DEBTS", "$100.00");
     }
 
+    [Fact]
+    public void RenderTemplates_PgtIdentifiesCourtAppointedOtherSuccessor()
+    {
+        var document = RenderTemplate(
+            "PGT.html",
+            new Dictionary<string, object>
+            {
+                ["applicant"] = new Dictionary<string, object>
+                {
+                    ["applicantName"] = "Ned Nominee",
+                    ["applicantNameSelection"] = "__other__",
+                    ["applicantHasBeenNominated"] = "no",
+                    ["applicantIsOtherSuccessor"] = "yes",
+                    ["applicantStep3PeopleExist"] = true,
+                    ["applicantCourtAppointed"] = "yes",
+                },
+                ["deceasedName"] = "Alex Test",
+                ["applicantRelationship"] = "",
+            }
+        );
+
+        var text = NormalizeText(ParseDocument(document).Root!.Value);
+        Assert.Contains("Ned Nominee (Court-appointed applicant)", text);
+        Assert.DoesNotContain("[Applicant relationship missing]", text);
+    }
+
     private static string RenderTemplate(string fileName, Dictionary<string, object> submissionData)
     {
         var environment = new Mock<IWebHostEnvironment>();
