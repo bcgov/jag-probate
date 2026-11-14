@@ -130,7 +130,7 @@ public class TemplateServiceTests
 
             var documents = service.RenderTemplates(
                 "test",
-                new { applicant = new { name = "Test Name" } }
+                JObject.Parse("""{ "applicant": { "name": "Test Name" } }""")
             );
 
             Assert.Equal("Test Name", Assert.Single(documents));
@@ -457,6 +457,41 @@ public class TemplateServiceTests
             Assert.Contains("Creditor Org Test Ltd. is a person", text);
         }
         Assert.DoesNotContain("[section 130 paragraph]", text);
+    }
+
+    [Theory]
+    [InlineData("Canada", "British Columbia", "", "", "V8W 1A1", "British Columbia")]
+    [InlineData("United States", "British Columbia", "Washington", "", "98101", "Washington")]
+    [InlineData("Australia", "British Columbia", "", "Victoria", "3000", "Victoria")]
+    public void RenderTemplates_P5UsesOrganizationAddress(
+        string country, string province, string state, string provinceText,
+        string postalCode, string expectedRegion)
+    {
+        var payload = new JObject
+        {
+            ["deceasedName"] = "Alex Test",
+            ["applicant"] = new JObject
+            {
+                ["applicantName"] = "Olivia Court Rep",
+                ["applicantCourtOrg"] = "yes",
+                ["applicantOrgName"] = "Court Appointed Org Test Ltd.",
+                ["applicantOrgAddressStreet"] = "400 Example Avenue",
+                ["applicantOrgAddressCity"] = "Example City",
+                ["applicantOrgAddressProvince"] = province,
+                ["applicantOrgAddressState"] = state,
+                ["applicantOrgAddressProvinceText"] = provinceText,
+                ["applicantOrgAddressPostalCode"] = postalCode,
+                ["applicantOrgAddressCountry"] = country,
+                ["applicantOrdinaryAddressStreet"] = "Wrong personal address",
+            },
+        };
+
+        var document = RenderTemplate("P5.html", SubmissionEnricher.EnrichP5(payload));
+        var text = NormalizeText(ParseDocument(document).Root!.Value);
+        Assert.Contains(
+            $"I, Olivia Court Rep, of 400 Example Avenue, Example City, {expectedRegion}, {postalCode}, {country}",
+            text);
+        Assert.DoesNotContain("Wrong personal address", text);
     }
 
     [Theory]

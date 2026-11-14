@@ -61,6 +61,19 @@ Access at http://localhost:8080
 - `npm run lint` - Lint and fix files
 - `npm run test` - Run unit tests
 
+### Wizard data hydration
+
+When injecting saved or cross-step data into Form.io, use
+`mergeIntoFormData` from `src/utils/formioMergeData.ts`. Child components
+retain references to container data objects; replacing a container can leave
+them reading defaults and autosaving blank answers on resume.
+
+For browser regression checks, reopen Applicant and reload an organization
+draft, then generate P1 and P5 through the UI. Verify the complete organization
+address survives and P1 says "This applicant is not an individual." Cover
+creditor, nominated, and court-appointed organizations, including an
+international address, plus an individual draft as a control.
+
 ## API Integration
 
 The frontend communicates with the backend API through Axios. API calls are proxied through Vite's dev server:

@@ -87,6 +87,7 @@
   } from '@/utils/courtLocations';
   import { pinia } from '@/stores/pinia';
   import { recalculateForm } from '@/utils/formioRecalculate';
+  import { mergeIntoFormData } from '@/utils/formioMergeData';
   import { useWizardDataStore } from '@/stores/WizardDataStore';
   import { useWizardStateStore } from '@/stores/WizardStateStore';
   import chefsFormStylesUrl from '@/styles/chefs-form.scss?url';
@@ -945,7 +946,7 @@
                 // change event isn't missed.
                 const accumulated = wizardDataStore.accumulatedData;
                 if (Object.keys(accumulated).length > 0) {
-                  Object.assign(el.formioInstance.data, accumulated);
+                  mergeIntoFormData(el.formioInstance.data, accumulated);
                 }
                 syncFormNavigationContext();
                 void loadCourtLocations(stepKey, el);
@@ -1171,8 +1172,10 @@
         stepInjectedKeys[stepKey] ?? (stepInjectedKeys[stepKey] = new Set());
       let hasChanges = false;
       for (const [key, value] of Object.entries(accumulated)) {
-        if (!ownKeys.has(key) && el.formioInstance.data[key] !== value) {
-          el.formioInstance.data[key] = value;
+        if (
+          !ownKeys.has(key) &&
+          mergeIntoFormData(el.formioInstance.data, { [key]: value })
+        ) {
           // Keep late-synced keys marked as injected so captureStepData does not
           // treat them as dynamic step-owned fields on future changes.
           injectedKeys.add(key);
