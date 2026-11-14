@@ -241,7 +241,12 @@
     {% assign applicant = Model.applicant %} {% assign roleLetter = '[section
     130 paragraph]' %} {% assign isNominated = false %} {% assign isOrganization
     = false %} {% assign organizationName = applicant.applicantOrgName |
-    default: '[organization name]' %} {% assign organizationTitle =
+    default: '[organization name]' %} {% assign deponentName =
+    applicant.applicantName %} {% if applicant.applicantCreditorType ==
+    'organization' %} {% assign organizationName = applicant.applicantName |
+    default: '[organization name]' %} {% assign deponentName =
+    applicant.applicantCreditorRepName | default: '[Representative name
+    missing]' %} {% endif %} {% assign organizationTitle =
     applicant.applicantOrgTitle | default: '[organizational title]' %} {% assign
     isPgtDeliveryRequired = false %} {% assign hasTestamentaryDocuments = false
     %} {% assign documentSearchKnown = false %} {% assign testamentaryDocuments
@@ -374,7 +379,7 @@
           >
         </div>
         <p class="text-right">
-          of <b>{{ Model.applicant.applicantName | escape }}</b> in this case
+          of <b>{{ deponentName | escape }}</b> in this case
         </p>
         <div class="certificate-row">
           <span>and was made on</span><span class="certificate-line"></span>
@@ -396,7 +401,7 @@
         AFFIDAVIT OF APPLICANT FOR GRANT OF ADMINISTRATION WITHOUT WILL ANNEXED
       </h1>
       <p>
-        I, <b>{{ Model.applicant.applicantName | escape }}</b>, of
+        I, <b>{{ deponentName | escape }}</b>, of
         <b class="multiline"
           >{{ Model.applicant.applicantOrdinaryAddressStreet | escape }}, {{
           Model.applicant.applicantOrdinaryAddressCity | escape }}, {{
@@ -558,7 +563,7 @@
                 </td>
                 <td class="caption">
                   Signature of
-                  <b><u>{{ Model.applicant.applicantName | escape }}</u></b>
+                  <b><u>{{ deponentName | escape }}</u></b>
                 </td>
               </tr>
               <tr>
