@@ -363,10 +363,10 @@ public class TemplateServiceTests
             {
                 ["applicantName"] = "Creditor Org Test Ltd.",
                 ["applicantNameSelection"] = "Creditor Org Test Ltd.",
+                ["applicantCreditorRepName"] = "Casey Creditor",
                 ["applicantCreditorType"] = "organization",
                 ["applicantHasBeenNominated"] = "no",
                 ["applicantCourtAppointed"] = "yes",
-                ["applicantOrgName"] = "Creditor Org Test Ltd.",
                 ["applicantOrgTitle"] = "Director",
             },
             "courtOrg" => new JObject
@@ -448,6 +448,14 @@ public class TemplateServiceTests
 
         var text = NormalizeText(ParseDocument(document).Root!.Value);
         Assert.Contains(expected, text);
+        if (scenario == "creditorOrg")
+        {
+            Assert.Contains("of Casey Creditor in this case", text);
+            Assert.Contains("I, Casey Creditor, of", text);
+            Assert.Contains("Signature of Casey Creditor", text);
+            Assert.DoesNotContain("Signature of Creditor Org Test Ltd.", text);
+            Assert.Contains("Creditor Org Test Ltd. is a person", text);
+        }
         Assert.DoesNotContain("[section 130 paragraph]", text);
     }
 
