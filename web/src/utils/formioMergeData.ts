@@ -6,6 +6,8 @@ export function mergeIntoFormData(
 ): boolean {
   let changed = false;
   for (const [key, value] of Object.entries(source)) {
+    if (key === '__proto__') continue;
+
     const current = target[key];
     if (isPlainObject(current) && isPlainObject(value)) {
       if (current !== value && mergeIntoFormData(current, value)) {

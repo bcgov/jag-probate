@@ -29,4 +29,21 @@ describe('mergeIntoFormData', () => {
     expect(formData.list).toEqual([2]);
     expect(mergeIntoFormData(formData, { nested: { a: 1 } })).toBe(false);
   });
+
+  it('ignores nested __proto__ properties without polluting Object.prototype', () => {
+    const marker = 'formioMergePollutionTest';
+    const applicant = { city: '' };
+    const formData = { applicant };
+    const source = JSON.parse(
+      '{"applicant":{"__proto__":{"formioMergePollutionTest":"polluted"},"city":"Seattle"}}'
+    );
+
+    try {
+      expect(mergeIntoFormData(formData, source)).toBe(true);
+      expect(applicant.city).toBe('Seattle');
+      expect(Object.hasOwn(Object.prototype, marker)).toBe(false);
+    } finally {
+      Reflect.deleteProperty(Object.prototype, marker);
+    }
+  });
 });
