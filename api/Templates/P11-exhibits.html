@@ -227,9 +227,23 @@
     </style>
   </head>
   <body>
-    {% assign realPropertyTotal = 0 %} {% assign tangiblePropertyTotal = 0 %} {%
-    assign intangiblePropertyTotal = 0 %} {% assign realPropertyCount = 0 %} {%
-    assign tangiblePropertyCount = 0 %} {% assign intangiblePropertyCount = 0 %}
+    {% assign isCreditorOrganization = false %} {% if
+    Model.applicant.applicantNameSelection != '__other__' %} {% if
+    Model.applicant.applicantCreditorType == 'organization' %} {% assign
+    isCreditorOrganization = true %} {% elsif
+    Model.applicant.applicantCreditorType != 'individual' and
+    Model.applicant.applicantIsOrg == true %} {% assign isCreditorOrganization =
+    true %} {% elsif Model.applicant.applicantCreditorType != 'individual' and
+    Model.isApplicantOrg == 'yes' %} {% assign isCreditorOrganization = true %}
+    {% endif %} {% endif %} {% capture applicantSignerName %}{{
+    Model.applicant.applicantName | strip | default: '[Applicant name missing]'
+    | escape }}{% endcapture %} {% if isCreditorOrganization %} {% capture
+    applicantSignerName %}{{ Model.applicant.applicantCreditorRepName | strip |
+    default: '[Representative name missing]' | escape }}{% endcapture %} {%
+    endif %} {% assign realPropertyTotal = 0 %} {% assign tangiblePropertyTotal
+    = 0 %} {% assign intangiblePropertyTotal = 0 %} {% assign realPropertyCount
+    = 0 %} {% assign tangiblePropertyCount = 0 %} {% assign
+    intangiblePropertyCount = 0 %}
     <div class="exhibit-container">
       <div class="exhibit-heading">
         <div class="exhibit-label"><b>EXHIBIT A</b></div>
@@ -237,7 +251,7 @@
           <p>This is <b>Exhibit A</b> referred to in the affidavit of</p>
           <div class="certificate-name-row">
             <span class="certificate-name"
-              ><b>{{ Model.applicant.applicantName }}</b></span
+              ><b>{{ applicantSignerName }}</b></span
             >
             <span class="certificate-name-suffix">, sworn/affirmed</span>
           </div>
@@ -559,6 +573,5 @@
         </tr>
       </table>
     </div>
-
   </body>
 </html>

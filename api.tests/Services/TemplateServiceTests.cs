@@ -8,6 +8,8 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Moq;
+using Newtonsoft.Json.Linq;
+using Probate.Api.Helpers;
 using Probate.Api.Infrastructure.Options;
 using Probate.Api.Services;
 
@@ -294,7 +296,275 @@ public class TemplateServiceTests
         AssertRow(document, "GROSS VALUE OF ASSETS LESS SECURED DEBTS", "$100.00");
     }
 
-    private static string RenderTemplate(string fileName, Dictionary<string, object> submissionData)
+    [Fact]
+    public void RenderTemplates_PgtIdentifiesCourtAppointedOtherSuccessor()
+    {
+        var document = RenderTemplate(
+            "PGT.html",
+            new Dictionary<string, object>
+            {
+                ["applicant"] = new Dictionary<string, object>
+                {
+                    ["applicantName"] = "Ned Nominee",
+                    ["applicantNameSelection"] = "__other__",
+                    ["applicantHasBeenNominated"] = "no",
+                    ["applicantIsOtherSuccessor"] = "yes",
+                    ["applicantStep3PeopleExist"] = true,
+                    ["applicantCourtAppointed"] = "yes",
+                },
+                ["deceasedName"] = "Alex Test",
+                ["applicantRelationship"] = "",
+            }
+        );
+
+        var text = NormalizeText(ParseDocument(document).Root!.Value);
+        Assert.Contains("Ned Nominee (Court-appointed applicant)", text);
+        Assert.DoesNotContain("[Applicant relationship missing]", text);
+    }
+
+    [Theory]
+    [InlineData(
+        "creditorOrg",
+        "Creditor Org Test Ltd. is a person referred to in paragraph (g) of section 130 of the Wills, Estates and Succession Act. I am the Director of Creditor Org Test Ltd."
+    )]
+    [InlineData(
+        "courtOrg",
+        "Court Appointed Org Test Ltd. is a person referred to in paragraph (g) of section 130 of the Wills, Estates and Succession Act. I am the Director of Court Appointed Org Test Ltd."
+    )]
+    [InlineData(
+        "nominatedOrg",
+        "Nominee Org Test Ltd. is a person referred to in paragraph (a) of section 130 of the Wills, Estates and Succession Act. I am the Director of Nominee Org Test Ltd."
+    )]
+    [InlineData(
+        "courtIndividual",
+        "I am a person referred to in paragraph (g) of section 130 of the Wills, Estates and Succession Act."
+    )]
+    [InlineData(
+        "nominatedBySpouse",
+        "I am a person nominated under paragraph (a) of section 130 of the Wills, Estates and Succession Act."
+    )]
+    [InlineData(
+        "nominatedByChild",
+        "I am a person nominated under paragraph (c) of section 130 of the Wills, Estates and Succession Act."
+    )]
+    [InlineData(
+        "nominatedByGrandchild",
+        "I am a person nominated under paragraph (e.1) of section 130 of the Wills, Estates and Succession Act."
+    )]
+    [InlineData(
+        "spouse",
+        "I am a person referred to in paragraph (a) of section 130 of the Wills, Estates and Succession Act."
+    )]
+    public void RenderTemplates_P5MapsSection130Paragraph(string scenario, string expected)
+    {
+        var applicant = scenario switch
+        {
+            "creditorOrg" => new JObject
+            {
+                ["applicantName"] = "Creditor Org Test Ltd.",
+                ["applicantNameSelection"] = "Creditor Org Test Ltd.",
+                ["applicantCreditorRepName"] = "Casey Creditor",
+                ["applicantCreditorType"] = "organization",
+                ["applicantHasBeenNominated"] = "no",
+                ["applicantCourtAppointed"] = "yes",
+                ["applicantOrgTitle"] = "Director",
+            },
+            "courtOrg" => new JObject
+            {
+                ["applicantName"] = "Olivia Court Rep",
+                ["applicantNameSelection"] = "__other__",
+                ["applicantHasBeenNominated"] = "no",
+                ["applicantCourtAppointed"] = "yes",
+                ["applicantCourtOrg"] = "yes",
+                ["applicantOrgName"] = "Court Appointed Org Test Ltd.",
+                ["applicantOrgTitle"] = "Director",
+            },
+            "nominatedOrg" => new JObject
+            {
+                ["applicantName"] = "Nina Nomrep",
+                ["applicantNameSelection"] = "__other__",
+                ["applicantHasBeenNominated"] = "yes",
+                ["applicantNominator"] = "spouse::Nora Nominator",
+                ["applicantNomineeIsOrg"] = "yes",
+                ["applicantOrgName"] = "Nominee Org Test Ltd.",
+                ["applicantOrgTitle"] = "Director",
+            },
+            "courtIndividual" => new JObject
+            {
+                ["applicantName"] = "Ivan Courtind",
+                ["applicantNameSelection"] = "__other__",
+                ["applicantHasBeenNominated"] = "no",
+                ["applicantCourtAppointed"] = "yes",
+                ["applicantCourtOrg"] = "no",
+            },
+            "nominatedBySpouse" => new JObject
+            {
+                ["applicantName"] = "Nick Nominee",
+                ["applicantNameSelection"] = "__other__",
+                ["applicantHasBeenNominated"] = "yes",
+                ["applicantNominator"] = "spouse::Nolan Nominator",
+                ["applicantNomineeIsOrg"] = "no",
+            },
+            "nominatedByChild" => new JObject
+            {
+                ["applicantName"] = "Nick Nominee",
+                ["applicantNameSelection"] = "__other__",
+                ["applicantHasBeenNominated"] = "yes",
+                ["applicantNominator"] = "child::Cal Child",
+                ["applicantChildConsent"] = "yes",
+                ["applicantNomineeIsOrg"] = "no",
+            },
+            "nominatedByGrandchild" => new JObject
+            {
+                ["applicantName"] = "Nick Nominee",
+                ["applicantNameSelection"] = "__other__",
+                ["applicantHasBeenNominated"] = "yes",
+                ["applicantNominator"] = "grandchild::Gail Grand",
+                ["applicantIntestateConsent"] = "yes",
+                ["applicantNomineeIsOrg"] = "no",
+                ["applicantSection130Pathway"] = "s130e",
+            },
+            _ => new JObject
+            {
+                ["applicantName"] = "Basil Baseline",
+                ["applicantNameSelection"] = "Basil Baseline",
+            },
+        };
+        var payload = new JObject
+        {
+            ["applicant"] = applicant,
+            ["deceasedName"] = "Alex Test",
+            ["spouse"] = new JObject
+            {
+                ["spouseData"] = new JArray
+                {
+                    new JObject { ["spouseName"] = "" },
+                    new JObject { ["spouseName"] = "Basil Baseline" },
+                },
+            },
+        };
+
+        var document = RenderTemplate("P5.html", SubmissionEnricher.EnrichP5(payload));
+
+        var text = NormalizeText(ParseDocument(document).Root!.Value);
+        Assert.Contains(expected, text);
+        if (scenario == "creditorOrg")
+        {
+            Assert.Contains("of Casey Creditor in this case", text);
+            Assert.Contains("I, Casey Creditor, of", text);
+            Assert.Contains("Signature of Casey Creditor", text);
+            Assert.DoesNotContain("Signature of Creditor Org Test Ltd.", text);
+            Assert.Contains("Creditor Org Test Ltd. is a person", text);
+        }
+        Assert.DoesNotContain("[section 130 paragraph]", text);
+    }
+
+    [Theory]
+    [InlineData("noStep3People", new[] { "Oscar Othersucc, Applicant." })]
+    [InlineData("courtAppointed", new[] { "Oscar Othersucc, Applicant." })]
+    [InlineData(
+        "samePrioritySuccessors",
+        new[] { "Oscar Othersucc, Applicant.", "Una Unclesucc, Uncle.", "Ava Auntsucc." }
+    )]
+    [InlineData("applicantAlsoInSamePriorityList", new[] { "Oscar Othersucc, Applicant." })]
+    [InlineData("otherRelationship", new[] { "Oscar Othersucc, Cousin." })]
+    [InlineData("blankOtherRelationship", new[] { "Oscar Othersucc, Applicant." })]
+    [InlineData(
+        "otherRelationshipWithSamePrioritySuccessors",
+        new[] { "Oscar Othersucc, Cousin.", "Una Unclesucc, Uncle." }
+    )]
+    [InlineData("leftoverAnswerWithStep3Name", new[] { "None." })]
+    [InlineData("notOtherSuccessor", new[] { "None." })]
+    [InlineData("nominated", new[] { "None." })]
+    public void RenderTemplates_P2ListsOtherSuccessorApplicantInScheduleC(
+        string scenario,
+        string[] expected
+    )
+    {
+        var applicant = new JObject
+        {
+            ["applicantName"] = "Oscar Othersucc",
+            ["applicantNameSelection"] = "__other__",
+            ["applicantHasBeenNominated"] = "no",
+            ["applicantIsOtherSuccessor"] = "yes",
+            ["applicantStep3PeopleExist"] = false,
+            ["applicantSuccessorData"] = new JArray(),
+        };
+        switch (scenario)
+        {
+            case "courtAppointed":
+                applicant["applicantStep3PeopleExist"] = true;
+                applicant["applicantCourtAppointed"] = "yes";
+                break;
+            case "samePrioritySuccessors":
+                applicant["applicantSuccessorData"] = new JArray
+                {
+                    Successor("Una Unclesucc", "Uncle"),
+                    Successor("Ava Auntsucc", ""),
+                };
+                break;
+            case "applicantAlsoInSamePriorityList":
+                applicant["applicantSuccessorData"] = new JArray
+                {
+                    Successor("Oscar Othersucc", "Nephew"),
+                };
+                break;
+            case "otherRelationship":
+                applicant["applicantOtherRelationship"] = "Cousin";
+                break;
+            case "blankOtherRelationship":
+                applicant["applicantOtherRelationship"] = "   ";
+                break;
+            case "otherRelationshipWithSamePrioritySuccessors":
+                applicant["applicantOtherRelationship"] = "Cousin";
+                applicant["applicantSuccessorData"] = new JArray
+                {
+                    Successor("Una Unclesucc", "Uncle"),
+                };
+                break;
+            case "leftoverAnswerWithStep3Name":
+                applicant["applicantName"] = "Timothy El";
+                applicant["applicantNameSelection"] = "Timothy El";
+                break;
+            case "notOtherSuccessor":
+                applicant["applicantIsOtherSuccessor"] = "no";
+                applicant["applicantCourtAppointed"] = "yes";
+                break;
+            case "nominated":
+                applicant["applicantHasBeenNominated"] = "yes";
+                applicant["applicantIsOtherSuccessor"] = "";
+                applicant["applicantNominator"] = "child::Carl Childnom";
+                break;
+        }
+
+        var document = RenderTemplate(
+            "P2.html",
+            new JObject { ["applicant"] = applicant, ["deceasedName"] = "Alex Test" }
+        );
+
+        var label = Assert.Single(
+            ParseDocument(document).Descendants("p"),
+            p => NormalizeText(p.Value).StartsWith("(c) each person")
+        );
+        var rows = label
+            .ElementsAfterSelf("ol")
+            .First()
+            .Elements("li")
+            .Select(li => NormalizeText(li.Value));
+        Assert.Equal(expected, rows);
+    }
+
+    private static JObject Successor(string name, string relationship) =>
+        new()
+        {
+            ["successorName"] = name,
+            ["successorRelationship"] = relationship,
+            ["successorIsAlive"] = "yes",
+            ["successorIsAdult"] = "yes",
+            ["successorIsCompetent"] = "yes",
+        };
+
+    private static string RenderTemplate(string fileName, object submissionData)
     {
         var environment = new Mock<IWebHostEnvironment>();
         environment.SetupGet(value => value.ContentRootPath).Returns(AppContext.BaseDirectory);

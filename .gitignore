@@ -1,3 +1,6 @@
+## Customizations
+local-dev-dump/
+
 ## .NET
 bin/
 obj/

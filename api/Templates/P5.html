@@ -241,7 +241,12 @@
     {% assign applicant = Model.applicant %} {% assign roleLetter = '[section
     130 paragraph]' %} {% assign isNominated = false %} {% assign isOrganization
     = false %} {% assign organizationName = applicant.applicantOrgName |
-    default: '[organization name]' %} {% assign organizationTitle =
+    default: '[organization name]' %} {% assign deponentName =
+    applicant.applicantName %} {% if applicant.applicantCreditorType ==
+    'organization' %} {% assign organizationName = applicant.applicantName |
+    default: '[organization name]' %} {% assign deponentName =
+    applicant.applicantCreditorRepName | default: '[Representative name
+    missing]' %} {% endif %} {% assign organizationTitle =
     applicant.applicantOrgTitle | default: '[organizational title]' %} {% assign
     isPgtDeliveryRequired = false %} {% assign hasTestamentaryDocuments = false
     %} {% assign documentSearchKnown = false %} {% assign testamentaryDocuments
@@ -255,25 +260,26 @@
     have been destroyed' %} {% when 'willsNoticeInError' %} {% assign
     willsNoticeResult = 'The Wills Notice filed in relation to an alleged
     testamentary document is believed to be in error' %} {% endcase %} {% case
-    applicant.applicantSection130Pathway %} {% when 's130a' %} {% assign
-    roleLetter = 'a' %} {% if applicant.applicantHasBeenNominated == 'yes' %}{%
-    assign isNominated = true %}{% endif %} {% when 's130b' %}{% assign
-    roleLetter = 'b' %} {% when 's130c' %} {% assign roleLetter = 'c' %} {%
-    assign isNominated = true %} {% when 's130d' %}{% assign roleLetter = 'd' %}
-    {% when 's130e' %}{% assign roleLetter = 'e' %} {% when 's130e1', 's130e.1'
-    %} {% assign roleLetter = 'e.1' %} {% assign isNominated = true %} {% when
-    's130f' %}{% assign roleLetter = 'f' %} {% when 's130f1', 's130f.1' %}{%
-    assign roleLetter = 'f.1' %} {% when 's130g' %}{% assign roleLetter = 'g' %}
-    {% endcase %} {% if applicant.applicantIsOrg == true or
-    applicant.applicantNomineeIsOrg == 'yes' %} {% assign isOrganization = true
-    %} {% endif %} {% for recipient in Model.notifyPeople.notifyPeopleData %} {%
-    if recipient.isPGT == true %}{% assign isPgtDeliveryRequired = true %}{%
-    endif %} {% endfor %} {% if Model.willExists == 'yes' %}{% assign
-    hasTestamentaryDocuments = true %}{% endif %} {% if
-    Model.HaveYouLookedForDeceasedWillWellYN == 'yes' and Model.willExists ==
-    'no' %} {% assign documentSearchKnown = true %} {% endif %} {% if
-    Model.willsNoticeResultsReceived == 'yes' and Model.willsNoticeHasResults ==
-    'yes' %} {% if Model.willsNoticeFoundIndicatedWills == 'yes' %} {% assign
+    applicant.applicantSection130Pathway %} {% when 's130a' %}{% assign
+    roleLetter = 'a' %} {% when 's130b' %}{% assign roleLetter = 'b' %} {% when
+    's130c' %}{% assign roleLetter = 'c' %} {% when 's130d' %}{% assign
+    roleLetter = 'd' %} {% when 's130e' %}{% assign roleLetter = 'e' %} {% when
+    's130e1', 's130e.1' %}{% assign roleLetter = 'e.1' %} {% when 's130f' %}{%
+    assign roleLetter = 'f' %} {% when 's130f1', 's130f.1' %}{% assign
+    roleLetter = 'f.1' %} {% when 's130g' %}{% assign roleLetter = 'g' %} {%
+    endcase %} {% if applicant.applicantSection130Nominated == true %}{% assign
+    isNominated = true %}{% endif %} {% if applicant.applicantIsOrg == true or
+    applicant.applicantNomineeIsOrg == 'yes' or applicant.applicantCreditorType
+    == 'organization' or applicant.applicantCourtOrg == 'yes' %} {% assign
+    isOrganization = true %} {% endif %} {% for recipient in
+    Model.notifyPeople.notifyPeopleData %} {% if recipient.isPGT == true %}{%
+    assign isPgtDeliveryRequired = true %}{% endif %} {% endfor %} {% if
+    Model.willExists == 'yes' %}{% assign hasTestamentaryDocuments = true %}{%
+    endif %} {% if Model.HaveYouLookedForDeceasedWillWellYN == 'yes' and
+    Model.willExists == 'no' %} {% assign documentSearchKnown = true %} {% endif
+    %} {% if Model.willsNoticeResultsReceived == 'yes' and
+    Model.willsNoticeHasResults == 'yes' %} {% if
+    Model.willsNoticeFoundIndicatedWills == 'yes' %} {% assign
     hasTestamentaryDocuments = true %} {% if
     Model.willsNoticeIndicatedWillsOtherDocExists == 'yes' %} {% assign
     testamentaryDocuments =
@@ -373,7 +379,7 @@
           >
         </div>
         <p class="text-right">
-          of <b>{{ Model.applicant.applicantName | escape }}</b> in this case
+          of <b>{{ deponentName | escape }}</b> in this case
         </p>
         <div class="certificate-row">
           <span>and was made on</span><span class="certificate-line"></span>
@@ -395,7 +401,7 @@
         AFFIDAVIT OF APPLICANT FOR GRANT OF ADMINISTRATION WITHOUT WILL ANNEXED
       </h1>
       <p>
-        I, <b>{{ Model.applicant.applicantName | escape }}</b>, of
+        I, <b>{{ deponentName | escape }}</b>, of
         <b class="multiline"
           >{{ Model.applicant.applicantOrdinaryAddressStreet | escape }}, {{
           Model.applicant.applicantOrdinaryAddressCity | escape }}, {{
@@ -557,7 +563,7 @@
                 </td>
                 <td class="caption">
                   Signature of
-                  <b><u>{{ Model.applicant.applicantName | escape }}</u></b>
+                  <b><u>{{ deponentName | escape }}</u></b>
                 </td>
               </tr>
               <tr>

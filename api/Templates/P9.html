@@ -89,7 +89,7 @@
         display: grid;
         grid-template-columns: max-content 200px max-content;
         grid-template-areas:
-          'label line suffix'
+          'prefix line suffix'
           '. caption .';
         column-gap: 4px;
         row-gap: 1px;
@@ -101,26 +101,22 @@
         grid-template-columns: max-content 300px;
       }
 
-      .jurat-field > :first-child {
-        grid-area: label;
+      .jurat-prefix {
+        grid-area: prefix;
       }
-      .jurat-field .jurat-line {
+      .jurat-line {
         grid-area: line;
         min-height: 16px;
         border-bottom: 1px solid #000;
       }
 
-      .jurat-field .jurat-suffix {
+      .jurat-suffix {
         grid-area: suffix;
       }
-      .jurat-field .jurat-caption {
+      .jurat-caption {
         grid-area: caption;
         margin: 0;
         text-align: center;
-      }
-
-      .jurat-field .jurat-caption.text-left {
-        text-align: left;
       }
 
       .indent {
@@ -160,15 +156,19 @@
 
       .closing-block,
       .closing-block table,
-      .closing-block tr {
+      .closing-block tr,
+      .signature-block,
+      .signature-block table,
+      .signature-block tr {
         break-inside: avoid;
         page-break-inside: avoid;
       }
 
       .signature-block table {
         width: 100%;
-        border-collapse: separate;
-        border-spacing: 20px 0;
+        table-layout: fixed;
+        border-collapse: collapse;
+        margin-top: 20px;
       }
 
       .signature-block td {
@@ -176,17 +176,81 @@
       }
 
       .signature-line {
-        border-bottom: 1px solid #000;
+        border-top: 1px solid #000;
+        padding-top: 4px;
       }
     </style>
   </head>
   <body>
+    {% assign isOrganization = false %} {% assign isCreditorOrganization = false
+    %} {% if Model.applicant.applicantNameSelection != '__other__' %} {% if
+    Model.applicant.applicantCreditorType == 'organization' %} {% assign
+    isOrganization = true %} {% assign isCreditorOrganization = true %} {% elsif
+    Model.applicant.applicantCreditorType != 'individual' and
+    Model.applicant.applicantIsOrg == true %} {% assign isOrganization = true %}
+    {% assign isCreditorOrganization = true %} {% elsif
+    Model.applicant.applicantCreditorType != 'individual' and
+    Model.isApplicantOrg == 'yes' %} {% assign isOrganization = true %} {%
+    assign isCreditorOrganization = true %} {% endif %} {% elsif
+    Model.applicant.applicantHasBeenNominated == 'yes' and
+    Model.applicant.applicantNomineeIsOrg == 'yes' %} {% assign isOrganization =
+    true %} {% elsif Model.applicant.applicantHasBeenNominated == 'no' and
+    Model.applicant.applicantIsOtherSuccessor == 'no' and
+    Model.applicant.applicantCourtAppointed == 'yes' and
+    Model.applicant.applicantCourtOrg == 'yes' %} {% assign isOrganization =
+    true %} {% endif %} {% capture applicantSignerName %}{{
+    Model.applicant.applicantName | strip | default: '[Applicant name missing]'
+    | escape }}{% endcapture %} {% if isCreditorOrganization %} {% capture
+    applicantSignerName %}{{ Model.applicant.applicantCreditorRepName | strip |
+    default: '[Representative name missing]' | escape }}{% endcapture %} {%
+    endif %} {% if isOrganization %} {% capture applicantOrganizationName %}{{
+    Model.applicant.applicantOrgName | strip | default: '[Organization name
+    missing]' | escape }}{% endcapture %} {% if isCreditorOrganization %} {%
+    capture applicantOrganizationName %}{{ Model.applicant.applicantName | strip
+    | default: '[Organization name missing]' | escape }}{% endcapture %} {%
+    endif %} {% endif %} {% if isOrganization %} {% capture addressStreet %}{{
+    Model.applicant.applicantOrgAddressStreet | strip | escape }}{% endcapture
+    %} {% capture addressCity %}{{ Model.applicant.applicantOrgAddressCity |
+    strip | escape }}{% endcapture %} {% capture addressProvince %}{{
+    Model.applicant.applicantOrgAddressProvince | strip | escape }}{% endcapture
+    %} {% capture addressState %}{{ Model.applicant.applicantOrgAddressState |
+    strip | escape }}{% endcapture %} {% capture addressProvinceText %}{{
+    Model.applicant.applicantOrgAddressProvinceText | strip | escape }}{%
+    endcapture %} {% capture addressPostal %}{{
+    Model.applicant.applicantOrgAddressPostalCode | strip | escape }}{%
+    endcapture %} {% capture addressCountry %}{{
+    Model.applicant.applicantOrgAddressCountry | strip | escape }}{% endcapture
+    %} {% else %} {% capture addressStreet %}{{
+    Model.applicant.applicantOrdinaryAddressStreet | strip | escape }}{%
+    endcapture %} {% capture addressCity %}{{
+    Model.applicant.applicantOrdinaryAddressCity | strip | escape }}{%
+    endcapture %} {% capture addressProvince %}{{
+    Model.applicant.applicantOrdinaryAddressProvince | strip | escape }}{%
+    endcapture %} {% capture addressState %}{{
+    Model.applicant.applicantOrdinaryAddressState | strip | escape }}{%
+    endcapture %} {% capture addressProvinceText %}{{
+    Model.applicant.applicantOrdinaryAddressProvinceText | strip | escape }}{%
+    endcapture %} {% capture addressPostal %}{{
+    Model.applicant.applicantOrdinaryAddressPostalCode | strip | escape }}{%
+    endcapture %} {% capture addressCountry %}{{
+    Model.applicant.applicantOrdinaryAddressCountry | strip | escape }}{%
+    endcapture %} {% endif %} {% assign addressRegion = addressProvinceText %}
+    {% if addressCountry == 'Canada' %} {% assign addressRegion =
+    addressProvince | default: '[Province missing]' %} {% elsif addressCountry
+    == 'United States' %} {% assign addressRegion = addressState | default:
+    '[State missing]' %} {% endif %} {% capture applicantAddress %}{{
+    addressStreet | default: '[Street address missing]' }}, {{ addressCity |
+    default: '[City missing]' }}{% if addressRegion != '' %}, {{ addressRegion
+    }}{% endif %}{% if addressPostal != '' %}, {{ addressPostal }}{% elsif
+    addressCountry == 'Canada' or addressCountry == 'United States' %}, [Postal
+    code missing]{% endif %}, {{ addressCountry | default: '[Country missing]'
+    }}{% endcapture %}
     <div class="affidavit-container">
       <p class="text-center"><b>FORM P9</b> (RULE 25-3 (2) )</p>
 
       <p class="text-right">
-        This is the <b>1st</b> affidavit of
-        <b>{{ Model.applicant.applicantName }}</b> in this case
+        This is the <b>1st</b> affidavit of <b>{{ applicantSignerName }}</b> in
+        this case
       </p>
       <div class="certificate-row">
         <span>and was made on</span>
@@ -210,16 +274,14 @@
       <p class="text-center"><b>AFFIDAVIT OF DELIVERY</b></p>
       <br />
       <p>
-        I, <b>{{ Model.applicant.applicantName }}</b>, of
-        <b>{{ Model.applicant.applicantOrdinaryAddressStreet }}</b>,
-        <b>{{ Model.applicant.applicantOrdinaryAddressCity }}</b>,
+        I, <b>{{ applicantSignerName }}</b>, of <b>{{ applicantAddress }}</b>,
         <b
-          >{{ Model.applicant.applicantOrdinaryAddressProvince }}{{
-          Model.applicant.applicantOrdinaryAddressState }}{{
-          Model.applicant.applicantOrdinaryAddressProvinceText }}</b
-        >, <b>{{ Model.applicant.applicantOrdinaryAddressPostalCode }}</b>,
-        <b>{{ Model.applicant.applicantOrdinaryAddressCountry }}</b>,
-        <b>{{ Model.applicant.applicantOccupation }}</b>, AFFIRM / SWEAR THAT:
+          >{% if isOrganization %}{{ Model.applicant.applicantOrgTitle | strip |
+          default: '[Organization role missing]' | escape }} for {{
+          applicantOrganizationName }}{% else %}{{
+          Model.applicant.applicantOccupation | strip | default: '[Occupation
+          missing]' | escape }}{% endif %}</b
+        >, AFFIRM / SWEAR THAT:
       </p>
 
       <p class="indent">
@@ -245,32 +307,29 @@
       <div class="closing-block">
         <p>AFFIRMED / SWORN BEFORE ME</p>
         <div class="jurat-field">
-          <span>at</span>
+          <span class="jurat-prefix">at</span>
           <span class="jurat-line"></span>
           <span class="jurat-suffix">, British Columbia</span>
-          <span class="caption jurat-caption text-left"
-            >[Commissioner city/town]</span
-          >
+          <span class="caption jurat-caption">[Commissioner city/town]</span>
         </div>
         <div class="jurat-field date">
-          <span>on</span>
+          <span class="jurat-prefix">on</span>
           <span class="jurat-line"></span>
-          <span class="caption jurat-caption text-left">[Date]</span>
+          <span class="caption jurat-caption">[Date]</span>
         </div>
-        <br />
 
         <div class="signature-block">
-          <table style="table-layout: fixed">
+          <table>
             <tr>
-              <td class="signature-line" style="width: 50%">&nbsp;</td>
-              <td class="signature-line" style="width: 50%">&nbsp;</td>
+              <td class="signature-line">&nbsp;</td>
+              <td class="signature-line">&nbsp;</td>
             </tr>
             <tr>
               <td class="caption">
                 <i>A commissioner for taking affidavits for British Columbia</i>
               </td>
               <td class="caption">
-                Signature of <b><u>{{ Model.applicant.applicantName }}</u></b>
+                Signature of <b><u>{{ applicantSignerName }}</u></b>
               </td>
             </tr>
           </table>

@@ -52,6 +52,7 @@ public class ReportController : ControllerBase
         var data = request.TemplateKey.ToUpperInvariant() switch
         {
             "PGT" => SubmissionEnricher.EnrichPGT(request.SubmissionData),
+            "P5" => SubmissionEnricher.EnrichP5(request.SubmissionData),
             _ => request.SubmissionData,
         };
 

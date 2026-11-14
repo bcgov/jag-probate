@@ -193,4 +193,118 @@ public class SubmissionEnricherTests
             adult["incapableAdultNomineeResAddress"]?.Value<string>()
         );
     }
+
+    [Theory]
+    [InlineData("no", "", "yes", "", "", "Creditor Org", "s130g", false)]
+    [InlineData("yes", "spouse::Sam Spouse", "", "", "", "Nina Nominee", "s130a", true)]
+    [InlineData("yes", "child::Cal Child", "", "yes", "", "Nina Nominee", "s130c", true)]
+    [InlineData("yes", "grandchild::Gail Grand", "", "", "yes", "Nina Nominee", "s130e1", true)]
+    [InlineData("yes", "parent::Pat Parent", "", "", "yes", "Nina Nominee", "s130e1", true)]
+    [InlineData("yes", "sibling::Sib Sibling", "", "", "yes", "Nina Nominee", "s130e1", true)]
+    [InlineData("", "", "", "", "", "Sam Spouse", "s130a", false)]
+    public void EnrichP5_DerivesSection130Pathway(
+        string nominated,
+        string nominator,
+        string courtAppointed,
+        string childConsent,
+        string intestateConsent,
+        string applicantName,
+        string expectedPathway,
+        bool expectedNominated
+    )
+    {
+        var payload = P5Payload(
+            new JObject
+            {
+                ["applicantName"] = applicantName,
+                ["applicantHasBeenNominated"] = nominated,
+                ["applicantNominator"] = nominator,
+                ["applicantCourtAppointed"] = courtAppointed,
+                ["applicantChildConsent"] = childConsent,
+                ["applicantIntestateConsent"] = intestateConsent,
+                ["applicantSection130Pathway"] = "",
+            }
+        );
+
+        var applicant = (JObject)((JObject)SubmissionEnricher.EnrichP5(payload))["applicant"]!;
+
+        Assert.Equal(expectedPathway, applicant.Value<string>("applicantSection130Pathway"));
+        Assert.Equal(expectedNominated, applicant.Value<bool>("applicantSection130Nominated"));
+    }
+
+    [Fact]
+    public void EnrichP5_NominatorPrefixOverridesCalculatedDirectSuccessorPathway()
+    {
+        var payload = P5Payload(
+            new JObject
+            {
+                ["applicantName"] = "Nina Nominee",
+                ["applicantNameSelection"] = "__other__",
+                ["applicantHasBeenNominated"] = "yes",
+                ["applicantNominator"] = "grandchild::Gail Grand",
+                ["applicantIntestateConsent"] = "yes",
+                ["applicantSection130Pathway"] = "s130e",
+            }
+        );
+
+        var applicant = (JObject)((JObject)SubmissionEnricher.EnrichP5(payload))["applicant"]!;
+
+        Assert.Equal("s130e1", applicant.Value<string>("applicantSection130Pathway"));
+        Assert.True(applicant.Value<bool>("applicantSection130Nominated"));
+    }
+
+    [Theory]
+    [InlineData("s130b")]
+    [InlineData("s130d")]
+    [InlineData("s130e")]
+    [InlineData("s130f")]
+    public void EnrichP5_KeepsCalculatedDirectSuccessorPathway(string pathway)
+    {
+        var payload = P5Payload(
+            new JObject
+            {
+                ["applicantName"] = "Cal Child",
+                ["applicantSection130Pathway"] = pathway,
+            }
+        );
+
+        var applicant = (JObject)((JObject)SubmissionEnricher.EnrichP5(payload))["applicant"]!;
+
+        Assert.Equal(pathway, applicant.Value<string>("applicantSection130Pathway"));
+        Assert.False(applicant.Value<bool>("applicantSection130Nominated"));
+    }
+
+    [Fact]
+    public void EnrichP5_LeavesPathwayUnsetWhenNominationConsentIsMissing()
+    {
+        var payload = P5Payload(
+            new JObject
+            {
+                ["applicantName"] = "Nina Nominee",
+                ["applicantHasBeenNominated"] = "yes",
+                ["applicantNominator"] = "child::Cal Child",
+                ["applicantChildConsent"] = "no",
+                ["applicantSection130Pathway"] = "",
+            }
+        );
+
+        var applicant = (JObject)((JObject)SubmissionEnricher.EnrichP5(payload))["applicant"]!;
+
+        Assert.Equal("", applicant.Value<string>("applicantSection130Pathway"));
+        Assert.False(applicant.Value<bool>("applicantSection130Nominated"));
+    }
+
+    private static JObject P5Payload(JObject applicant) =>
+        new()
+        {
+            ["applicant"] = applicant,
+            ["spouse"] = new JObject
+            {
+                ["spouseData"] = new JArray
+                {
+                    new JObject { ["spouseName"] = "" },
+                    new JObject { ["spouseName"] = "Sam Spouse" },
+                },
+            },
+        };
 }
