@@ -403,13 +403,23 @@
       <p>
         I, <b>{{ deponentName | escape }}</b>, of
         <b class="multiline"
-          >{{ Model.applicant.applicantOrdinaryAddressStreet | escape }}, {{
+          >{% if isOrganization %}{{
+          applicant.applicantOrgAddressStreet | escape }}, {{
+          applicant.applicantOrgAddressCity | escape }}, {% if
+          applicant.applicantOrgAddressCountry == 'Canada' %}{{
+          applicant.applicantOrgAddressProvince | escape }}{% elsif
+          applicant.applicantOrgAddressCountry == 'United States' %}{{
+          applicant.applicantOrgAddressState | escape }}{% else %}{{
+          applicant.applicantOrgAddressProvinceText | escape }}{% endif %}, {{
+          applicant.applicantOrgAddressPostalCode | escape }}, {{
+          applicant.applicantOrgAddressCountry | escape }}{% else %}{{
+          Model.applicant.applicantOrdinaryAddressStreet | escape }}, {{
           Model.applicant.applicantOrdinaryAddressCity | escape }}, {{
           Model.applicant.applicantOrdinaryAddressProvince | escape }}{{
           Model.applicant.applicantOrdinaryAddressState | escape }}{{
           Model.applicant.applicantOrdinaryAddressProvinceText | escape }}, {{
           Model.applicant.applicantOrdinaryAddressPostalCode | escape }}, {{
-          Model.applicant.applicantOrdinaryAddressCountry | escape }}</b
+          Model.applicant.applicantOrdinaryAddressCountry | escape }}{% endif %}</b
         >, <b>{{ Model.applicant.applicantOccupation | escape }}</b>, SWEAR (OR
         AFFIRM) THAT:
       </p>

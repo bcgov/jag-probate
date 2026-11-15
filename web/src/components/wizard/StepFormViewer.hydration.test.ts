@@ -156,6 +156,44 @@ describe('StepFormViewer cross-step hydration on resume', () => {
     throw new Error('chefs-form-viewer element was never created');
   }
 
+  it('hydrates existing container objects before child calculations run', async () => {
+    mountViewer(
+      makeChefsService(async () => [
+        {
+          formId: 'form-applicant',
+          data: JSON.stringify({
+            applicant: {
+              applicantOrgTitle: 'Director',
+              applicantOrgAddressCity: 'Seattle',
+              applicantOrgAddressCountry: 'United States',
+            },
+          }),
+        },
+      ])
+    );
+    const el = await getFakeFilingElement();
+    const applicant = {
+      applicantOrgTitle: '',
+      applicantOrgAddressCity: '',
+      applicantOrgAddressCountry: 'Canada',
+    };
+    el.formioInstance.data.applicant = applicant;
+    el.formioInstance.components.applicantOrgAddressCity = { data: applicant };
+    el.dispatchEvent(new CustomEvent('formio:ready'));
+    await nextTick();
+
+    // A child's calculateValue reads its retained data object, not just root data.
+    const childData = el.formioInstance.getComponent(
+      'applicantOrgAddressCity'
+    ).data;
+    const calculatedCity = childData.applicantOrgTitle
+      ? childData.applicantOrgAddressCity
+      : '';
+    expect(calculatedCity).toBe('Seattle');
+    expect(childData.applicantOrgAddressCountry).toBe('United States');
+    expect(childData).toBe(el.formioInstance.data.applicant);
+  });
+
   it('injects a courthouse name loaded from another step on the very first render (no revisit needed)', async () => {
     // Resume flow: the DB already has form-applicant's data by the time
     // getAllStepData resolves — this is the exact scenario reported: land
