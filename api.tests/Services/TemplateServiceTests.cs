@@ -626,6 +626,46 @@ public class TemplateServiceTests
         );
     }
 
+    [Theory]
+    [InlineData("no", "yes", "British Columbia", "domiciled")]
+    [InlineData("yes", "yes", "Alberta", "non-domiciled")]
+    [InlineData("yes", "no", "British Columbia", "domiciled")]
+    [InlineData("no", "no", "Alberta", "non-domiciled")]
+    public void RenderTemplates_P2RequestsOnlyApplicableCopies(
+        string initial,
+        string final,
+        string province,
+        string domicile
+    )
+    {
+        var data = new JObject
+        {
+            ["q42CanIdentifyAssets"] = initial,
+            ["q424AssetsConfirmed"] = final,
+            ["deceasedAddressCountry"] = "Canada",
+            ["deceasedAddressProvince"] = province,
+            ["estateGrantCopies"] = 1,
+            ["estateAuthCopies"] = 2,
+            ["estateDomiciledCopies"] = 3,
+            ["estateNonDomiciledCopies"] = 4,
+        };
+        var document = ParseDocument(RenderTemplate("P2.html", data));
+        var paragraphs = document.Descendants("p").Select(p => NormalizeText(p.Value)).ToList();
+        var requests = paragraphs.Where(p => p.StartsWith("I request ")).ToList();
+        Assert.Equal(final == "no" ? 3 : 2, requests.Count);
+        Assert.Contains("I request 1 certified copy of the estate grant.", requests);
+        Assert.Equal(final == "no", requests.Contains("I request 2 certified copies of the authorization to obtain estate information."));
+        Assert.Contains($"I request {(domicile == "domiciled" ? 3 : 4)} certified copies of the affidavit of assets and liabilities for {domicile} estate grant.", requests);
+        Assert.Equal(final == "no", paragraphs.Any(p => p.StartsWith("I am seeking an authorization")));
+        Assert.Equal(final == "yes", paragraphs.Any(p => p.StartsWith("I am submitting with this submission")));
+
+        data["estateGrantCopies"] = 0;
+        data["estateAuthCopies"] = null;
+        data.Remove("estateDomiciledCopies");
+        data.Remove("estateNonDomiciledCopies");
+        Assert.DoesNotContain("I request ", NormalizeText(ParseDocument(RenderTemplate("P2.html", data)).Root!.Value));
+    }
+
     private static JObject Successor(string name, string relationship) =>
         new()
         {
