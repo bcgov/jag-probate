@@ -107,6 +107,10 @@
         break-before: avoid;
       }
 
+      .signature-block {
+        margin-top: 4em;
+      }
+
       .closing-block,
       .closing-block table,
       .closing-block tr,
@@ -126,6 +130,11 @@
 
       .signature-block td {
         vertical-align: top;
+        text-align: center;
+      }
+
+      .signature-spacer {
+        width: 24px;
       }
 
       .signature-line {
@@ -373,15 +382,17 @@
 
         <div class="signature-block">
           <table>
+            <colgroup>
+              <col />
+              <col class="signature-spacer" />
+              <col />
+            </colgroup>
             <tr>
-              <td class="signature-line">&nbsp;</td>
-              <td class="signature-line">&nbsp;</td>
-            </tr>
-            <tr>
-              <td class="caption">
+              <td class="signature-line caption">
                 <i>A commissioner for taking affidavits for British Columbia</i>
               </td>
-              <td class="caption">
+              <td></td>
+              <td class="signature-line caption">
                 Signature of <b><u>{{ applicantSignerName }}</u></b>
               </td>
             </tr>
