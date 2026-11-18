@@ -464,8 +464,13 @@ public class TemplateServiceTests
     [InlineData("United States", "British Columbia", "Washington", "", "98101", "Washington")]
     [InlineData("Australia", "British Columbia", "", "Victoria", "3000", "Victoria")]
     public void RenderTemplates_P5UsesOrganizationAddress(
-        string country, string province, string state, string provinceText,
-        string postalCode, string expectedRegion)
+        string country,
+        string province,
+        string state,
+        string provinceText,
+        string postalCode,
+        string expectedRegion
+    )
     {
         var payload = new JObject
         {
@@ -490,7 +495,8 @@ public class TemplateServiceTests
         var text = NormalizeText(ParseDocument(document).Root!.Value);
         Assert.Contains(
             $"I, Olivia Court Rep, of 400 Example Avenue, Example City, {expectedRegion}, {postalCode}, {country}",
-            text);
+            text
+        );
         Assert.DoesNotContain("Wrong personal address", text);
     }
 
@@ -577,9 +583,8 @@ public class TemplateServiceTests
             new JObject { ["applicant"] = applicant, ["deceasedName"] = "Alex Test" }
         );
 
-        var label = Assert.Single(
-            ParseDocument(document).Descendants("p"),
-            p => NormalizeText(p.Value).StartsWith("(c) each person")
+        var label = Assert.Single(ParseDocument(document).Descendants("p"), p =>
+            NormalizeText(p.Value).StartsWith("(c) each person")
         );
         var rows = label
             .ElementsAfterSelf("ol")
@@ -587,6 +592,38 @@ public class TemplateServiceTests
             .Elements("li")
             .Select(li => NormalizeText(li.Value));
         Assert.Equal(expected, rows);
+    }
+
+    [Theory]
+    [InlineData("British Columbia", "domiciled", "estateDomiciledCopies")]
+    [InlineData("Alberta", "non-domiciled", "estateNonDomiciledCopies")]
+    public void RenderTemplates_P2RequestsAffidavitCopiesAlongsideP18(
+        string province,
+        string domicile,
+        string copyField
+    )
+    {
+        var document = RenderTemplate(
+            "P2.html",
+            new JObject
+            {
+                ["q42CanIdentifyAssets"] = "yes",
+                ["q424AssetsConfirmed"] = "no",
+                ["deceasedAddressCountry"] = "Canada",
+                ["deceasedAddressProvince"] = province,
+                ["estateAuthCopies"] = 2,
+                [copyField] = 3,
+            }
+        );
+        var text = NormalizeText(ParseDocument(document).Root!.Value);
+        Assert.Contains(
+            "2 certified copies of the authorization to obtain estate information",
+            text
+        );
+        Assert.Contains(
+            $"3 certified copies of the affidavit of assets and liabilities for {domicile} estate grant",
+            text
+        );
     }
 
     private static JObject Successor(string name, string relationship) =>
