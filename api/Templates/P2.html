@@ -219,11 +219,18 @@
     append: '|' %} {% endunless %} {% endif %} {% for successor in
     applicant.applicantSuccessorData %} {% if successor.successorName and
     successor.successorName != '' %} {% assign nameKey = successor.successorName
-    | prepend: '|' | append: '|' %} {% unless listedNames contains nameKey %}
+    | prepend: '|' | append: '|' %} {% unless listedNames contains nameKey %} {%
+    assign successorRelationship = successor.successorRelationship | strip %} 
+    {% if successorRelationship == '' %} {% for entry in
+    applicant.applicantSamePrioritySuccessorNames %} {% assign entryName =
+    entry.applicantSuccessorEntry | strip %} {% if successorRelationship == ''
+    and entryName == successor.successorName %} {% assign successorRelationship
+    = entry.relationship | strip %} {% endif %} {% endfor %} {% endif %}
     <li>
-      <b>{{ successor.successorName | escape }}</b>{% if
-      successor.successorRelationship and successor.successorRelationship != ''
-      %}, <b>{{ successor.successorRelationship | escape }}</b>{% endif %}.
+      <b>{{ successor.successorName | escape }}</b>{% if successorRelationship
+      != '' %}, {% assign successorRelationshipPrefix = successorRelationship |
+      downcase | slice: 0, 11 %}{% if successorRelationshipPrefix != "deceased's "
+      %}deceased's {% endif %}{{ successorRelationship | escape }}{% endif %}.
     </li>
     {% assign listedNames = listedNames | append: successor.successorName |
     append: '|' %} {% endunless %} {% endif %} {% endfor %} {% endcapture %} {%
@@ -281,15 +288,21 @@
         "deceased"):
       </p>
       <p><b>Grant of administration without will annexed</b></p>
+      {% assign generateP18 = false %}
+      {% if Model.q42CanIdentifyAssets == 'yes' or Model.q42CanIdentifyAssets == 'no' %}
+        {% unless Model.q424AssetsConfirmed == 'yes' %}
+          {% assign generateP18 = true %}
+        {% endunless %}
+      {% endif %}
       {% if Model.q424AssetsConfirmed == 'yes' %}
       <p>
         I am submitting with this submission for estate grant an affidavit of
         assets and liabilities in Form P10 or P11 and therefore do not require
         an authorization to obtain estate information.
       </p>
-      {% elsif Model.q424AssetsConfirmed == 'no' %}
+      {% elsif generateP18 %}
       <p>
-        I am seeking an authorization to obtain estate information so that I/we
+        I am seeking an authorization to obtain estate information so that I
         can secure the information necessary to prepare and submit an affidavit
         of assets and liabilities for estate grant.
       </p>
@@ -299,7 +312,7 @@
         Model.estateGrantCopies == 1 %}copy{% else %}copies{% endif %} of the
         estate grant.
       </p>
-      {% endif %} {% if Model.q424AssetsConfirmed == 'no' and Model.estateAuthCopies > 0 %}
+      {% endif %} {% if generateP18 and Model.estateAuthCopies > 0 %}
       <p>
         I request <b>{{ Model.estateAuthCopies | escape }}</b> certified {% if
         Model.estateAuthCopies == 1 %}copy{% else %}copies{% endif %} of the
