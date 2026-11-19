@@ -12,6 +12,53 @@ describe('ApplicationStepSidebar', () => {
     initWizardState('', { hiddenSteps: {}, hiddenSubsteps: {} }, {}, {});
   });
 
+  it('enters Application Documents when the default P9 preview is hidden and skipped assets are incomplete', async () => {
+    const steps: WizardStep[] = [
+      {
+        key: 'form-assets',
+        number: 6,
+        title: 'Assets',
+        defaultSubstep: 'form-assets-details',
+        substeps: [
+          { key: 'form-assets-details', label: 'Assets Details' },
+          {
+            key: 'form-assets-real-property-bc',
+            label: 'Real Property Within BC',
+          },
+        ],
+      },
+      {
+        key: 'form-application-documents',
+        number: 7,
+        title: 'Application Documents',
+        defaultSubstep: 'form-preview-p9',
+        substeps: [
+          { key: 'form-preview-p9', label: 'Preview P9' },
+          { key: 'form-preview-p5', label: 'Preview P5' },
+        ],
+      },
+    ];
+    const navigate = vi.fn();
+    const app = createApp(ApplicationStepSidebar, {
+      steps,
+      initialStep: 'form-assets-details',
+      onNavigate: navigate,
+    });
+    app.config.warnHandler = () => {};
+    const host = document.createElement('div');
+    app.mount(host);
+    try {
+      window.wizardSetSubstepVisibility?.('form-preview-p9', false);
+      window.wizardValidateStep = vi.fn(() => false);
+      await nextTick();
+      host.querySelectorAll<HTMLElement>('.wiz-step')[1].click();
+      expect(navigate).toHaveBeenLastCalledWith('form-preview-p5');
+    } finally {
+      delete window.wizardValidateStep;
+      app.unmount();
+    }
+  });
+
   it('shows statuses restored after the primary sidebar has initialized', async () => {
     const steps: WizardStep[] = [
       {

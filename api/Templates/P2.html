@@ -156,16 +156,7 @@
     </style>
   </head>
   <body>
-    {% assign applicant = Model.applicant %} {% assign generateP18 = false %} {%
-    assign hasAssetsAffidavit = false %} {% if Model.q42CanIdentifyAssets ==
-    'no' %} {% assign generateP18 = true %} {% elsif Model.q42CanIdentifyAssets
-    == 'yes' %} {% if Model.q424AssetsConfirmed == 'no' %} {% assign generateP18
-    = true %} {% elsif Model.q424AssetsConfirmed == 'yes' %} {% if
-    Model.deceasedAddressCountry and Model.deceasedAddressCountry != '' %} {% if
-    Model.deceasedAddressCountry != 'Canada' %} {% assign hasAssetsAffidavit =
-    true %} {% elsif Model.deceasedAddressProvince and
-    Model.deceasedAddressProvince != '' %} {% assign hasAssetsAffidavit = true
-    %} {% endif %} {% endif %} {% endif %} {% endif %} {% assign
+    {% assign applicant = Model.applicant %} {% assign
     hasNoticeRecipients = false %} {% for recipient in
     Model.notifyPeople.notifyPeopleData %} {% if recipient.recipientName and
     recipient.recipientName != '' %} {% assign hasNoticeRecipients = true %} {%
@@ -290,13 +281,13 @@
         "deceased"):
       </p>
       <p><b>Grant of administration without will annexed</b></p>
-      {% if hasAssetsAffidavit %}
+      {% if Model.q424AssetsConfirmed == 'yes' %}
       <p>
         I am submitting with this submission for estate grant an affidavit of
         assets and liabilities in Form P10 or P11 and therefore do not require
         an authorization to obtain estate information.
       </p>
-      {% elsif generateP18 %}
+      {% elsif Model.q424AssetsConfirmed == 'no' %}
       <p>
         I am seeking an authorization to obtain estate information so that I/we
         can secure the information necessary to prepare and submit an affidavit
@@ -308,13 +299,13 @@
         Model.estateGrantCopies == 1 %}copy{% else %}copies{% endif %} of the
         estate grant.
       </p>
-      {% endif %} {% if generateP18 and Model.estateAuthCopies > 0 %}
+      {% endif %} {% if Model.q424AssetsConfirmed == 'no' and Model.estateAuthCopies > 0 %}
       <p>
         I request <b>{{ Model.estateAuthCopies | escape }}</b> certified {% if
         Model.estateAuthCopies == 1 %}copy{% else %}copies{% endif %} of the
         authorization to obtain estate information.
       </p>
-      {% endif %} {% if hasAssetsAffidavit %} {% if Model.deceasedAddressCountry
+      {% endif %} {% if Model.deceasedAddressCountry
       == 'Canada' and Model.deceasedAddressProvince == 'British Columbia' %} {%
       if Model.estateDomiciledCopies > 0 %}
       <p>
@@ -329,7 +320,7 @@
         %} of the affidavit of assets and liabilities for non-domiciled estate
         grant.
       </p>
-      {% endif %} {% endif %}
+      {% endif %}
 
       <div class="tail-group">
         <p>This submission for estate grant has 4 Parts:</p>

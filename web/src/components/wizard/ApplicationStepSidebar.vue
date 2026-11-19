@@ -431,7 +431,15 @@
   function onStepClick(step: WizardStep) {
     const stepKey = step.key;
     if (isStepDisabled(stepKey) || isStepHidden(stepKey)) return;
-    updateSidebar(step.defaultSubstep);
+    if (!isSubstepHidden(step.defaultSubstep)) {
+      updateSidebar(step.defaultSubstep);
+      return;
+    }
+    // P9, the default Step 7 preview, is hidden when nobody needs notice.
+    const firstAvailable = step.substeps.find(
+      ({ key }) => !isSubstepHidden(key) && !isSubstepDisabled(key)
+    );
+    if (firstAvailable) updateSidebar(firstAvailable.key);
   }
 
   /**
