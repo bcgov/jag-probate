@@ -505,14 +505,29 @@ public class TemplateServiceTests
     [InlineData("courtAppointed", new[] { "Oscar Othersucc, Applicant." })]
     [InlineData(
         "samePrioritySuccessors",
-        new[] { "Oscar Othersucc, Applicant.", "Una Unclesucc, Uncle.", "Ava Auntsucc." }
+        new[]
+        {
+            "Oscar Othersucc, Applicant.",
+            "Una Unclesucc, deceased's Uncle.",
+            "Ava Auntsucc."
+        }
     )]
     [InlineData("applicantAlsoInSamePriorityList", new[] { "Oscar Othersucc, Applicant." })]
+    [InlineData(
+        "samePriorityDatagridRelationships",
+        new[]
+        {
+            "Oscar Othersucc, Applicant.",
+            "Patty Bouvier, deceased's mother's sister.",
+            "Selma Bouvier, deceased's mother's sister.",
+            "Abbey Simpson.",
+        }
+    )]
     [InlineData("otherRelationship", new[] { "Oscar Othersucc, Cousin." })]
     [InlineData("blankOtherRelationship", new[] { "Oscar Othersucc, Applicant." })]
     [InlineData(
         "otherRelationshipWithSamePrioritySuccessors",
-        new[] { "Oscar Othersucc, Cousin.", "Una Unclesucc, Uncle." }
+        new[] { "Oscar Othersucc, Cousin.", "Una Unclesucc, deceased's Uncle." }
     )]
     [InlineData("leftoverAnswerWithStep3Name", new[] { "None." })]
     [InlineData("notOtherSuccessor", new[] { "None." })]
@@ -548,6 +563,28 @@ public class TemplateServiceTests
                 applicant["applicantSuccessorData"] = new JArray
                 {
                     Successor("Oscar Othersucc", "Nephew"),
+                };
+                break;
+            case "samePriorityDatagridRelationships":
+                applicant["applicantSuccessorData"] = new JArray
+                {
+                    Successor("Patty Bouvier", ""),
+                    Successor("Selma Bouvier", ""),
+                    Successor("Abbey Simpson", ""),
+                };
+                applicant["applicantSamePrioritySuccessorNames"] = new JArray
+                {
+                    new JObject
+                    {
+                        ["applicantSuccessorEntry"] = " Patty Bouvier ",
+                        ["relationship"] = "mother's sister",
+                    },
+                    new JObject
+                    {
+                        ["applicantSuccessorEntry"] = "Selma Bouvier",
+                        ["relationship"] = " mother's sister ",
+                    },
+                    new JObject { ["applicantSuccessorEntry"] = "Abbey Simpson" },
                 };
                 break;
             case "otherRelationship":
@@ -624,6 +661,41 @@ public class TemplateServiceTests
             $"3 certified copies of the affidavit of assets and liabilities for {domicile} estate grant",
             text
         );
+    }
+
+    [Theory]
+    [InlineData("no", null, true)]
+    [InlineData("no", "", true)]
+    [InlineData("yes", null, true)]
+    [InlineData(null, null, false)]
+    public void RenderTemplates_P2WithSkippedAssetConfirmation(
+        string? initial, string? final, bool expectsP18
+    )
+    {
+        var data = new JObject
+        {
+            ["deceasedAddressCountry"] = "Canada",
+            ["deceasedAddressProvince"] = "Alberta",
+            ["estateGrantCopies"] = 3,
+            ["estateAuthCopies"] = 2,
+            ["estateNonDomiciledCopies"] = 3,
+        };
+        if (initial != null)
+            data["q42CanIdentifyAssets"] = initial;
+        if (final != null)
+            data["q424AssetsConfirmed"] = final;
+
+        var paragraphs = ParseDocument(RenderTemplate("P2.html", data))
+            .Descendants("p").Select(p => NormalizeText(p.Value)).ToList();
+        const string declaration = "I am seeking an authorization to obtain estate information so that I can secure the information necessary to prepare and submit an affidavit of assets and liabilities for estate grant.";
+        const string grant = "I request 3 certified copies of the estate grant.";
+        const string authorization = "I request 2 certified copies of the authorization to obtain estate information.";
+        Assert.Contains(grant, paragraphs);
+        Assert.Contains("I request 3 certified copies of the affidavit of assets and liabilities for non-domiciled estate grant.", paragraphs);
+        Assert.Equal(expectsP18, paragraphs.Contains(declaration));
+        Assert.Equal(expectsP18, paragraphs.Contains(authorization));
+        if (expectsP18)
+            Assert.Equal(paragraphs.IndexOf(grant) - 1, paragraphs.IndexOf(declaration));
     }
 
     [Theory]
