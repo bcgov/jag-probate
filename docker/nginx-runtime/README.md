@@ -98,6 +98,16 @@ spec:
 
 ## Security
 
+Both this runtime Dockerfile and the [release web Dockerfile](../web/Dockerfile.release)
+pin the Debian-based NGINX 1.30.7 image by version and multi-platform image digest.
+This release fixes [CVE-2026-123633 and related NGINX vulnerabilities](https://nginx.org/en/security_advisories.html).
+Keep both image references aligned when updating NGINX.
+
+Rebuild and deploy the web image to remediate existing containers; changing the
+Dockerfiles alone does not patch running deployments. Verify the deployed image
+with `nginx -v`. The generated application listeners do not enable HTTP/2, but
+platform ingress and any deployed configuration overrides require a separate audit.
+
 - Runs as non-root user (UID 104)
 - Security headers configured (CSP, HSTS, X-Frame-Options, etc.)
 - Rate limiting enabled
