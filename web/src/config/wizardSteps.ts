@@ -44,8 +44,55 @@ export function mapSidebarStepsToWizardSteps(
         key: c.key,
         label: c.title,
         hiddenIsGhost: c.hiddenIsGhost,
+        ...(c.disabled ? { disabled: true } : {}),
       })),
     }));
+}
+
+/**
+ * Same baseline as deriveInitialNavState, from the mapped WizardStep[] shape:
+ * every step but the first hidden, Disabled substeps hidden.
+ */
+export function deriveBaselineNavState(steps: WizardStep[]): WizardNavState {
+  const hiddenSteps: Record<string, boolean> = {};
+  const hiddenSubsteps: Record<string, boolean> = {};
+  steps.forEach((step, index) => {
+    if (index > 0) hiddenSteps[step.key] = true;
+    step.substeps.forEach((sub) => {
+      if (sub.disabled) hiddenSubsteps[sub.key] = true;
+    });
+  });
+  return { hiddenSteps, hiddenSubsteps };
+}
+
+/**
+ * Keys disabled by banning the pathway after stepKey: every substep after it
+ * in config order plus their parent steps. A substep key bans from its own
+ * position (including its later siblings); a top-level step key bans after
+ * that step's final substep. The cutoff's own parent step is never included,
+ * so the step the user is on stays usable. Unknown key → [].
+ */
+export function getKeysBannedAfter(
+  orderedKeys: string[],
+  parentOf: (key: string) => string | null,
+  stepKey: string
+): string[] {
+  let lastIdx = orderedKeys.indexOf(stepKey);
+  if (lastIdx === -1) {
+    orderedKeys.forEach((key, i) => {
+      if (parentOf(key) === stepKey) lastIdx = i;
+    });
+  }
+  if (lastIdx === -1) return [];
+
+  const laterKeys = orderedKeys.slice(lastIdx + 1);
+  const cutoffParentKey = parentOf(stepKey) ?? stepKey;
+  const laterStepKeys = new Set(
+    laterKeys
+      .map((key) => parentOf(key) ?? key)
+      .filter((key) => key !== cutoffParentKey)
+  );
+  return [...laterKeys, ...laterStepKeys];
 }
 
 /**
