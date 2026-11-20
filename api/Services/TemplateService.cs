@@ -16,7 +16,16 @@ public class TemplateService : ITemplateService
     private readonly Dictionary<string, string[]> _templateGroups;
     private readonly string _templatesPath;
     private readonly ILogger<TemplateService> _logger;
-    private readonly Fluid.TemplateOptions _fluidOptions = new();
+    private readonly Fluid.TemplateOptions _fluidOptions = CreateOptions();
+
+    private static Fluid.TemplateOptions CreateOptions()
+    {
+        var options = new Fluid.TemplateOptions();
+        options.Filters.WithMoneyFilters();
+        options.MoneyOptions.Currency = "CAD";
+        options.MoneyOptions.MoneyFormat = "{{amount}}";
+        return options;
+    }
 
     public TemplateService(
         IWebHostEnvironment env,
@@ -25,9 +34,6 @@ public class TemplateService : ITemplateService
     )
     {
         _logger = logger;
-        _fluidOptions.Filters.WithMoneyFilters();
-        _fluidOptions.MoneyOptions.Currency = "CAD";
-        _fluidOptions.MoneyOptions.MoneyFormat = "{{amount}}";
         _templatesPath = Path.Join(env.ContentRootPath, "Templates");
         _templateGroups = new Dictionary<string, string[]>(
             options.Value.Groups,
@@ -35,8 +41,17 @@ public class TemplateService : ITemplateService
         );
     }
 
-    public IReadOnlyList<string> RenderTemplates(string templateKey, object submissionData)
+    public IReadOnlyList<string> RenderTemplates(string templateKey, object submissionData) =>
+        RenderTemplates(templateKey, submissionData, null);
+
+    public IReadOnlyList<string> RenderTemplates(
+        string templateKey,
+        object submissionData,
+        string? timeZoneId
+    )
     {
+        var timeZone = ResolveTimeZone(timeZoneId);
+
         if (!_templateGroups.TryGetValue(templateKey, out var fileNames) || fileNames.Length == 0)
             throw new InvalidOperationException(
                 $"Template key '{templateKey}' is not recognized. "
@@ -79,11 +94,35 @@ public class TemplateService : ITemplateService
                     $"Template file '{fileName}' could not be parsed: {error}"
                 );
 
-            var context = new TemplateContext(_fluidOptions);
+            var options = _fluidOptions;
+            if (timeZone != null)
+            {
+                options = CreateOptions();
+                options.TimeZone = timeZone;
+                options.Now = () => TimeZoneInfo.ConvertTime(DateTimeOffset.UtcNow, timeZone);
+            }
+
+            var context = new TemplateContext(options);
             context.SetValue("Model", submissionData);
             documents.Add(template.Render(context));
         }
 
         return documents;
+    }
+
+    private TimeZoneInfo? ResolveTimeZone(string? timeZoneId)
+    {
+        if (string.IsNullOrWhiteSpace(timeZoneId))
+            return null;
+
+        try
+        {
+            return TimeZoneInfo.FindSystemTimeZoneById(timeZoneId);
+        }
+        catch (Exception ex) when (ex is TimeZoneNotFoundException or InvalidTimeZoneException)
+        {
+            _logger.LogWarning("Unrecognized client time zone; using server time zone.");
+            return null;
+        }
     }
 }

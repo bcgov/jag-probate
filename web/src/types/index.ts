@@ -68,6 +68,8 @@ export interface GenerateReportRequest {
   templateKey: string;
   /** The raw CHEFS form submission data. */
   submissionData: unknown;
+  /** Client browser IANA timezone, e.g. "America/Vancouver". Used to render dates. */
+  timeZone?: string;
 }
 
 export interface GenerateReportResponse {

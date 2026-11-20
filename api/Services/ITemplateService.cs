@@ -5,4 +5,10 @@ namespace Probate.Api.Services;
 public interface ITemplateService
 {
     IReadOnlyList<string> RenderTemplates(string templateKey, object submissionData);
+
+    IReadOnlyList<string> RenderTemplates(
+        string templateKey,
+        object submissionData,
+        string? timeZoneId
+    );
 }

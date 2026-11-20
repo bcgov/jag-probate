@@ -18,7 +18,11 @@ class ReportService {
   ): Promise<GenerateReportResponse> {
     const blob = await this.httpService.postBlob(
       'api/Report/generate-from-submission',
-      request
+      {
+        ...request,
+        timeZone:
+          request.timeZone ?? Intl.DateTimeFormat().resolvedOptions().timeZone,
+      }
     );
     const url = URL.createObjectURL(blob);
     return { url, fileName: `${request.templateKey}.pdf` };

@@ -19,7 +19,9 @@ public class ReportControllerTests
     public async Task GenerateFromSubmission_ReturnsGeneratedPdf()
     {
         _templateService
-            .Setup(service => service.RenderTemplates("P1", It.IsAny<object>()))
+            .Setup(service =>
+                service.RenderTemplates("P1", It.IsAny<object>(), It.IsAny<string?>())
+            )
             .Returns(["<h1>P1</h1>"]);
         _pdfService
             .Setup(service =>
@@ -93,7 +95,9 @@ public class ReportControllerTests
     public async Task GenerateFromSubmission_ReturnsBadRequestForProviderError()
     {
         _templateService
-            .Setup(service => service.RenderTemplates("P1", It.IsAny<object>()))
+            .Setup(service =>
+                service.RenderTemplates("P1", It.IsAny<object>(), It.IsAny<string?>())
+            )
             .Returns([]);
         _pdfService
             .Setup(service =>

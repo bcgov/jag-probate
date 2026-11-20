@@ -59,7 +59,11 @@ public class ReportController : ControllerBase
         var result = await _pdfGenerationService.GeneratePdfAsync(
             new PdfGenerationRequest
             {
-                Documents = _templateService.RenderTemplates(request.TemplateKey, data),
+                Documents = _templateService.RenderTemplates(
+                    request.TemplateKey,
+                    data,
+                    request.TimeZone
+                ),
                 FileName = $"{request.TemplateKey}.pdf",
             },
             ct
