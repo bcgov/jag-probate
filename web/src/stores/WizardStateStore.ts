@@ -1,4 +1,5 @@
 import {
+  getKeysBannedAfter,
   getOrderedSubstepKeys,
   getVisibleSubstepKeys,
 } from '@/config/wizardSteps';
@@ -22,6 +23,10 @@ import { computed, reactive, ref } from 'vue';
  *   for this session. It takes precedence over navState and is never reset by
  *   init()/resume/setAllVisibility, so a form's rule result can't be wiped by
  *   a later state seed.
+ *
+ * When the pathway machine owns availability (wizard/pathway), it replaces
+ * hiddenSteps/hiddenSubsteps/disabledMap wholesale via applyPathway() and the
+ * override layer stays empty.
  */
 export const useWizardStateStore = defineStore('wizardState', () => {
   const activeSubstep = ref('');
@@ -40,6 +45,10 @@ export const useWizardStateStore = defineStore('wizardState', () => {
    * watches it to move off the active substep once that becomes hidden.
    */
   const visibilityRevision = ref(0);
+  /** Bumped by every init(); the pathway controller re-applies after a seed. */
+  const seedRevision = ref(0);
+  /** Keys the pathway machine last banned; setStepClickable can't lift them. */
+  let pathwayBans = new Set<string>();
 
   const configReady = computed(() => steps.value.length > 0);
 
@@ -106,6 +115,7 @@ export const useWizardStateStore = defineStore('wizardState', () => {
     replaceRecord(statusMap, initialStatusMap);
     replaceRecord(disabledMap, initialDisabledMap);
     pending?.forEach((update) => update());
+    seedRevision.value++;
   }
 
   // ── Step config + deferred calls ──────────────────────────────────────────
@@ -208,6 +218,7 @@ export const useWizardStateStore = defineStore('wizardState', () => {
   }
 
   function setStepClickable(stepKey: string, isClickable: boolean) {
+    if (isClickable && pathwayBans.has(stepKey)) return;
     mutate(() => {
       if (isClickable) delete disabledMap[stepKey];
       else disabledMap[stepKey] = true;
@@ -224,33 +235,49 @@ export const useWizardStateStore = defineStore('wizardState', () => {
    */
   function banPathwayAfter(stepKey: string, isBanned: boolean) {
     const update = () => {
-      const ordered = orderedSubstepKeys.value;
-      // A substep key bans from its own position; a top-level step key falls
-      // back to its final child so the whole step stays usable.
-      let lastIdx = ordered.indexOf(stepKey);
-      if (lastIdx === -1) {
-        ordered.forEach((key, i) => {
-          if (parentOf(key) === stepKey) lastIdx = i;
-        });
-      }
-      if (lastIdx === -1) return;
-
-      const laterKeys = ordered.slice(lastIdx + 1);
-      // Later siblings share the cutoff's parent — banning that parent would
-      // disable the step the caller is still on.
-      const cutoffParentKey = parentOf(stepKey) ?? stepKey;
-      const laterStepKeys = new Set(
-        laterKeys
-          .map((key) => parentOf(key) ?? key)
-          .filter((key) => key !== cutoffParentKey)
+      const keys = getKeysBannedAfter(
+        orderedSubstepKeys.value,
+        parentOf,
+        stepKey
       );
-      for (const key of [...laterKeys, ...laterStepKeys]) {
+      for (const key of keys) {
         if (isBanned) disabledMap[key] = true;
         else delete disabledMap[key];
       }
     };
     pendingSeedMutations?.push(update);
     whenConfigReady(update);
+  }
+
+  /**
+   * Replaces visibility and bans with the pathway machine's result in one
+   * mutation. Bumps visibilityRevision only when visibility actually changed
+   * (the sidebar uses it to move off a now-hidden active substep). Returns
+   * whether anything changed.
+   */
+  function applyPathway(result: {
+    hiddenSteps: Record<string, boolean>;
+    hiddenSubsteps: Record<string, boolean>;
+    disabledMap: Record<string, boolean>;
+  }): boolean {
+    const visibilityChanged =
+      !sameFlags(navState.hiddenSteps, result.hiddenSteps) ||
+      !sameFlags(navState.hiddenSubsteps, result.hiddenSubsteps) ||
+      Object.keys(substepVisibilityOverrides).length > 0;
+    const bansChanged = !sameFlags(disabledMap, result.disabledMap);
+    pathwayBans = new Set(
+      Object.keys(result.disabledMap).filter((k) => result.disabledMap[k])
+    );
+    if (!visibilityChanged && !bansChanged) return false;
+
+    if (visibilityChanged) {
+      replaceRecord(substepVisibilityOverrides, {});
+      replaceRecord(navState.hiddenSteps, { ...result.hiddenSteps });
+      replaceRecord(navState.hiddenSubsteps, { ...result.hiddenSubsteps });
+    }
+    if (bansChanged) replaceRecord(disabledMap, { ...result.disabledMap });
+    if (visibilityChanged) visibilityRevision.value++;
+    return true;
   }
 
   /**
@@ -279,6 +306,8 @@ export const useWizardStateStore = defineStore('wizardState', () => {
     pendingUntilConfig.splice(0);
     steps.value = [];
     visibilityRevision.value = 0;
+    seedRevision.value = 0;
+    pathwayBans = new Set();
   }
 
   return {
@@ -289,6 +318,7 @@ export const useWizardStateStore = defineStore('wizardState', () => {
     disabledMap,
     steps,
     visibilityRevision,
+    seedRevision,
     configReady,
     orderedSubstepKeys,
     visibleSubstepsOrdered,
@@ -306,7 +336,21 @@ export const useWizardStateStore = defineStore('wizardState', () => {
     setAllVisibility,
     setStepClickable,
     banPathwayAfter,
+    applyPathway,
     isActiveBridgeSource,
     reset,
   };
 });
+
+function sameFlags(
+  a: Record<string, boolean>,
+  b: Record<string, boolean>
+): boolean {
+  const on = (r: Record<string, boolean>) =>
+    Object.keys(r)
+      .filter((k) => r[k])
+      .sort();
+  const ka = on(a);
+  const kb = on(b);
+  return ka.length === kb.length && ka.every((k, i) => k === kb[i]);
+}
