@@ -77,6 +77,11 @@
     sanitizeStepDataForSave,
     type ResumeWizardState,
   } from '@/components/wizard/resumeWizardState';
+  import type {
+    ApplicationValidationResult,
+    StepValidationStatus,
+    StepValidationTarget,
+  } from '@/components/wizard/submitValidation';
   import { useWizardState } from '@/composables/useWizardState';
   import ChefsService from '@/services/ChefsService';
   import CourtLocationService from '@/services/CourtLocationService';
@@ -1195,24 +1200,36 @@
     }
   }
 
+  /**
+   * Per-step currentStep/currentSubstep override, set only while
+   * validateSteps() checks a substep that isn't the one on screen (substep
+   * panels are shown by `data.currentSubstep === '<key>'` conditionals).
+   */
+  const navContextOverrides: Record<string, { step: string; substep: string }> =
+    {};
+
+  function defineNavigationContext(stepKey: string, data: Record<string, any>) {
+    Object.defineProperties(data, {
+      currentStep: {
+        configurable: true,
+        enumerable: true,
+        get: () => navContextOverrides[stepKey]?.step ?? props.activeStep,
+        set: () => undefined,
+      },
+      currentSubstep: {
+        configurable: true,
+        enumerable: true,
+        get: () =>
+          navContextOverrides[stepKey]?.substep ?? wizardActiveSubstep.value,
+        set: () => undefined,
+      },
+    });
+  }
+
   function syncFormNavigationContext() {
     for (const [stepKey, el] of Object.entries(stepEls)) {
       if (el?.formioInstance?.data === undefined) continue;
-      const data = el.formioInstance.data;
-      Object.defineProperties(data, {
-        currentStep: {
-          configurable: true,
-          enumerable: true,
-          get: () => props.activeStep,
-          set: () => undefined,
-        },
-        currentSubstep: {
-          configurable: true,
-          enumerable: true,
-          get: () => wizardActiveSubstep.value,
-          set: () => undefined,
-        },
-      });
+      defineNavigationContext(stepKey, el.formioInstance.data);
       if (stepKey === props.activeStep) {
         recalculateForm(el.formioInstance);
         el.formioInstance.redraw?.();
@@ -1476,28 +1493,121 @@
   );
 
   // ── Validate all steps ─────────────────────────────────────────────────────
-  function validateAllSteps(): { valid: boolean; failedSteps: string[] } {
-    const failedSteps: string[] = [];
+  const STEP_LOAD_TIMEOUT_MS = 20000;
 
-    for (const stepKey of props.stepKeys) {
-      if (isSurveyStep(stepKey)) continue;
+  async function waitUntil(predicate: () => boolean, timeoutMs: number) {
+    const deadline = Date.now() + timeoutMs;
+    while (!predicate() && !unmounted && Date.now() < deadline) {
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    }
+  }
 
-      const el = stepEls[stepKey];
-      const formio = el?.formioInstance;
-      if (!formio || typeof formio.checkValidity !== 'function') continue;
+  /**
+   * Mounts a step's CHEFS form if the user never opened it (same path as
+   * navigating to it, but without marking it visited, so it isn't auto-saved)
+   * and resolves its Form.io instance once persisted data has been injected.
+   */
+  async function ensureStepLoaded(stepKey: string): Promise<any | null> {
+    if (!initializedSteps.has(stepKey)) {
+      initializedSteps.add(stepKey);
+      await initStep(stepKey);
+    } else if (stepStates[stepKey] === 'error') {
+      await initStep(stepKey);
+    }
+    await waitUntil(
+      () => stepStates[stepKey] === 'error' || !!stepOwnedKeys[stepKey],
+      STEP_LOAD_TIMEOUT_MS
+    );
+    const formio = stepEls[stepKey]?.formioInstance;
+    if (stepStates[stepKey] === 'error' || !formio?.data) return null;
+    defineNavigationContext(stepKey, formio.data);
+    return formio;
+  }
 
-      try {
-        const data = formio.submission?.data ?? formio.data ?? {};
-        const isValid = !!formio.checkValidity(data, true);
-        if (!isValid) {
-          failedSteps.push(stepKey);
-        }
-      } catch {
-        failedSteps.push(stepKey);
+  /** Validates one substep's section by showing it as the current substep. */
+  function checkSubstepValidity(
+    stepKey: string,
+    substepKey: string,
+    formio: any
+  ): boolean {
+    if (typeof formio.checkValidity !== 'function') return true;
+    navContextOverrides[stepKey] = { step: stepKey, substep: substepKey };
+    try {
+      const data = formio.submission?.data ?? formio.data ?? {};
+      // Re-evaluate conditionals so the substep's panel (and its children)
+      // become visible; checkValidity skips hidden components.
+      formio.checkConditions?.(data);
+      return !!formio.checkValidity(data, true);
+    } catch (err) {
+      console.warn(
+        `[StepFormViewer] validation failed for substep "${substepKey}":`,
+        err
+      );
+      return false;
+    }
+  }
+
+  /**
+   * Validates every given substep of every given step, loading forms the user
+   * hasn't opened yet. Runs sequentially and reports per-step progress.
+   */
+  async function validateSteps(
+    targets: StepValidationTarget[],
+    onProgress?: (stepKey: string, status: StepValidationStatus) => void
+  ): Promise<ApplicationValidationResult> {
+    const failedSubsteps: string[] = [];
+    const loadFailedSteps: string[] = [];
+
+    for (const { stepKey, substepKeys } of targets) {
+      if (unmounted) break;
+      if (
+        !props.stepKeys.includes(stepKey) ||
+        isSurveyStep(stepKey) ||
+        substepKeys.length === 0
+      ) {
+        onProgress?.(stepKey, 'valid');
+        continue;
       }
+
+      onProgress?.(stepKey, 'loading');
+      const formio = await ensureStepLoaded(stepKey);
+      if (!formio) {
+        loadFailedSteps.push(stepKey);
+        onProgress?.(stepKey, 'error');
+        continue;
+      }
+
+      onProgress?.(stepKey, 'checking');
+      // Let the progress dialog paint before the synchronous Form.io work.
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      let stepValid = true;
+      try {
+        for (const substepKey of substepKeys) {
+          if (!checkSubstepValidity(stepKey, substepKey, formio)) {
+            stepValid = false;
+            failedSubsteps.push(substepKey);
+          }
+        }
+      } finally {
+        delete navContextOverrides[stepKey];
+        try {
+          formio.checkConditions?.(formio.data);
+        } catch {
+          /* ignore — non-critical */
+        }
+      }
+      onProgress?.(stepKey, stepValid ? 'valid' : 'invalid');
     }
 
-    return { valid: failedSteps.length === 0, failedSteps };
+    return {
+      valid:
+        !unmounted &&
+        failedSubsteps.length === 0 &&
+        loadFailedSteps.length === 0,
+      failedSubsteps,
+      loadFailedSteps,
+    };
   }
 
   /** Immediately persist every step that has user-entered data. */
@@ -1537,7 +1647,7 @@
     }
   }
 
-  defineExpose({ validateAllSteps, flushAllSteps });
+  defineExpose({ validateSteps, flushAllSteps });
 
   // ── Lifecycle ───────────────────────────────────────────────────────────────
   onMounted(async () => {

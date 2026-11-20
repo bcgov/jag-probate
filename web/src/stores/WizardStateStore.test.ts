@@ -220,4 +220,49 @@ describe('WizardStateStore', () => {
       'finish',
     ]);
   });
+
+  describe('applyPathway', () => {
+    const result = {
+      hiddenSteps: { docs: true },
+      hiddenSubsteps: { 'step1-b': true },
+      disabledMap: { p9: true },
+    };
+
+    beforeEach(() => {
+      store.setSteps(steps);
+      store.init('step1-a', { hiddenSteps: {}, hiddenSubsteps: {} }, {}, {});
+    });
+
+    it('replaces visibility, bans and overrides in one mutation', () => {
+      store.setSubstepVisibilityOverride('p10', false);
+      const revision = store.visibilityRevision;
+      expect(store.applyPathway(result)).toBe(true);
+      expect(store.navState).toEqual({
+        hiddenSteps: { docs: true },
+        hiddenSubsteps: { 'step1-b': true },
+      });
+      expect(store.isSubstepHidden('p10')).toBe(false);
+      expect(store.disabledMap).toEqual({ p9: true });
+      expect(store.visibilityRevision).toBe(revision + 1);
+    });
+
+    it('bumps the visibility revision only when visibility changed', () => {
+      store.applyPathway(result);
+      const revision = store.visibilityRevision;
+      expect(store.applyPathway(structuredClone(result))).toBe(false);
+      expect(
+        store.applyPathway({ ...structuredClone(result), disabledMap: {} })
+      ).toBe(true);
+      expect(store.visibilityRevision).toBe(revision);
+    });
+
+    it('does not let setStepClickable lift a pathway ban', () => {
+      store.applyPathway(result);
+      store.setStepClickable('p9', true);
+      expect(store.disabledMap.p9).toBe(true);
+      store.setStepClickable('p10', false);
+      store.setStepClickable('p10', true);
+      expect(store.disabledMap.p10).toBeUndefined();
+    });
+  });
 });

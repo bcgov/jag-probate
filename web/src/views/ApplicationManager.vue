@@ -95,6 +95,17 @@
     </div>
   </div>
 
+  <SubmitValidationModal
+    :visible="submitDialog.visible"
+    :phase="submitDialog.phase"
+    :steps="submitDialog.steps"
+    :issues="submitDialog.issues"
+    :error-message="submitDialog.errorMessage"
+    @close="submitDialog.visible = false"
+    @retry="saveCompletedApplication"
+    @go-to="goToSubstep"
+  />
+
   <!-- ── Mobile drawer overlay ───────────────────────────────────────────── -->
   <Teleport to="body">
     <div
@@ -153,6 +164,13 @@
   import ApplicationStepSidebar from '@/components/wizard/ApplicationStepSidebar.vue';
   import StepFormViewer from '@/components/wizard/StepFormViewer.vue';
   import StepNavButtons from '@/components/wizard/StepNavButton.vue';
+  import SubmitValidationModal from '@/components/wizard/SubmitValidationModal.vue';
+  import {
+    getValidationTargets,
+    type SubmitIssue,
+    type SubmitPhase,
+    type SubmitStepProgress,
+  } from '@/components/wizard/submitValidation';
   import {
     repairResumeVisibility,
     type ResumeWizardState,
@@ -169,7 +187,8 @@
     WizardNavState,
     WizardStep,
   } from '@/types/applicationStep';
-  import { computed, inject, onMounted, onUnmounted, ref } from 'vue';
+  import { usePathwayController } from '@/wizard/pathway/usePathwayController';
+  import { computed, inject, onMounted, onUnmounted, reactive, ref } from 'vue';
   import { useRoute, useRouter } from 'vue-router';
 
   const chefsService = inject<ChefsService>('chefsService')!;
@@ -197,6 +216,8 @@
     hiddenSubsteps: {},
   });
   const wizardStateStore = useWizardStateStore(pinia);
+  // Step/substep availability is derived from the form data (Repgrant-7xx).
+  usePathwayController(pinia);
   let resumedState: ResumeWizardState | null = null;
   let hydrationComplete = false;
   let disposed = false;
@@ -430,38 +451,133 @@
     }
   }
 
+  const submitDialog = reactive({
+    visible: false,
+    phase: 'validating' as SubmitPhase,
+    steps: [] as SubmitStepProgress[],
+    issues: [] as SubmitIssue[],
+    errorMessage: '',
+  });
+  let isSubmitting = false;
+
+  function describeSubstep(substepKey: string): string {
+    for (const step of wizardSteps.value) {
+      const substep = step.substeps.find((s) => s.key === substepKey);
+      if (!substep) continue;
+      return step.substeps.length > 1 && substep.label !== step.title
+        ? `${step.title} — ${substep.label}`
+        : step.title;
+    }
+    return substepKey;
+  }
+
+  /**
+   * "Save Completed Application": validates every visible step/substep's
+   * CHEFS form (showing progress), then saves and submits only if all pass.
+   */
   async function onSubmit() {
     if (!submissionPublicId.value) {
       console.warn('[ApplicationManager] No submission to submit.');
       return;
     }
-
-    // Validate all steps before submitting.
-    const validation = stepFormViewerRef.value?.validateAllSteps();
-    if (validation && !validation.valid) {
-      console.warn(
-        '[ApplicationManager] Validation failed for steps:',
-        validation.failedSteps
-      );
-      // Navigate to the first failed step so the user can fix it.
-      const firstFailed = validation.failedSteps[0];
-      if (firstFailed) {
-        activeStep.value = firstFailed;
-        sidebarRef.value?.updateSidebar?.(firstFailed);
-        sidebarRef.value?.setStepStatus(firstFailed, 'error');
-      }
-      return;
-    }
+    const viewer = stepFormViewerRef.value;
+    if (!viewer || isSubmitting) return;
+    isSubmitting = true;
 
     try {
+      const targets = getValidationTargets(
+        wizardSteps.value,
+        wizardStateStore.isStepHidden,
+        wizardStateStore.isSubstepHidden
+      );
+      const titles = new Map(wizardSteps.value.map((s) => [s.key, s.title]));
+      submitDialog.steps = targets.map((t) => ({
+        key: t.stepKey,
+        title: titles.get(t.stepKey) ?? t.stepKey,
+        status: 'pending' as const,
+      }));
+      submitDialog.issues = [];
+      submitDialog.errorMessage = '';
+      submitDialog.phase = 'validating';
+      submitDialog.visible = true;
+
+      const result = await viewer.validateSteps(targets, (stepKey, status) => {
+        const item = submitDialog.steps.find((s) => s.key === stepKey);
+        if (item) item.status = status;
+      });
+      if (disposed) return;
+
+      const failed = new Set(result.failedSubsteps);
+      const loadFailed = new Set(result.loadFailedSteps);
+      for (const target of targets) {
+        if (loadFailed.has(target.stepKey)) continue;
+        for (const substepKey of target.substepKeys) {
+          wizardStateStore.setStepStatus(
+            substepKey,
+            failed.has(substepKey) ? 'error' : 'completed'
+          );
+        }
+      }
+
+      if (!result.valid) {
+        console.warn(
+          '[ApplicationManager] Validation failed for substeps:',
+          result.failedSubsteps,
+          'unloaded steps:',
+          result.loadFailedSteps
+        );
+        submitDialog.issues = targets.flatMap((target) =>
+          loadFailed.has(target.stepKey)
+            ? [
+                {
+                  substepKey: target.substepKeys[0],
+                  label: `${titles.get(target.stepKey) ?? target.stepKey} — could not be loaded, please open it and try again`,
+                },
+              ]
+            : target.substepKeys
+                .filter((key) => failed.has(key))
+                .map((key) => ({
+                  substepKey: key,
+                  label: describeSubstep(key),
+                }))
+        );
+        submitDialog.phase = 'invalid';
+        return;
+      }
+
+      await saveCompletedApplication();
+    } finally {
+      isSubmitting = false;
+    }
+  }
+
+  async function saveCompletedApplication() {
+    if (!submissionPublicId.value || submitDialog.phase === 'saving') return;
+    submitDialog.phase = 'saving';
+    submitDialog.errorMessage = '';
+    try {
+      await stepFormViewerRef.value?.flushAllSteps();
       await chefsService.submitApplication(submissionPublicId.value);
+      submitDialog.visible = false;
       router.push({
         name: 'PreviousActivity',
         query: { submitted: submissionPublicId.value },
       });
     } catch (err) {
       console.error('[ApplicationManager] Submit failed:', err);
+      submitDialog.phase = 'error';
+      submitDialog.errorMessage = 'Please check your connection and try again.';
     }
+  }
+
+  /** Closes the dialog and opens the substep so its errors are shown. */
+  function goToSubstep(substepKey: string) {
+    submitDialog.visible = false;
+    sidebarRef.value?.updateSidebar?.(substepKey);
+    // Wait for the step/substep switch to settle before highlighting errors.
+    setTimeout(() => {
+      if (!disposed) window.wizardValidateStep?.(substepKey);
+    }, 300);
   }
 </script>
 

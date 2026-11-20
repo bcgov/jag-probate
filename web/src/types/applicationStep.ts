@@ -5,6 +5,8 @@ export interface WizardSubstep {
   label: string;
   /** Keep a hidden substep visible as a ghost; defaults to true. */
   hiddenIsGhost?: boolean;
+  /** Flagged Disabled in the backend config: hidden until a rule shows it. */
+  disabled?: boolean;
 }
 
 export interface WizardStep {
@@ -72,6 +74,7 @@ declare global {
       isVisible: boolean,
       sourceStepKey?: string
     ) => void;
+    wizardIsSubstepVisible?: (substepKey: string) => boolean;
     wizardSetAllVisibility?: (
       nextState: WizardNavState,
       sourceStepKey?: string
@@ -111,5 +114,8 @@ declare global {
       event: 'navigate' | 'validation',
       fn: (...args: unknown[]) => void
     ) => void;
+    // Availability calls from CHEFS forms ignored while the pathway machine
+    // owns availability (newest last; debugging/shadow comparison only).
+    __wizardBridgeLog?: Array<{ fn: string; args: unknown[]; at: number }>;
   }
 }
