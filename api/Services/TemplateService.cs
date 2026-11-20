@@ -121,7 +121,7 @@ public class TemplateService : ITemplateService
         }
         catch (Exception ex) when (ex is TimeZoneNotFoundException or InvalidTimeZoneException)
         {
-            _logger.LogWarning("Unrecognized client time zone {TimeZoneId}", timeZoneId);
+            _logger.LogWarning("Unrecognized client time zone; using server time zone.");
             return null;
         }
     }
