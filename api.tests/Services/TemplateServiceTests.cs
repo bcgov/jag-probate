@@ -141,6 +141,48 @@ public class TemplateServiceTests
         }
     }
 
+    [Fact]
+    public void RenderTemplates_UsesClientTimeZoneForNow()
+    {
+        var temporaryDirectory = Directory.CreateTempSubdirectory();
+        try
+        {
+            var templatesPath = Path.Join(temporaryDirectory.FullName, "Templates");
+            Directory.CreateDirectory(templatesPath);
+            File.WriteAllText(
+                Path.Join(templatesPath, "test.html"),
+                "{{ \"now\" | date: \"%H\" }}"
+            );
+
+            var environment = new Mock<IWebHostEnvironment>();
+            environment
+                .SetupGet(value => value.ContentRootPath)
+                .Returns(temporaryDirectory.FullName);
+            var options = Microsoft.Extensions.Options.Options.Create(
+                new TemplateOptions
+                {
+                    Groups = new Dictionary<string, string[]> { ["test"] = ["test.html"] },
+                }
+            );
+            var service = new TemplateService(
+                environment.Object,
+                options,
+                NullLogger<TemplateService>.Instance
+            );
+
+            var tokyo = TimeZoneInfo.FindSystemTimeZoneById("Asia/Tokyo");
+            var expected = TimeZoneInfo.ConvertTime(DateTimeOffset.UtcNow, tokyo).Hour;
+
+            var documents = service.RenderTemplates("test", new JObject(), "Asia/Tokyo");
+
+            Assert.Equal(expected.ToString("00"), Assert.Single(documents));
+        }
+        finally
+        {
+            temporaryDirectory.Delete(recursive: true);
+        }
+    }
+
     [Theory]
     [InlineData("deceasedAddressProvince", "British Columbia")]
     [InlineData("deceasedAddressState", "Washington")]
@@ -505,12 +547,7 @@ public class TemplateServiceTests
     [InlineData("courtAppointed", new[] { "Oscar Othersucc, Applicant." })]
     [InlineData(
         "samePrioritySuccessors",
-        new[]
-        {
-            "Oscar Othersucc, Applicant.",
-            "Una Unclesucc, deceased's Uncle.",
-            "Ava Auntsucc."
-        }
+        new[] { "Oscar Othersucc, Applicant.", "Una Unclesucc, deceased's Uncle.", "Ava Auntsucc." }
     )]
     [InlineData("applicantAlsoInSamePriorityList", new[] { "Oscar Othersucc, Applicant." })]
     [InlineData(
@@ -669,7 +706,9 @@ public class TemplateServiceTests
     [InlineData("yes", null, true)]
     [InlineData(null, null, false)]
     public void RenderTemplates_P2WithSkippedAssetConfirmation(
-        string? initial, string? final, bool expectsP18
+        string? initial,
+        string? final,
+        bool expectsP18
     )
     {
         var data = new JObject
@@ -686,12 +725,19 @@ public class TemplateServiceTests
             data["q424AssetsConfirmed"] = final;
 
         var paragraphs = ParseDocument(RenderTemplate("P2.html", data))
-            .Descendants("p").Select(p => NormalizeText(p.Value)).ToList();
-        const string declaration = "I am seeking an authorization to obtain estate information so that I can secure the information necessary to prepare and submit an affidavit of assets and liabilities for estate grant.";
+            .Descendants("p")
+            .Select(p => NormalizeText(p.Value))
+            .ToList();
+        const string declaration =
+            "I am seeking an authorization to obtain estate information so that I can secure the information necessary to prepare and submit an affidavit of assets and liabilities for estate grant.";
         const string grant = "I request 3 certified copies of the estate grant.";
-        const string authorization = "I request 2 certified copies of the authorization to obtain estate information.";
+        const string authorization =
+            "I request 2 certified copies of the authorization to obtain estate information.";
         Assert.Contains(grant, paragraphs);
-        Assert.Contains("I request 3 certified copies of the affidavit of assets and liabilities for non-domiciled estate grant.", paragraphs);
+        Assert.Contains(
+            "I request 3 certified copies of the affidavit of assets and liabilities for non-domiciled estate grant.",
+            paragraphs
+        );
         Assert.Equal(expectsP18, paragraphs.Contains(declaration));
         Assert.Equal(expectsP18, paragraphs.Contains(authorization));
         if (expectsP18)
@@ -726,16 +772,33 @@ public class TemplateServiceTests
         var requests = paragraphs.Where(p => p.StartsWith("I request ")).ToList();
         Assert.Equal(final == "no" ? 3 : 2, requests.Count);
         Assert.Contains("I request 1 certified copy of the estate grant.", requests);
-        Assert.Equal(final == "no", requests.Contains("I request 2 certified copies of the authorization to obtain estate information."));
-        Assert.Contains($"I request {(domicile == "domiciled" ? 3 : 4)} certified copies of the affidavit of assets and liabilities for {domicile} estate grant.", requests);
-        Assert.Equal(final == "no", paragraphs.Any(p => p.StartsWith("I am seeking an authorization")));
-        Assert.Equal(final == "yes", paragraphs.Any(p => p.StartsWith("I am submitting with this submission")));
+        Assert.Equal(
+            final == "no",
+            requests.Contains(
+                "I request 2 certified copies of the authorization to obtain estate information."
+            )
+        );
+        Assert.Contains(
+            $"I request {(domicile == "domiciled" ? 3 : 4)} certified copies of the affidavit of assets and liabilities for {domicile} estate grant.",
+            requests
+        );
+        Assert.Equal(
+            final == "no",
+            paragraphs.Any(p => p.StartsWith("I am seeking an authorization"))
+        );
+        Assert.Equal(
+            final == "yes",
+            paragraphs.Any(p => p.StartsWith("I am submitting with this submission"))
+        );
 
         data["estateGrantCopies"] = 0;
         data["estateAuthCopies"] = null;
         data.Remove("estateDomiciledCopies");
         data.Remove("estateNonDomiciledCopies");
-        Assert.DoesNotContain("I request ", NormalizeText(ParseDocument(RenderTemplate("P2.html", data)).Root!.Value));
+        Assert.DoesNotContain(
+            "I request ",
+            NormalizeText(ParseDocument(RenderTemplate("P2.html", data)).Root!.Value)
+        );
     }
 
     private static JObject Successor(string name, string relationship) =>
