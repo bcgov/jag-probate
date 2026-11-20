@@ -11,4 +11,10 @@ public class GenerateReportFromSubmissionRequest
     /// The raw CHEFS form submission data to merge into the template.
     /// </summary>
     public object SubmissionData { get; set; } = new();
+
+    /// <summary>
+    /// Optional IANA timezone of the client browser (e.g. "America/Vancouver"), used to render dates.
+    /// Falls back to the server timezone when missing or unrecognized.
+    /// </summary>
+    public string? TimeZone { get; set; }
 }
