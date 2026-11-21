@@ -49,17 +49,18 @@ read -r -d '' _FORWARDED_HEADERS << EOF
 EOF
 
 read -r -d '' _CONFIG_SECTION << EOF
-        location /api {
+        # Trailing slash: only /api/... is proxied (not /apifoo). proxy_pass has no URI, so the
+        # rewritten path (/api/...) is forwarded unchanged.
+        location /api/ {
             limit_except OPTIONS {
                 ${HTTP_BASIC}
             }
             ${_FORWARDED_HEADERS}
-            proxy_pass ${apiUrl};
+            proxy_pass ${proxyUrl};
 			
             proxy_buffer_size       128k;
             proxy_buffers           4 256k;
             proxy_busy_buffers_size 256k;
-            proxy_cookie_path /api/auth ${WEB_BASE_HREF}api/auth;
             proxy_read_timeout 600s;
         }
 EOF

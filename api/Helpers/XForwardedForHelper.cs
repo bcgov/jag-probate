@@ -1,4 +1,5 @@
 using System;
+using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Http;
 
 namespace Probate.Api.Helpers
@@ -58,6 +59,35 @@ namespace Probate.Api.Helpers
 
             return uriBuilder.Uri.AbsoluteUri;
         }
+
+        /// <summary>
+        /// Restores the external path base (e.g. /probate) that nginx strips before proxying and
+        /// forwards in X-Base-Href. Request.Path is left as-is, so routing and the OIDC
+        /// CallbackPath still match; cookies default to the app path instead of "/".
+        /// </summary>
+        public static void ApplyForwardedPathBase(HttpRequest request)
+        {
+            if (request == null || request.PathBase.HasValue)
+                return;
+
+            if (!request.Headers.TryGetValue("X-Base-Href", out var values))
+                return;
+
+            var baseHref = NormalizeBaseHref(values.ToString());
+            if (baseHref == "/" || !SafeBaseHref.IsMatch(baseHref))
+                return;
+
+            var pathBase = new PathString(baseHref.TrimEnd('/'));
+            if (request.Path.StartsWithSegments(pathBase, out var remaining))
+                request.Path = remaining;
+
+            request.PathBase = pathBase;
+        }
+
+        private static readonly Regex SafeBaseHref = new(
+            "^(/[A-Za-z0-9._~-]+)+/$",
+            RegexOptions.Compiled | RegexOptions.CultureInvariant
+        );
 
         public static void ApplyPathBase(HttpRequest request)
         {
