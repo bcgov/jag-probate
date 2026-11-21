@@ -5,7 +5,11 @@ namespace Probate.Api.Tests.Helpers;
 
 public class XForwardedForHelperTests
 {
-    private static HttpRequest CreateRequest(string path, string? baseHref = null, string? pathBase = null)
+    private static HttpRequest CreateRequest(
+        string path,
+        string? baseHref = null,
+        string? pathBase = null
+    )
     {
         var context = new DefaultHttpContext();
         context.Request.Path = path;
@@ -43,7 +47,9 @@ public class XForwardedForHelperTests
     [InlineData("/")]
     [InlineData("/probate/;evil=1/")]
     [InlineData("https://evil.example/")]
-    public void ApplyForwardedPathBase_WithMissingOrUnsafeHeader_LeavesRequestUnchanged(string? baseHref)
+    public void ApplyForwardedPathBase_WithMissingOrUnsafeHeader_LeavesRequestUnchanged(
+        string? baseHref
+    )
     {
         var request = CreateRequest("/api/auth/login", baseHref);
 

@@ -180,11 +180,13 @@ namespace Probate.Api
                 }
             }
 
-            app.Use((context, next) =>
-            {
-                XForwardedForHelper.ApplyForwardedPathBase(context.Request);
-                return next(context);
-            });
+            app.Use(
+                (context, next) =>
+                {
+                    XForwardedForHelper.ApplyForwardedPathBase(context.Request);
+                    return next(context);
+                }
+            );
 
             if (env.IsDevelopment())
             {
