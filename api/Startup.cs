@@ -1,5 +1,6 @@
 using System;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
@@ -98,6 +99,12 @@ namespace Probate.Api
                     options.EnableSensitiveDataLogging();
             });
 
+            // Persist keys so auth cookies survive restarts and work across replicas.
+            services
+                .AddDataProtection()
+                .SetApplicationName("probate")
+                .PersistKeysToDbContext<ProbateDbContext>();
+
             var corsOptions = Configuration.GetSection(CorsOptions.SectionName).Get<CorsOptions>()
                 ?? throw new InvalidOperationException(
                     $"Missing required configuration section '{CorsOptions.SectionName}'."
@@ -172,6 +179,14 @@ namespace Probate.Api
                     app.UsePathBase(basePath);
                 }
             }
+
+            app.Use(
+                (context, next) =>
+                {
+                    XForwardedForHelper.ApplyForwardedPathBase(context.Request);
+                    return next(context);
+                }
+            );
 
             if (env.IsDevelopment())
             {
