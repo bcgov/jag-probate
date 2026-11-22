@@ -58,6 +58,10 @@ namespace Probate.Api.Infrastructure.DataProtection
         /// </summary>
         public static void ValidatePersistedKeys(IServiceProvider services)
         {
+            // A plaintext-only key ring never resolves the options, so validate them explicitly
+            // before anything (such as revocation) is persisted.
+            _ = services.GetRequiredService<IOptions<DataProtectionOptions>>().Value;
+
             foreach (var key in services.GetRequiredService<IKeyManager>().GetAllKeys())
             {
                 try
@@ -86,6 +90,8 @@ namespace Probate.Api.Infrastructure.DataProtection
         /// <returns>The number of keys revoked.</returns>
         public static int RevokeUnencryptedKeys(IServiceProvider services)
         {
+            _ = services.GetRequiredService<IOptions<DataProtectionOptions>>().Value;
+
             var repository = services
                 .GetRequiredService<IOptions<KeyManagementOptions>>()
                 .Value.XmlRepository;

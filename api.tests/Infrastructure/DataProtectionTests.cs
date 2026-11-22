@@ -99,6 +99,29 @@ public class DataProtectionTests
         Assert.Equal("ticket", provider.GetDataProtector("test").Unprotect(payload));
     }
 
+    [Fact]
+    public void InvalidEncryptionKey_WithLegacyKeys_FailsBeforeRevoking()
+    {
+        var store = new InMemoryDatabaseRoot();
+        var dbName = Guid.NewGuid().ToString();
+        string legacyPayload;
+        using (var legacy = BuildLegacyProvider(store, dbName))
+            legacyPayload = legacy.GetDataProtector("test").Protect("ticket");
+
+        using (var misconfigured = BuildProvider("", store, dbName))
+        {
+            Assert.Throws<OptionsValidationException>(() =>
+                ProbateDataProtectionExtensions.ValidatePersistedKeys(misconfigured)
+            );
+            Assert.Throws<OptionsValidationException>(() =>
+                ProbateDataProtectionExtensions.RevokeUnencryptedKeys(misconfigured)
+            );
+        }
+
+        using var legacyAgain = BuildLegacyProvider(store, dbName);
+        Assert.Equal("ticket", legacyAgain.GetDataProtector("test").Unprotect(legacyPayload));
+    }
+
     [Theory]
     [InlineData("")]
     [InlineData("not base64!")]
