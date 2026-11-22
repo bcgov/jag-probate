@@ -60,7 +60,7 @@ namespace Probate.Api.Infrastructure.Authentication
                         options.Cookie.Name += ".Development";
 
                     options.Cookie.HttpOnly = true;
-                    options.Cookie.SameSite = SameSiteMode.None;
+                    options.Cookie.SameSite = SameSiteMode.Lax;
                     options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
 
                     // If no request arrives within idleTimeout, the cookie expires.
@@ -152,9 +152,10 @@ namespace Probate.Api.Infrastructure.Authentication
                     options.SaveTokens = true;
                     options.CallbackPath = "/api/auth/signin-oidc";
 
-                    // Set explicit cookie paths so nginx's proxy_cookie_path directive
-                    options.CorrelationCookie.Path = "/";
-                    options.NonceCookie.Path = "/";
+                    // Paths default to PathBase + CallbackPath (/probate/api/auth/signin-oidc),
+                    // keeping them off other justice.gov.bc.ca apps. SameSite stays None for form_post.
+                    options.CorrelationCookie.Name = "Probate.Correlation.";
+                    options.NonceCookie.Name = "Probate.Nonce.";
 
                     // Disable Pushed Authorization Requests (PAR) so that kc_idp_hint
                     // is sent as a query parameter on the authorization URL rather than
