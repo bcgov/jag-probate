@@ -22,7 +22,7 @@ The workflow updates `bcgov-c/tenant-gitops-a94b15` using the existing `update-a
 
 | Environment | GitHub Environment | GitOps branch | Kustomize path |
 |---|---|---|---|
-| Dev | `dev` | `develop` | `services/probate/overlays/dev` |
+| Dev | `dev` | `develop` | `services/probate/base` |
 | Test | `test` | `test` | `services/probate/overlays/test` |
 | Prod | `prod` | `main` | `services/probate/overlays/prod` |
 
@@ -31,7 +31,9 @@ Each release image is pushed with two tags:
 - semantic version from the release tag, for normal promotion. For example, `v1.2.3` becomes `1.2.3`.
 - short commit SHA, for rollback, audit, and SHA pinning when needed.
 
-The release workflow updates GitOps overlays to the semver tag by default. Operators can still pin an overlay to the short SHA tag manually if a semver tag must be avoided.
+The release workflow updates the dev base and the test/prod overlays to the semver tag by default. Operators can still pin an environment to the short SHA tag manually if a semver tag must be avoided.
+
+Kustomize image entries are keyed by the full image name (`ghcr.io/bcgov/jag-probate/api`, `ghcr.io/bcgov/jag-probate/web`) so the test and prod overlays can override the tag the dev base sets.
 
 ## Required app repo setup
 
@@ -50,7 +52,7 @@ Prefer a machine-user fine-grained PAT or GitHub App token with `contents: write
 
 Use these settings in `bcgov-c/tenant-gitops-a94b15`:
 
-1. Keep the existing overlay structure under `services/probate/overlays/{dev,test,prod}`.
+1. Keep the structure under `services/probate`: `base` is the deployable dev environment; `overlays/{test,prod}` change only what those environments need.
 2. Protect `test` and `main` so humans cannot bypass the release workflow with direct pushes.
 3. Ensure the deploy automation actor can bypass pull-request requirements and push image-tag updates.
 4. Decide the prod sync gate:

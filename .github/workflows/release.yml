@@ -223,11 +223,11 @@ jobs:
           licence_plate: ${{ env.GITOPS_LICENCE_PLATE }}
           gitops_branch: develop
           gitops_gh_token: ${{ secrets.GITOPS_DEPLOY_TOKEN }}
-          image_name: jag-probate-api
+          image_name: ghcr.io/bcgov/jag-probate/api
           new_image: ${{ env.GITHUB_IMAGE_REPO }}/api:${{ needs.setup.outputs.image_tag }}
-          image_name_2: jag-probate-web
+          image_name_2: ghcr.io/bcgov/jag-probate/web
           new_image_2: ${{ env.GITHUB_IMAGE_REPO }}/web:${{ needs.setup.outputs.image_tag }}
-          kustomize_path: services/probate/overlays/dev
+          kustomize_path: services/probate/base
 
   deploy-test:
     name: Deploy to Test
@@ -245,9 +245,9 @@ jobs:
           licence_plate: ${{ env.GITOPS_LICENCE_PLATE }}
           gitops_branch: test
           gitops_gh_token: ${{ secrets.GITOPS_DEPLOY_TOKEN }}
-          image_name: jag-probate-api
+          image_name: ghcr.io/bcgov/jag-probate/api
           new_image: ${{ env.GITHUB_IMAGE_REPO }}/api:${{ needs.setup.outputs.image_tag }}
-          image_name_2: jag-probate-web
+          image_name_2: ghcr.io/bcgov/jag-probate/web
           new_image_2: ${{ env.GITHUB_IMAGE_REPO }}/web:${{ needs.setup.outputs.image_tag }}
           kustomize_path: services/probate/overlays/test
 
@@ -268,9 +268,9 @@ jobs:
           licence_plate: ${{ env.GITOPS_LICENCE_PLATE }}
           gitops_branch: main
           gitops_gh_token: ${{ secrets.GITOPS_DEPLOY_TOKEN }}
-          image_name: jag-probate-api
+          image_name: ghcr.io/bcgov/jag-probate/api
           new_image: ${{ env.GITHUB_IMAGE_REPO }}/api:${{ needs.setup.outputs.image_tag }}
-          image_name_2: jag-probate-web
+          image_name_2: ghcr.io/bcgov/jag-probate/web
           new_image_2: ${{ env.GITHUB_IMAGE_REPO }}/web:${{ needs.setup.outputs.image_tag }}
           kustomize_path: services/probate/overlays/prod
           create_pull_request: 'true'
