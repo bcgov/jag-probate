@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Probate.Api.Infrastructure.DataProtection;
 using Probate.Api.Services;
 
 namespace Probate.Api
@@ -24,6 +25,10 @@ namespace Probate.Api
                 );
 
                 await RunMigrationsAsync(host, logger);
+
+                // Fail fast on a wrong or missing encryption key instead of letting Data
+                // Protection silently replace unreadable keys.
+                ProbateDataProtectionExtensions.ValidatePersistedKeys(host.Services);
 
                 logger.LogInformation("Starting web host");
                 await host.RunAsync();

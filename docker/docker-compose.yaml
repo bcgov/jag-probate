@@ -116,6 +116,7 @@ services:
       - EFiling__KeycloakRealm=${EFiling__KeycloakRealm}
       - EFiling__ClientId=${EFiling__ClientId}
       - EFiling__ClientSecret=${EFiling__ClientSecret}
+      - DataProtection__EncryptionKey=${DataProtection__EncryptionKey:?Set DataProtection__EncryptionKey in docker/.env (openssl rand -base64 32)}
     ports:
       - 5000:5000
     volumes:
