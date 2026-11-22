@@ -27,8 +27,15 @@ namespace Probate.Api
                 await RunMigrationsAsync(host, logger);
 
                 // Fail fast on a wrong or missing encryption key instead of letting Data
-                // Protection silently replace unreadable keys.
+                // Protection silently replace unreadable keys, then revoke keys stored before
+                // encryption was enabled.
                 ProbateDataProtectionExtensions.ValidatePersistedKeys(host.Services);
+                var revoked = ProbateDataProtectionExtensions.RevokeUnencryptedKeys(host.Services);
+                if (revoked > 0)
+                    logger.LogWarning(
+                        "Revoked {Count} unencrypted Data Protection key(s); affected users must sign in again",
+                        revoked
+                    );
 
                 logger.LogInformation("Starting web host");
                 await host.RunAsync();

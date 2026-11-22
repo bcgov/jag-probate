@@ -1,9 +1,12 @@
 using System;
+using System.Linq;
 using System.Security.Cryptography;
+using System.Xml.Linq;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.DataProtection.KeyManagement;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using DataProtectionOptions = Probate.Api.Infrastructure.Options.DataProtectionOptions;
 
 namespace Probate.Api.Infrastructure.DataProtection
@@ -11,6 +14,12 @@ namespace Probate.Api.Infrastructure.DataProtection
     public static class ProbateDataProtectionExtensions
     {
         public const string ApplicationName = "probate";
+
+        // Data Protection marks secret elements that are stored unencrypted with this attribute.
+        private static readonly XName RequiresEncryptionAttribute = XName.Get(
+            "requiresEncryption",
+            "http://schemas.asp.net/2015/03/dataProtection"
+        );
 
         /// <summary>
         /// Registers Data Protection with a stable application name and AES-256-GCM encryption of
@@ -66,6 +75,55 @@ namespace Probate.Api.Infrastructure.DataProtection
                     );
                 }
             }
+        }
+
+        /// <summary>
+        /// Revokes persisted keys whose secret is still stored unencrypted (written before key
+        /// encryption was enabled). Expired keys still unprotect payloads, so plaintext keys must be
+        /// revoked to stop cookie forgery from a database leak. Users holding cookies protected by a
+        /// revoked key must sign in again; Data Protection then creates a new, encrypted key.
+        /// </summary>
+        /// <returns>The number of keys revoked.</returns>
+        public static int RevokeUnencryptedKeys(IServiceProvider services)
+        {
+            var repository = services
+                .GetRequiredService<IOptions<KeyManagementOptions>>()
+                .Value.XmlRepository;
+            if (repository is null)
+                return 0;
+
+            var unencryptedKeyIds = repository
+                .GetAllElements()
+                .Where(element => element.Name.LocalName == "key")
+                .Where(element =>
+                    element
+                        .Descendants()
+                        .Any(descendant =>
+                            (string?)descendant.Attribute(RequiresEncryptionAttribute) == "true"
+                        )
+                )
+                .Select(element => (string?)element.Attribute("id"))
+                .Where(id => Guid.TryParse(id, out _))
+                .Select(id => Guid.Parse(id!))
+                .ToHashSet();
+            if (unencryptedKeyIds.Count == 0)
+                return 0;
+
+            var keyManager = services.GetRequiredService<IKeyManager>();
+            var revoked = 0;
+            foreach (var key in keyManager.GetAllKeys())
+            {
+                if (key.IsRevoked || !unencryptedKeyIds.Contains(key.KeyId))
+                    continue;
+
+                keyManager.RevokeKey(
+                    key.KeyId,
+                    "Stored unencrypted before key encryption was enabled."
+                );
+                revoked++;
+            }
+
+            return revoked;
         }
 
         private static bool IsValidEncryptionKey(string value)

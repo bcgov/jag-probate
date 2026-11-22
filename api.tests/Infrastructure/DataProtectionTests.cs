@@ -58,6 +58,47 @@ public class DataProtectionTests
         Assert.Contains("DataProtection__EncryptionKey", ex.Message);
     }
 
+    [Fact]
+    public void LegacyUnencryptedKeys_LoadWithNewProvider_ThenRevocationRejectsTheirPayloads()
+    {
+        var store = new InMemoryDatabaseRoot();
+        var dbName = Guid.NewGuid().ToString();
+        string legacyPayload;
+        using (var legacy = BuildLegacyProvider(store, dbName))
+            legacyPayload = legacy.GetDataProtector("test").Protect("ticket");
+        Assert.All(ReadStoredKeyXmlFrom(store, dbName), xml => Assert.Contains("<masterKey", xml));
+
+        // Same application name and key ring: the upgrade can read existing keys and payloads.
+        using (var upgraded = BuildProvider(KeyA, store, dbName))
+        {
+            ProbateDataProtectionExtensions.ValidatePersistedKeys(upgraded);
+            Assert.Equal("ticket", upgraded.GetDataProtector("test").Unprotect(legacyPayload));
+            Assert.Equal(1, ProbateDataProtectionExtensions.RevokeUnencryptedKeys(upgraded));
+            Assert.Equal(0, ProbateDataProtectionExtensions.RevokeUnencryptedKeys(upgraded));
+        }
+
+        using var restarted = BuildProvider(KeyA, store, dbName);
+        Assert.ThrowsAny<CryptographicException>(() =>
+            restarted.GetDataProtector("test").Unprotect(legacyPayload)
+        );
+        var payload = restarted.GetDataProtector("test").Protect("ticket");
+        Assert.Equal("ticket", restarted.GetDataProtector("test").Unprotect(payload));
+    }
+
+    [Fact]
+    public void RevokeUnencryptedKeys_LeavesEncryptedKeysActive()
+    {
+        using var provider = BuildProvider(
+            KeyA,
+            new InMemoryDatabaseRoot(),
+            Guid.NewGuid().ToString()
+        );
+        var payload = provider.GetDataProtector("test").Protect("ticket");
+
+        Assert.Equal(0, ProbateDataProtectionExtensions.RevokeUnencryptedKeys(provider));
+        Assert.Equal("ticket", provider.GetDataProtector("test").Unprotect(payload));
+    }
+
     [Theory]
     [InlineData("")]
     [InlineData("not base64!")]
@@ -103,6 +144,31 @@ public class DataProtectionTests
         );
         services.AddProbateDataProtection(configuration).PersistKeysToDbContext<ProbateDbContext>();
         return services.BuildServiceProvider();
+    }
+
+    private static ServiceProvider BuildLegacyProvider(InMemoryDatabaseRoot store, string dbName)
+    {
+        // The configuration used before key encryption was enabled.
+        var services = new ServiceCollection();
+        services.AddLogging();
+        services.AddDbContext<ProbateDbContext>(options =>
+            options.UseInMemoryDatabase(dbName, store)
+        );
+        services
+            .AddDataProtection()
+            .SetApplicationName("probate")
+            .PersistKeysToDbContext<ProbateDbContext>();
+        return services.BuildServiceProvider();
+    }
+
+    private static List<string> ReadStoredKeyXmlFrom(InMemoryDatabaseRoot store, string dbName)
+    {
+        using var context = new ProbateDbContext(
+            new DbContextOptionsBuilder<ProbateDbContext>()
+                .UseInMemoryDatabase(dbName, store)
+                .Options
+        );
+        return context.DataProtectionKeys.Select(key => key.Xml!).ToList();
     }
 
     private static List<string> ReadStoredKeyXml(IServiceProvider provider)
