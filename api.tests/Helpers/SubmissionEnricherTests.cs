@@ -6,6 +6,166 @@ namespace Probate.Api.Tests.Helpers;
 public class SubmissionEnricherTests
 {
     [Fact]
+    public void EnrichP2_ReadsGrandchildrenFromNestedChildDataWhenFlatDataIsPresent()
+    {
+        var payload = new JObject
+        {
+            ["childExists"] = "yes",
+            ["childData"] = new JArray
+            {
+                new JObject
+                {
+                    ["childName"] = "Chris Child",
+                    ["childIsAlive"] = "no",
+                    ["childGchildExists"] = "yes",
+                    ["gchildData"] = new JArray(),
+                },
+            },
+            ["child"] = new JObject
+            {
+                ["childExists"] = "yes",
+                ["childData"] = new JArray
+                {
+                    new JObject
+                    {
+                        ["childName"] = "Chris Child",
+                        ["childIsAlive"] = "no",
+                        ["gchildData"] = new JArray
+                        {
+                            new JObject
+                            {
+                                ["grandchildName"] = "Grace Grandchild",
+                                ["grandchildIsAlive"] = "yes",
+                            },
+                        },
+                    },
+                },
+            },
+        };
+
+        var result = (JObject)SubmissionEnricher.EnrichP2(payload);
+        var successor = Assert.Single((JArray)result["p2SuccessorRows"]!);
+
+        Assert.Equal("Grace Grandchild", successor["name"]?.Value<string>());
+        Assert.Equal("Deceased's grandchild", successor["relationship"]?.Value<string>());
+    }
+
+    [Fact]
+    public void EnrichP2_ChildWithoutGrandchildrenSuppressesHiddenGrandchildData()
+    {
+        var payload = new JObject
+        {
+            ["childExists"] = "yes",
+            ["childData"] = new JArray
+            {
+                new JObject
+                {
+                    ["childName"] = "Chris Child",
+                    ["childIsAlive"] = "no",
+                    ["childGchildExists"] = "no",
+                    ["gchildData"] = new JArray
+                    {
+                        new JObject
+                        {
+                            ["grandchildName"] = "Hidden Grandchild",
+                            ["grandchildIsAlive"] = "yes",
+                        },
+                    },
+                },
+            },
+        };
+
+        var result = (JObject)SubmissionEnricher.EnrichP2(payload);
+
+        Assert.Empty((JArray)result["p2SuccessorRows"]!);
+    }
+
+    [Fact]
+    public void EnrichP2_ListsGrandchildSharingDeceasedParentsName()
+    {
+        var payload = new JObject
+        {
+            ["childExists"] = "yes",
+            ["childData"] = new JArray
+            {
+                new JObject
+                {
+                    ["childName"] = "test",
+                    ["childIsAlive"] = "no",
+                    ["childGchildExists"] = "yes",
+                    ["gchildData"] = new JArray
+                    {
+                        new JObject
+                        {
+                            ["grandchildName"] = "test",
+                            ["grandchildIsAlive"] = "yes",
+                        },
+                    },
+                },
+            },
+        };
+
+        var result = (JObject)SubmissionEnricher.EnrichP2(payload);
+        var successor = Assert.Single((JArray)result["p2SuccessorRows"]!);
+
+        Assert.Equal("test", successor["name"]?.Value<string>());
+    }
+
+    [Fact]
+    public void EnrichP2_ExistsAnswersSuppressHiddenCategoryData()
+    {
+        var payload = new JObject
+        {
+            ["spouseExists"] = "yes",
+            ["spouseData"] = new JArray
+            {
+                new JObject { ["spouseName"] = "Hidden Spouse", ["spouseIsAlive"] = "yes" },
+            },
+            ["spouse"] = new JObject
+            {
+                ["spouseExists"] = "no",
+                ["spouseData"] = new JArray
+                {
+                    new JObject { ["spouseName"] = "Hidden Nested Spouse", ["spouseIsAlive"] = "yes" },
+                },
+            },
+            ["childExists"] = "no",
+            ["childData"] = new JArray
+            {
+                new JObject
+                {
+                    ["childName"] = "Hidden Child",
+                    ["childIsAlive"] = "no",
+                    ["gchildData"] = new JArray
+                    {
+                        new JObject
+                        {
+                            ["grandchildName"] = "Hidden Grandchild",
+                            ["grandchildIsAlive"] = "yes",
+                        },
+                    },
+                },
+            },
+            ["parentExists"] = "no",
+            ["parentData"] = new JArray
+            {
+                new JObject { ["parentName"] = "Hidden Parent", ["parentIsAlive"] = "yes" },
+            },
+            ["siblingExists"] = "no",
+            ["siblingData"] = new JArray
+            {
+                new JObject { ["siblingName"] = "Hidden Sibling", ["siblingIsAlive"] = "yes" },
+            },
+        };
+
+        var result = (JObject)SubmissionEnricher.EnrichP2(payload);
+
+        Assert.Empty((JArray)result["p2SpouseRows"]!);
+        Assert.Empty((JArray)result["p2ChildRows"]!);
+        Assert.Empty((JArray)result["p2SuccessorRows"]!);
+    }
+
+    [Fact]
     public void EnrichPGT_UsesProvinceWhenItIsTheOnlyPopulatedRegionField()
     {
         var payload = new JObject

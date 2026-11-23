@@ -156,85 +156,30 @@
     </style>
   </head>
   <body>
-    {% assign applicant = Model.applicant %} {% assign
-    hasNoticeRecipients = false %} {% for recipient in
-    Model.notifyPeople.notifyPeopleData %} {% if recipient.recipientName and
-    recipient.recipientName != '' %} {% assign hasNoticeRecipients = true %} {%
-    endif %} {% endfor %} {% assign listedNames = '|' %} {% capture spouseRows
-    %} {% if Model.spouseExists == 'yes' %} {% for spouse in Model.spouseData %}
-    {% if spouse.spouseName and spouse.spouseName != '' %}
+    {% assign applicant = Model.applicant %} {% assign hasNoticeRecipients =
+    false %} {% for recipient in Model.notifyPeople.notifyPeopleData %} {% if
+    recipient.recipientName and recipient.recipientName != '' %} {% assign
+    hasNoticeRecipients = true %} {% endif %} {% endfor %} {% assign listedNames
+    = Model.p2ListedNames %} {% capture spouseRows %} {% for spouse in
+    Model.p2SpouseRows %}
     <li>
-      <b>{{ spouse.spouseName | escape }}</b>{% if spouse.spouseIsAlive == 'no'
-      %} (deceased){% endif %}
+      <b>{{ spouse.name | escape }}</b>{% if spouse.isDeceased %} (deceased){%
+      endif %}
     </li>
-    {% assign listedNames = listedNames | append: spouse.spouseName | append:
-    '|' %} {% endif %} {% endfor %} {% endif %} {% endcapture %} {% capture
-    childRows %} {% if Model.childExists == 'yes' %} {% for child in
-    Model.childData %} {% if child.childName and child.childName != '' %}
+    {% endfor %} {% endcapture %} {% capture childRows %} {% for child in
+    Model.p2ChildRows %}
     <li>
-      <b>{{ child.childName | escape }}</b>{% if child.childIsAlive == 'no' %}
-      (deceased){% endif %}
+      <b>{{ child.name | escape }}</b>{% if child.isDeceased %} (deceased){%
+      endif %}
     </li>
-    {% assign listedNames = listedNames | append: child.childName | append: '|'
-    %} {% endif %} {% endfor %} {% endif %} {% endcapture %} {% capture
-    successorRows %} {% if Model.childExists == 'yes' %} {% for child in
-    Model.childData %} {% if child.childGchildExists == 'yes' %} {% for
-    grandchild in child.gchildData %} {% if grandchild.grandchildName and
-    grandchild.grandchildName != '' %} {% assign nameKey =
-    grandchild.grandchildName | prepend: '|' | append: '|' %} {% unless
-    listedNames contains nameKey %}
+    {% endfor %} {% endcapture %} {% capture successorRows %} {% for successor
+    in Model.p2SuccessorRows %}
     <li>
-      <b>{{ grandchild.grandchildName | escape }}</b>, Deceased's grandchild.
+      <b>{{ successor.name | escape }}</b>{% if successor.relationship != '' %},
+      {{ successor.relationship | escape }}{% endif %}.
     </li>
-    {% assign listedNames = listedNames | append: grandchild.grandchildName |
-    append: '|' %} {% endunless %} {% endif %} {% endfor %} {% endif %} {%
-    endfor %} {% endif %} {% if Model.parentExists == 'yes' %} {% for parent in
-    Model.parentData %} {% if parent.parentName and parent.parentName != '' %}
-    {% assign nameKey = parent.parentName | prepend: '|' | append: '|' %} {%
-    unless listedNames contains nameKey %}
-    <li><b>{{ parent.parentName | escape }}</b>, Deceased's parent.</li>
-    {% assign listedNames = listedNames | append: parent.parentName | append:
-    '|' %} {% endunless %} {% endif %} {% endfor %} {% endif %} {% if
-    Model.siblingExists == 'yes' %} {% for sibling in Model.siblingData %} {% if
-    sibling.siblingName and sibling.siblingName != '' %} {% assign nameKey =
-    sibling.siblingName | prepend: '|' | append: '|' %} {% unless listedNames
-    contains nameKey %}
-    <li><b>{{ sibling.siblingName | escape }}</b>, Deceased's sibling.</li>
-    {% assign listedNames = listedNames | append: sibling.siblingName | append:
-    '|' %} {% endunless %} {% endif %} {% endfor %} {% endif %} {% assign
-    applicantSuccessorName = applicant.applicantName | strip %} {% assign
-    applicantSuccessorRelationship = applicant.applicantOtherRelationship |
-    strip %} {% if applicantSuccessorRelationship == '' %} {% assign
-    applicantSuccessorRelationship = 'Applicant' %} {% endif %} {% if
-    applicant.applicantNameSelection == '__other__' and
-    applicant.applicantHasBeenNominated == 'no' and
-    applicant.applicantIsOtherSuccessor == 'yes' and applicantSuccessorName !=
-    '' %} {% assign nameKey = applicantSuccessorName | prepend: '|' | append:
-    '|' %} {% unless listedNames contains nameKey %}
-    <li>
-      <b>{{ applicantSuccessorName | escape }}</b>, {{
-      applicantSuccessorRelationship | escape }}.
-    </li>
-    {% assign listedNames = listedNames | append: applicantSuccessorName |
-    append: '|' %} {% endunless %} {% endif %} {% for successor in
-    applicant.applicantSuccessorData %} {% if successor.successorName and
-    successor.successorName != '' %} {% assign nameKey = successor.successorName
-    | prepend: '|' | append: '|' %} {% unless listedNames contains nameKey %} {%
-    assign successorRelationship = successor.successorRelationship | strip %} 
-    {% if successorRelationship == '' %} {% for entry in
-    applicant.applicantSamePrioritySuccessorNames %} {% assign entryName =
-    entry.applicantSuccessorEntry | strip %} {% if successorRelationship == ''
-    and entryName == successor.successorName %} {% assign successorRelationship
-    = entry.relationship | strip %} {% endif %} {% endfor %} {% endif %}
-    <li>
-      <b>{{ successor.successorName | escape }}</b>{% if successorRelationship
-      != '' %}, {% assign successorRelationshipPrefix = successorRelationship |
-      downcase | slice: 0, 11 %}{% if successorRelationshipPrefix != "deceased's "
-      %}deceased's {% endif %}{{ successorRelationship | escape }}{% endif %}.
-    </li>
-    {% assign listedNames = listedNames | append: successor.successorName |
-    append: '|' %} {% endunless %} {% endif %} {% endfor %} {% endcapture %} {%
-    capture creditorRows %} {% if Model.creditorPersonExists == 'yes' %} {% for
+    {% endfor %} {% endcapture %} {% capture creditorRows %} {% if
+    Model.creditorPersonExists == 'yes' %} {% for
     creditor in Model.creditorPersonData %} {% if creditor.creditorPersonName
     and creditor.creditorPersonName != '' %} {% assign nameKey =
     creditor.creditorPersonName | prepend: '|' | append: '|' %} {% unless
@@ -288,13 +233,10 @@
         "deceased"):
       </p>
       <p><b>Grant of administration without will annexed</b></p>
-      {% assign generateP18 = false %}
-      {% if Model.q42CanIdentifyAssets == 'yes' or Model.q42CanIdentifyAssets == 'no' %}
-        {% unless Model.q424AssetsConfirmed == 'yes' %}
-          {% assign generateP18 = true %}
-        {% endunless %}
-      {% endif %}
-      {% if Model.q424AssetsConfirmed == 'yes' %}
+      {% assign generateP18 = false %} {% if Model.q42CanIdentifyAssets == 'yes'
+      or Model.q42CanIdentifyAssets == 'no' %} {% unless
+      Model.q424AssetsConfirmed == 'yes' %} {% assign generateP18 = true %} {%
+      endunless %} {% endif %} {% if Model.q424AssetsConfirmed == 'yes' %}
       <p>
         I am submitting with this submission for estate grant an affidavit of
         assets and liabilities in Form P10 or P11 and therefore do not require
@@ -302,9 +244,9 @@
       </p>
       {% elsif generateP18 %}
       <p>
-        I am seeking an authorization to obtain estate information so that I
-        can secure the information necessary to prepare and submit an affidavit
-        of assets and liabilities for estate grant.
+        I am seeking an authorization to obtain estate information so that I can
+        secure the information necessary to prepare and submit an affidavit of
+        assets and liabilities for estate grant.
       </p>
       {% endif %} {% if Model.estateGrantCopies > 0 %}
       <p>
@@ -318,9 +260,9 @@
         Model.estateAuthCopies == 1 %}copy{% else %}copies{% endif %} of the
         authorization to obtain estate information.
       </p>
-      {% endif %} {% if Model.deceasedAddressCountry
-      == 'Canada' and Model.deceasedAddressProvince == 'British Columbia' %} {%
-      if Model.estateDomiciledCopies > 0 %}
+      {% endif %} {% if Model.deceasedAddressCountry == 'Canada' and
+      Model.deceasedAddressProvince == 'British Columbia' %} {% if
+      Model.estateDomiciledCopies > 0 %}
       <p>
         I request <b>{{ Model.estateDomiciledCopies | escape }}</b> certified {%
         if Model.estateDomiciledCopies == 1 %}copy{% else %}copies{% endif %} of
