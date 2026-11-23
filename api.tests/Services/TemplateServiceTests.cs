@@ -669,6 +669,101 @@ public class TemplateServiceTests
     }
 
     [Theory]
+    [InlineData("spouse", new[] { "None." })]
+    [InlineData("child", new[] { "None." })]
+    [InlineData("grandchild", new[] { "Grace Grandchild, Deceased's grandchild." })]
+    [InlineData("parent", new[] { "Paula Parent, Deceased's parent." })]
+    [InlineData("sibling", new[] { "Sam Sibling, Deceased's sibling." })]
+    [InlineData(
+        "other",
+        new[] { "Oscar Othersucc, Applicant.", "Una Unclesucc, deceased's Uncle." }
+    )]
+    public void RenderTemplates_P2ListsOnlyHighestPriorityLivingSuccessors(
+        string highestPriority,
+        string[] expected
+    )
+    {
+        var data = new JObject
+        {
+            ["deceasedName"] = "Alex Test",
+            ["applicant"] = new JObject
+            {
+                ["applicantName"] = "Oscar Othersucc",
+                ["applicantNameSelection"] = "__other__",
+                ["applicantHasBeenNominated"] = "no",
+                ["applicantIsOtherSuccessor"] = "yes",
+                ["applicantSuccessorData"] = new JArray { Successor("Una Unclesucc", "Uncle") },
+            },
+            ["spouseExists"] = "yes",
+            ["spouseData"] = new JArray
+            {
+                new JObject
+                {
+                    ["spouseName"] = "Sasha Spouse",
+                    ["spouseIsAlive"] = highestPriority == "spouse" ? "yes" : "no",
+                },
+            },
+            ["childExists"] = "yes",
+            ["childData"] = new JArray
+            {
+                new JObject
+                {
+                    ["childName"] = "Chris Child",
+                    ["childIsAlive"] = highestPriority == "child" ? "yes" : "no",
+                    ["childGchildExists"] = "yes",
+                    ["gchildData"] = new JArray
+                    {
+                        new JObject
+                        {
+                            ["grandchildName"] =
+                                highestPriority == "grandchild" ? "Grace Grandchild" : "",
+                            ["grandchildIsAlive"] =
+                                highestPriority == "grandchild" ? "yes" : "no",
+                        },
+                    },
+                },
+            },
+            ["parentExists"] = "yes",
+            ["parentData"] = new JArray
+            {
+                new JObject
+                {
+                    ["parentName"] = "Paula Parent",
+                    ["parentIsAlive"] = highestPriority
+                        is "spouse"
+                            or "child"
+                            or "grandchild"
+                            or "parent"
+                        ? "yes"
+                        : "no",
+                },
+            },
+            ["siblingExists"] = "yes",
+            ["siblingData"] = new JArray
+            {
+                new JObject
+                {
+                    ["siblingName"] = "Sam Sibling",
+                    ["siblingIsAlive"] = highestPriority == "other" ? "no" : "yes",
+                },
+            },
+        };
+
+        var document = RenderTemplate("P2.html", data);
+
+        var label = Assert.Single(
+            ParseDocument(document).Descendants("p"),
+            p => NormalizeText(p.Value).StartsWith("(c) each person")
+        );
+        var rows = label
+            .ElementsAfterSelf("ol")
+            .First()
+            .Elements("li")
+            .Select(li => NormalizeText(li.Value));
+        Assert.Equal(expected, rows);
+    }
+
+    [Theory]
     [InlineData("British Columbia", "domiciled", "estateDomiciledCopies")]
     [InlineData("Alberta", "non-domiciled", "estateNonDomiciledCopies")]
     public void RenderTemplates_P2RequestsAffidavitCopiesAlongsideP18(
@@ -813,6 +908,9 @@ public class TemplateServiceTests
 
     private static string RenderTemplate(string fileName, object submissionData)
     {
+        if (fileName.Equals("P2.html", StringComparison.OrdinalIgnoreCase))
+            submissionData = SubmissionEnricher.EnrichP2(submissionData);
+
         var environment = new Mock<IWebHostEnvironment>();
         environment.SetupGet(value => value.ContentRootPath).Returns(AppContext.BaseDirectory);
         var options = Microsoft.Extensions.Options.Options.Create(

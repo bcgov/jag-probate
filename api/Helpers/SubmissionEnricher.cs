@@ -13,6 +13,312 @@ namespace Probate.Api.Helpers;
 /// </summary>
 public static class SubmissionEnricher
 {
+    private const string SpouseExistsField = "spouseExists";
+    private const string SpouseDataField = "spouseData";
+    private const string SpouseDataPath = "spouse.spouseData";
+    private const string SpouseNameField = "spouseName";
+    private const string SpouseIsAliveField = "spouseIsAlive";
+    private const string ChildExistsField = "childExists";
+    private const string ChildDataField = "childData";
+    private const string ChildDataPath = "child.childData";
+    private const string ChildNameField = "childName";
+    private const string ChildIsAliveField = "childIsAlive";
+    private const string ParentExistsField = "parentExists";
+    private const string ParentDataField = "parentData";
+    private const string ParentDataPath = "parent.parentData";
+    private const string SiblingExistsField = "siblingExists";
+    private const string SiblingDataField = "siblingData";
+    private const string SiblingDataPath = "sibling.siblingData";
+
+    /// <summary>
+    /// Enriches P2 schedule data with display-ready spouse, child, and intestate-successor rows.
+    /// Intestate successor classes are emitted in priority order based on living predecessors.
+    /// </summary>
+    public static object EnrichP2(object submissionData)
+    {
+        var root = submissionData is JObject jo
+            ? jo
+            : JObject.Parse(JsonSerializer.Serialize(submissionData));
+
+        var spouseRows = BuildP2PeopleRows(
+            root,
+            SpouseExistsField,
+            SpouseDataField,
+            SpouseDataPath,
+            SpouseNameField,
+            SpouseIsAliveField
+        );
+        var childRows = BuildP2PeopleRows(
+            root,
+            ChildExistsField,
+            ChildDataField,
+            ChildDataPath,
+            ChildNameField,
+            ChildIsAliveField
+        );
+        var successorRows = BuildP2SuccessorRows(root);
+
+        root["p2SpouseRows"] = new JArray(spouseRows);
+        root["p2ChildRows"] = new JArray(childRows);
+        root["p2SuccessorRows"] = new JArray(successorRows);
+        root["p2ListedNames"] =
+            "|"
+            + string.Join(
+                "|",
+                spouseRows
+                    .Concat(childRows)
+                    .Concat(successorRows)
+                    .Select(row => row.Value<string>("name"))
+            )
+            + "|";
+
+        return root;
+    }
+
+    private static List<JObject> BuildP2PeopleRows(
+        JObject root,
+        string existsField,
+        string flatArrayField,
+        string nestedArrayPath,
+        string nameField,
+        string aliveField
+    )
+    {
+        var rows = new List<JObject>();
+        var listedNames = new HashSet<string>(StringComparer.Ordinal);
+        if (P2Value(root, existsField) != "yes")
+            return rows;
+
+        foreach (var person in P2Array(root, flatArrayField, nestedArrayPath).OfType<JObject>())
+        {
+            var name = person.Value<string>(nameField)?.Trim();
+            if (string.IsNullOrEmpty(name))
+                continue;
+            if (!listedNames.Add(name))
+                continue;
+
+            rows.Add(
+                new JObject
+                {
+                    ["name"] = name,
+                    ["isDeceased"] = person.Value<string>(aliveField) == "no",
+                }
+            );
+        }
+
+        return rows;
+    }
+
+    private static List<JObject> BuildP2SuccessorRows(JObject root)
+    {
+        var rows = new List<JObject>();
+        var spouseData = P2People(root, SpouseExistsField, SpouseDataField, SpouseDataPath);
+        var childData = P2People(root, ChildExistsField, ChildDataField, ChildDataPath);
+        var parentData = P2People(root, ParentExistsField, ParentDataField, ParentDataPath);
+        var siblingData = P2People(root, SiblingExistsField, SiblingDataField, SiblingDataPath);
+        var listedNames = new HashSet<string>(StringComparer.Ordinal);
+
+        AddP2Grandchildren(rows, listedNames, childData);
+
+        var canListParents =
+            !HasLivingPerson(spouseData, SpouseNameField, SpouseIsAliveField)
+            && !HasLivingPerson(childData, ChildNameField, ChildIsAliveField)
+            && !HasLivingGrandchild(childData);
+        var hasLivingParent = HasLivingPerson(parentData, "parentName", "parentIsAlive");
+        if (canListParents)
+            AddP2Successors(rows, listedNames, parentData, "parent", "Deceased's parent");
+
+        var canListSiblings = canListParents && !hasLivingParent;
+        var hasLivingSibling = HasLivingPerson(siblingData, "siblingName", "siblingIsAlive");
+        if (canListSiblings)
+            AddP2Successors(rows, listedNames, siblingData, "sibling", "Deceased's sibling");
+
+        if (canListSiblings && !hasLivingSibling)
+            AddP2OtherSuccessors(root, rows, listedNames);
+        return rows;
+    }
+
+    private static void AddP2Grandchildren(
+        List<JObject> rows,
+        HashSet<string> listedNames,
+        IEnumerable<JObject> childData
+    )
+    {
+        foreach (var child in childData)
+        {
+            if (
+                child.Value<string>(ChildIsAliveField) != "no"
+                || child.Value<string>("childGchildExists") == "no"
+            )
+                continue;
+
+            foreach (var grandchild in P2Grandchildren(child))
+            {
+                AddP2Successor(
+                    rows,
+                    listedNames,
+                    grandchild.Value<string>("grandchildName"),
+                    "Deceased's grandchild"
+                );
+            }
+        }
+    }
+
+    private static bool HasLivingGrandchild(IEnumerable<JObject> childData) =>
+        childData
+            .Where(child =>
+                child.Value<string>(ChildIsAliveField) == "no"
+                && child.Value<string>("childGchildExists") != "no"
+            )
+            .SelectMany(P2Grandchildren)
+            .Any(grandchild =>
+                !string.IsNullOrWhiteSpace(grandchild.Value<string>("grandchildName"))
+                && grandchild.Value<string>("grandchildIsAlive") == "yes"
+            );
+
+    private static void AddP2Successors(
+        List<JObject> rows,
+        HashSet<string> listedNames,
+        IEnumerable<JObject> data,
+        string fieldPrefix,
+        string relationship
+    )
+    {
+        foreach (
+            var person in data.Where(person =>
+                person.Value<string>($"{fieldPrefix}IsAlive") == "yes"
+            )
+        )
+        {
+            AddP2Successor(
+                rows,
+                listedNames,
+                person.Value<string>($"{fieldPrefix}Name"),
+                relationship
+            );
+        }
+    }
+
+    private static void AddP2OtherSuccessors(
+        JObject root,
+        List<JObject> rows,
+        HashSet<string> listedNames
+    )
+    {
+        if (root["applicant"] is not JObject applicant)
+            return;
+
+        if (
+            applicant.Value<string>("applicantNameSelection") == "__other__"
+            && applicant.Value<string>("applicantHasBeenNominated") == "no"
+            && applicant.Value<string>("applicantIsOtherSuccessor") == "yes"
+        )
+        {
+            var relationship = applicant.Value<string>("applicantOtherRelationship")?.Trim();
+            AddP2Successor(
+                rows,
+                listedNames,
+                applicant.Value<string>("applicantName"),
+                string.IsNullOrEmpty(relationship) ? "Applicant" : relationship
+            );
+        }
+
+        foreach (
+            var successor in (applicant["applicantSuccessorData"] as JArray)?.OfType<JObject>()
+                ?? []
+        )
+        {
+            var name = successor.Value<string>("successorName")?.Trim();
+            var relationship = successor.Value<string>("successorRelationship")?.Trim();
+            if (string.IsNullOrEmpty(relationship))
+            {
+                relationship = (applicant["applicantSamePrioritySuccessorNames"] as JArray)
+                    ?.OfType<JObject>()
+                    .FirstOrDefault(entry =>
+                        string.Equals(
+                            entry.Value<string>("applicantSuccessorEntry")?.Trim(),
+                            name,
+                            StringComparison.Ordinal
+                        )
+                    )
+                    ?.Value<string>("relationship")
+                    ?.Trim();
+            }
+
+            if (
+                !string.IsNullOrEmpty(relationship)
+                && !relationship.StartsWith("deceased's ", StringComparison.OrdinalIgnoreCase)
+            )
+                relationship = $"deceased's {relationship}";
+
+            AddP2Successor(rows, listedNames, name, relationship);
+        }
+    }
+
+    private static IEnumerable<JObject> P2Array(JObject root, string flatField, string nestedPath)
+    {
+        var flatData = root[flatField] as JArray;
+        var nestedData = root.SelectToken(nestedPath) as JArray;
+
+        if (flatData == null)
+            return nestedData?.OfType<JObject>() ?? [];
+        if (nestedData == null || ReferenceEquals(flatData, nestedData))
+            return flatData.OfType<JObject>();
+
+        return nestedData.OfType<JObject>().Concat(flatData.OfType<JObject>());
+    }
+
+    private static IEnumerable<JObject> P2Grandchildren(JObject child) =>
+        child["gchildData"] is JArray grandchildren ? grandchildren.OfType<JObject>() : [];
+
+    private static string? P2Value(JObject root, string field)
+    {
+        var nestedPath = field switch
+        {
+            SpouseExistsField => "spouse.spouseExists",
+            ChildExistsField => "child.childExists",
+            ParentExistsField => "parent.parentExists",
+            SiblingExistsField => "sibling.siblingExists",
+            _ => field,
+        };
+        var nestedValue = root.SelectToken(nestedPath)?.Value<string>();
+        return nestedValue ?? root.Value<string>(field);
+    }
+
+    private static List<JObject> P2People(
+        JObject root,
+        string existsField,
+        string flatArrayField,
+        string nestedArrayPath
+    ) =>
+        P2Value(root, existsField) == "yes"
+            ? P2Array(root, flatArrayField, nestedArrayPath).ToList()
+            : [];
+
+    private static bool HasLivingPerson(
+        IEnumerable<JObject> data,
+        string nameField,
+        string aliveField
+    ) =>
+        data.Any(person =>
+            !string.IsNullOrWhiteSpace(person.Value<string>(nameField))
+            && person.Value<string>(aliveField) == "yes"
+        );
+
+    private static void AddP2Successor(
+        List<JObject> rows,
+        HashSet<string> listedNames,
+        string? name,
+        string? relationship
+    )
+    {
+        name = name?.Trim();
+        if (string.IsNullOrEmpty(name) || !listedNames.Add(name))
+            return;
+
+        rows.Add(new JObject { ["name"] = name, ["relationship"] = relationship ?? "" });
+    }
+
     /// <summary>
     /// Enriches PGT submission data with computed fields:
     /// - hasMinors / computedMinors: alive minors from spouseData + childData + siblingData + gchildData + creditorPersonData

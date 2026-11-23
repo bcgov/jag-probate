@@ -53,6 +53,7 @@ public class ReportController : ControllerBase
         {
             "PGT" => SubmissionEnricher.EnrichPGT(request.SubmissionData),
             "P5" => SubmissionEnricher.EnrichP5(request.SubmissionData),
+            "P2" => SubmissionEnricher.EnrichP2(request.SubmissionData),
             _ => request.SubmissionData,
         };
 
