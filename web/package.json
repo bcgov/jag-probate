@@ -13,7 +13,7 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@bcgov/bootstrap-v5-theme": "^1.1.0",
+    "@bcgov/bootstrap-v5-theme": "^1.1.1",
     "@fortawesome/fontawesome-svg-core": "^7.3.1",
     "@fortawesome/free-brands-svg-icons": "^7.3.1",
     "@fortawesome/free-regular-svg-icons": "^7.3.1",
@@ -24,19 +24,19 @@
     "@fullcalendar/vue3": "^6.1.19",
     "@types/luxon": "^3.7.6",
     "@types/underscore": "^1.13.0",
-    "axios": "^1.21.0",
+    "axios": "^1.21.1",
     "base64url": "^3.0.1",
-    "bootstrap": "^5.3.3",
-    "bootstrap-vue-next": "^1.2.3",
+    "bootstrap": "^5.3.9",
+    "bootstrap-vue-next": "^1.2.5",
     "luxon": "^3.7.2",
     "moment-timezone": "^0.6.6",
     "pinia": "^4.1.0",
     "underscore": "^1.13.7",
     "uuid": "^14.0.3",
-    "vue": "^3.5.45",
-    "vue-router": "^5.4.0",
+    "vue": "^3.5.46",
+    "vue-router": "^5.5.1",
     "vuedraggable": "^4.1.0",
-    "vuetify": "^4.3.2"
+    "vuetify": "^4.3.4"
   },
   "devDependencies": {
     "@vitejs/plugin-basic-ssl": "^2.3.0",
