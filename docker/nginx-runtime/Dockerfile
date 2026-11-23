@@ -1,5 +1,5 @@
 # Use the offical nginx (based on debian)
-FROM nginx:1.30.7@sha256:7fad6c0dff97965adbddf28027d934b111fc0221a554315dc274712f3fba24d3
+FROM nginx:1.31.9@sha256:84f7876d21d154885f99554d7ae325d8c2213f9169726ea7ab60642f2573a787
 
 ENV STI_SCRIPTS_PATH=/usr/libexec/s2i
 
