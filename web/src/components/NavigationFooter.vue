@@ -49,9 +49,9 @@
           <li class="nav-item">
             <a
               class="nav-link"
-              href="https://www2.gov.bc.ca/gov/content/home/contact-us"
-              target="_blank"
-              rel="noopener noreferrer"
+              href="#"
+              role="button"
+              @click.prevent="contactUs = true"
             >
               Contact Us
             </a>
@@ -59,12 +59,37 @@
         </ul>
       </div>
     </nav>
+    <BModal
+      v-model="contactUs"
+      size="lg"
+      header-class="bg-primary text-white"
+      header-close-variant="white"
+      ok-only
+      ok-title="Close"
+    >
+      <template #title>
+        <h3 class="mb-0">General and Technical Enquiries</h3>
+      </template>
+      <div class="m-3">
+        <p>Can't find what you are looking for? Have a technical issue?</p>
+        <p>
+          Contact us 8:00 am to 4:30 pm Pacific Time - Monday to Friday except
+          Statutory Holidays
+        </p>
+        <p>
+          CSO Support -
+          <a href="mailto:Courts.CSO@gov.bc.ca">Courts.CSO@gov.bc.ca</a>
+        </p>
+      </div>
+    </BModal>
   </footer>
 </template>
 
 <script setup lang="ts">
-  // Navigation Footer Component
-  // Uses BC Government Visual Identity
+  import { ref } from 'vue';
+  import { BModal } from 'bootstrap-vue-next';
+
+  const contactUs = ref(false);
 </script>
 
 <style scoped>
