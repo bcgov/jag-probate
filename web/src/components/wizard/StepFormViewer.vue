@@ -87,6 +87,11 @@
   } from '@/utils/courtLocations';
   import { pinia } from '@/stores/pinia';
   import { recalculateForm } from '@/utils/formioRecalculate';
+  import {
+    buildNotifyPeopleRows,
+    isNotifyRowComplete,
+    summarizeNotifyRecipients,
+  } from '@/utils/notifyRecipients';
   import { mergeIntoFormData } from '@/utils/formioMergeData';
   import { useWizardDataStore } from '@/stores/WizardDataStore';
   import { useWizardStateStore } from '@/stores/WizardStateStore';
@@ -1242,10 +1247,14 @@
     }
 
     if (!initializedSteps.has(stepKey)) {
+      // Bring derived Step 5 data and visibility up to date before this step
+      // reads the shared data (the watcher alone would run after it).
+      reconcileNoticeState();
       // Add to set first so Vue renders the container div, then init
       initializedSteps.add(stepKey);
       await initStep(stepKey);
     } else {
+      reconcileNoticeState();
       // Already initialized — sync any cross-step fields that changed since last visit.
       syncCrossStepData(stepKey);
     }
@@ -1400,6 +1409,146 @@
       rt.debounceTimer = null;
     }
   }
+
+  // ── Derive notice-dependent state from data ────────────────────────────────
+  // Whether anyone needs notice is decided by the Notify/Assets CHEFS scripts,
+  // which only run while their step is open. Mirror it here so the sidebar and
+  // forms (P2, P9) stay correct after the related people change, even when the
+  // user resumes straight on a later step.
+  function reconcileNoticeState() {
+    // Rebuild the recipient list from the current data first (the Notify
+    // CHEFS script only runs while that step is open), then derive
+    // visibility from the result rather than from possibly stale copies.
+    const rows = props.readOnly ? null : syncNotifyPeopleRows();
+
+    const data = wizardDataStore.accumulatedData;
+    const { hasRecipients, hasMinorOrIncapable } =
+      summarizeNotifyRecipients(data);
+    const hasRows = rows
+      ? rows.length > 0
+      : Array.isArray(data.notifyPeopleData) &&
+        data.notifyPeopleData.length > 0;
+    const assetsReady =
+      data.q42CanIdentifyAssets === 'yes' || data.q42CanIdentifyAssets === 'no';
+
+    wizardStateStore.setSubstepVisibilityOverride(
+      'form-preview-p9',
+      assetsReady && hasRows
+    );
+
+    // The Notify review script only shows these once the step has been valid
+    // (form-tell-people visible), so use that as the gate for showing them.
+    const notifyReviewed =
+      !wizardStateStore.isSubstepHidden('form-tell-people');
+    if (notifyReviewed || !hasRecipients) {
+      wizardStateStore.setSubstepVisibilityOverride(
+        'form-preview-p1',
+        notifyReviewed && hasRecipients
+      );
+      wizardStateStore.setSubstepVisibilityOverride(
+        'form-notify-people',
+        notifyReviewed && hasRecipients
+      );
+    }
+    if (notifyReviewed || !hasMinorOrIncapable) {
+      wizardStateStore.setSubstepVisibilityOverride(
+        'form-preview-pgt',
+        notifyReviewed && hasMinorOrIncapable
+      );
+    }
+
+    // Mirror the Notify People table check: while any recipient row is
+    // incomplete the step is not complete and later steps stay locked. The
+    // lock is re-applied on every pass (idempotent) because other scripts
+    // can lift it.
+    if (rows) {
+      const blocked = rows.length > 0 && !rows.every(isNotifyRowComplete);
+      if (blocked) {
+        wizardStateStore.banPathwayAfter('form-notify-people', true);
+        for (const key of ['form-notify-people', 'form-tell-people']) {
+          if (wizardStateStore.statusMap[key] === 'completed') {
+            wizardStateStore.setStepStatus(key, 'incomplete');
+          }
+        }
+      } else if (notifyPathwayBlocked) {
+        wizardStateStore.banPathwayAfter('form-notify-people', false);
+      }
+      notifyPathwayBlocked = blocked;
+    }
+  }
+
+  let notifyPathwayBlocked = false;
+
+  /**
+   * Writes the freshly built recipient list into every step that holds a
+   * notifyPeople container (a step other than Notify can end up with its own
+   * stale copy, which would win in the accumulated data), plus any live form.
+   * Returns the list, or null when there isn't enough data to derive it.
+   */
+  function syncNotifyPeopleRows() {
+    const notifyStepKey = 'form-notify';
+    if (!props.stepKeys.includes(notifyStepKey)) return null;
+    const data = wizardDataStore.accumulatedData;
+    // Until the people/applicant answers exist there is nothing to derive from;
+    // don't wipe a saved list because of a partially hydrated store.
+    if (!data.applicant && !data.spouse && !data.child) return null;
+
+    const holders = Object.keys(wizardDataStore.stepData).filter(
+      (key) => wizardDataStore.stepData[key]?.notifyPeople
+    );
+    if (!holders.includes(notifyStepKey)) holders.push(notifyStepKey);
+
+    const existing =
+      wizardDataStore.getStepData(notifyStepKey).notifyPeople
+        ?.notifyPeopleData ?? data.notifyPeopleData;
+    const next = buildNotifyPeopleRows(data, existing);
+    const serialized = JSON.stringify(next);
+
+    for (const stepKey of holders) {
+      const stepData = wizardDataStore.getStepData(stepKey);
+      const live = stepEls[stepKey]?.formioInstance?.data?.notifyPeople;
+      const storedStale =
+        JSON.stringify(stepData.notifyPeople?.notifyPeopleData ?? []) !==
+          serialized &&
+        !(
+          stepKey === notifyStepKey &&
+          next.length === 0 &&
+          !stepData.notifyPeople
+        );
+      const liveStale =
+        !!live && JSON.stringify(live.notifyPeopleData ?? []) !== serialized;
+      if (!storedStale && !liveStale) continue;
+
+      if (storedStale) {
+        wizardDataStore.setStepData(stepKey, {
+          ...stepData,
+          notifyPeople: { ...stepData.notifyPeople, notifyPeopleData: next },
+        });
+      }
+      if (liveStale) {
+        live.notifyPeopleData = JSON.parse(serialized);
+        recalculateForm(stepEls[stepKey].formioInstance);
+      }
+      visitedSteps.add(stepKey);
+      markStepDirty(stepKey);
+      scheduleAutoSave(stepKey);
+    }
+    return next;
+  }
+
+  watch(
+    [
+      hydrationDone,
+      () => wizardDataStore.accumulatedData,
+      () => wizardStateStore.isSubstepHidden('form-tell-people'),
+      () => Object.keys(wizardStateStore.disabledMap).length,
+      () => wizardStateStore.statusMap['form-notify-people'],
+    ],
+    () => {
+      if (hydrationDone.value && !unmounted) reconcileNoticeState();
+    },
+    { immediate: true }
+  );
 
   // ── Watch active step ─────────────────────────────────────────────────────
   // On navigation away, do a final capture of the departing step's data.
