@@ -569,3 +569,116 @@ describe('StepFormViewer cross-step hydration on resume', () => {
     ]);
   });
 });
+
+describe('StepFormViewer validateSteps', () => {
+  let host: HTMLDivElement;
+  let app: ReturnType<typeof createApp> | null = null;
+
+  beforeEach(() => {
+    setActivePinia(createPinia());
+    initWizardState(
+      'form-filing',
+      { hiddenSteps: {}, hiddenSubsteps: {} },
+      {},
+      {}
+    );
+    stubOutChefsScriptLoading();
+    host = document.createElement('div');
+    document.body.appendChild(host);
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    app?.unmount();
+    host.remove();
+    app = null;
+  });
+
+  async function findForm(stepKey: string): Promise<FakeChefsFormViewer> {
+    for (let i = 0; i < 100; i++) {
+      const el = host.querySelector(`[form-id="formid-${stepKey}"]`);
+      if (el) return el as FakeChefsFormViewer;
+      await new Promise((r) => setTimeout(r, 5));
+    }
+    throw new Error(`${stepKey} form was never created`);
+  }
+
+  it('loads unvisited forms and validates every substep as the current one', async () => {
+    app = createApp(StepFormViewer, {
+      activeStep: 'form-filing',
+      stepKeys: ['survey', 'form-notify', 'form-filing'],
+      surveyStepKey: 'survey',
+      submissionPublicId: 'sub-123',
+    });
+    app.config.warnHandler = () => {};
+    app.provide(
+      'chefsService',
+      makeChefsService(async () => [])
+    );
+    app.provide('reportService', {});
+    const vm = app.mount(host) as unknown as {
+      validateSteps: (
+        targets: Array<{ stepKey: string; substepKeys: string[] }>,
+        onProgress?: (stepKey: string, status: string) => void
+      ) => Promise<{
+        valid: boolean;
+        failedSubsteps: string[];
+        loadFailedSteps: string[];
+      }>;
+    };
+
+    const filing = await findForm('form-filing');
+    filing.formioInstance.data.filingOwnField = '';
+    filing.dispatchEvent(new CustomEvent('formio:ready'));
+
+    const progress: string[] = [];
+    const pending = vm.validateSteps(
+      [
+        {
+          stepKey: 'form-notify',
+          substepKeys: ['form-tell-people', 'form-notify-people'],
+        },
+        { stepKey: 'form-filing', substepKeys: ['form-filing'] },
+      ],
+      (stepKey, status) => progress.push(`${stepKey}:${status}`)
+    );
+
+    // form-notify was never opened, so validation has to mount it.
+    const notify = await findForm('form-notify');
+    const seen: Array<[string, string]> = [];
+    const checkConditions = vi.fn();
+    Object.assign(notify.formioInstance, {
+      checkConditions,
+      checkValidity(data: Record<string, any>) {
+        seen.push([data.currentStep, data.currentSubstep]);
+        return data.currentSubstep !== 'form-notify-people';
+      },
+    });
+    notify.formioInstance.data.notifyOwnField = '';
+    notify.dispatchEvent(new CustomEvent('formio:ready'));
+
+    const result = await pending;
+
+    expect(seen).toEqual([
+      ['form-notify', 'form-tell-people'],
+      ['form-notify', 'form-notify-people'],
+    ]);
+    expect(result).toEqual({
+      valid: false,
+      failedSubsteps: ['form-notify-people'],
+      loadFailedSteps: [],
+    });
+    expect(progress).toEqual([
+      'form-notify:loading',
+      'form-notify:checking',
+      'form-notify:invalid',
+      'form-filing:loading',
+      'form-filing:checking',
+      'form-filing:valid',
+    ]);
+    // The real navigation context is restored afterwards.
+    expect(notify.formioInstance.data.currentStep).toBe('form-filing');
+    expect(notify.formioInstance.data.currentSubstep).toBe('form-filing');
+    expect(checkConditions).toHaveBeenCalledTimes(3);
+  });
+});

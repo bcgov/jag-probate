@@ -5,6 +5,10 @@ import {
   installWizardBridge,
   uninstallWizardBridgeForTests,
 } from '@/stores/wizardBridge';
+import {
+  resetPathwayMachineModeForTests,
+  setPathwayMachineMode,
+} from '@/wizard/pathway/mode';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createApp, nextTick } from 'vue';
 import ApplicationManager from './ApplicationManager.vue';
@@ -12,20 +16,28 @@ import ApplicationManager from './ApplicationManager.vue';
 const viewer = vi.hoisted(() => ({
   emit: null as null | ((event: string, ...args: unknown[]) => void),
   submissionId: '',
+  validateSteps: null as null | ((...args: any[]) => Promise<unknown>),
+  flushAllSteps: null as null | (() => Promise<void>),
 }));
+
+const routerPush = vi.hoisted(() => vi.fn());
 
 vi.mock('vue-router', async (importOriginal) => ({
   ...(await importOriginal<typeof import('vue-router')>()),
   useRoute: () => ({ params: { id: viewer.submissionId || undefined } }),
-  useRouter: () => ({ push: vi.fn() }),
+  useRouter: () => ({ push: routerPush, replace: vi.fn() }),
 }));
 
 vi.mock('@/components/wizard/StepFormViewer.vue', async () => {
   const { defineComponent } = await import('vue');
   return {
     default: defineComponent({
-      setup(_, { emit }) {
+      setup(_, { emit, expose }) {
         viewer.emit = emit;
+        expose({
+          validateSteps: (...args: any[]) => viewer.validateSteps?.(...args),
+          flushAllSteps: () => viewer.flushAllSteps?.(),
+        });
         return () => null;
       },
     }),
@@ -63,11 +75,17 @@ describe('ApplicationManager wizard initialization', () => {
   let resolveConfig: (value: typeof sidebarDtos) => void;
 
   beforeEach(() => {
+    // These cases cover the legacy bridge-driven state; the pathway machine
+    // is covered in wizard/pathway and by the 'on' case below.
+    setPathwayMachineMode('off');
     useWizardStateStore(pinia).reset();
     uninstallWizardBridgeForTests();
     installWizardBridge(pinia);
     viewer.submissionId = '';
     viewer.emit = null;
+    viewer.validateSteps = null;
+    viewer.flushAllSteps = null;
+    routerPush.mockReset();
     app = null;
     host = document.createElement('div');
     document.body.appendChild(host);
@@ -77,11 +95,12 @@ describe('ApplicationManager wizard initialization', () => {
     app?.unmount();
     host.remove();
     uninstallWizardBridgeForTests();
+    resetPathwayMachineModeForTests();
     vi.restoreAllMocks();
     vi.unstubAllGlobals();
   });
 
-  function mountManager() {
+  function mountManager(extraChefsService: Record<string, unknown> = {}) {
     const config = new Promise<typeof sidebarDtos>((resolve) => {
       resolveConfig = resolve;
     });
@@ -90,6 +109,7 @@ describe('ApplicationManager wizard initialization', () => {
     app.config.warnHandler = () => {};
     app.provide('chefsService', {
       getSidebarStructure: vi.fn(() => config),
+      ...extraChefsService,
     });
     app.mount(host);
   }
@@ -243,5 +263,116 @@ describe('ApplicationManager wizard initialization', () => {
     expect(useWizardStateStore(pinia).statusMap['step2-a']).toBe('completed');
     expect(validate).not.toHaveBeenCalled();
     expect(save).not.toHaveBeenCalled();
+  });
+
+  it('derives availability from the form data once the pathway machine owns it', async () => {
+    setPathwayMachineMode('on');
+    mountManager();
+    window.wizardBanPathway?.('step1-a', true);
+    window.wizardSetStepVisibility?.('step2', true);
+    await enterWizard(true);
+    viewer.emit?.('resume-wizard-state', {
+      activeStep: 'step1',
+      activeSubstep: 'step1-a',
+      hiddenSteps: {},
+      hiddenSubsteps: {},
+      statusMap: {},
+      disabledMap: { 'step1-b': true },
+    });
+    await settle();
+    await new Promise((r) => setTimeout(r, 0));
+
+    const store = useWizardStateStore(pinia);
+    expect(store.navState.hiddenSteps).toEqual({ step2: true });
+    expect(store.disabledMap).toEqual({});
+  });
+
+  describe('Save Completed Application', () => {
+    async function openLastStep(submitApplication: ReturnType<typeof vi.fn>) {
+      viewer.submissionId = 'app-1';
+      mountManager({ submitApplication });
+      resolveConfig(sidebarDtos);
+      viewer.emit?.('hydration-complete');
+      viewer.emit?.('resume-wizard-state', {
+        activeStep: 'step2',
+        activeSubstep: 'step2-a',
+        hiddenSteps: {},
+        hiddenSubsteps: {},
+        statusMap: {},
+        disabledMap: {},
+      });
+      await settle();
+      viewer.emit?.('step-ready', 'step2');
+      await settle();
+    }
+
+    async function clickSave() {
+      const button = [...host.querySelectorAll('button')].find((b) =>
+        b.textContent?.includes('Save Completed Application')
+      );
+      expect(button).toBeDefined();
+      button!.click();
+      await settle();
+    }
+
+    it('validates every visible substep and does not save when one fails', async () => {
+      const submitApplication = vi.fn();
+      viewer.validateSteps = vi.fn(async (targets, onProgress) => {
+        onProgress('step1', 'invalid');
+        onProgress('step2', 'valid');
+        return {
+          valid: false,
+          failedSubsteps: ['step1-b'],
+          loadFailedSteps: [],
+        };
+      });
+      viewer.flushAllSteps = vi.fn(async () => undefined);
+      await openLastStep(submitApplication);
+      await clickSave();
+      await vi.waitFor(() =>
+        expect(host.textContent).toContain('Your application is not complete')
+      );
+
+      expect(viewer.validateSteps).toHaveBeenCalledWith(
+        [
+          { stepKey: 'step1', substepKeys: ['step1-a', 'step1-b'] },
+          { stepKey: 'step2', substepKeys: ['step2-a'] },
+        ],
+        expect.any(Function)
+      );
+      expect(host.textContent).toContain('First — First B');
+      expect(host.textContent).toContain('Needs attention');
+      const store = useWizardStateStore(pinia);
+      expect(store.statusMap['step1-a']).toBe('completed');
+      expect(store.statusMap['step1-b']).toBe('error');
+      expect(viewer.flushAllSteps).not.toHaveBeenCalled();
+      expect(submitApplication).not.toHaveBeenCalled();
+    });
+
+    it('saves pending step data and submits once every step is valid', async () => {
+      const calls: string[] = [];
+      const submitApplication = vi.fn(async () => {
+        calls.push('submit');
+      });
+      viewer.validateSteps = vi.fn(async () => ({
+        valid: true,
+        failedSubsteps: [],
+        loadFailedSteps: [],
+      }));
+      viewer.flushAllSteps = vi.fn(async () => {
+        calls.push('flush');
+      });
+      await openLastStep(submitApplication);
+      await clickSave();
+
+      await vi.waitFor(() => expect(routerPush).toHaveBeenCalled());
+      expect(document.querySelector('.modal')).toBeNull();
+      expect(calls).toEqual(['flush', 'submit']);
+      expect(submitApplication).toHaveBeenCalledWith('app-1');
+      expect(routerPush).toHaveBeenCalledWith({
+        name: 'PreviousActivity',
+        query: { submitted: 'app-1' },
+      });
+    });
   });
 });

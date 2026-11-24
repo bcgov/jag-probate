@@ -2,14 +2,24 @@ import { initWizardState, useWizardState } from '@/composables/useWizardState';
 import type { WizardStep } from '@/types/applicationStep';
 import { pinia } from '@/stores/pinia';
 import { useWizardStateStore } from '@/stores/WizardStateStore';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import {
+  resetPathwayMachineModeForTests,
+  setPathwayMachineMode,
+} from '@/wizard/pathway/mode';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createApp, h, nextTick, ref } from 'vue';
 import ApplicationStepSidebar from './ApplicationStepSidebar.vue';
 
 describe('ApplicationStepSidebar', () => {
   beforeEach(() => {
+    // Exercises the sidebar against legacy bridge writes.
+    setPathwayMachineMode('off');
     useWizardStateStore(pinia).reset();
     initWizardState('', { hiddenSteps: {}, hiddenSubsteps: {} }, {}, {});
+  });
+
+  afterEach(() => {
+    resetPathwayMachineModeForTests();
   });
 
   it('enters Application Documents when the default P9 preview is hidden and skipped assets are incomplete', async () => {

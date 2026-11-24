@@ -1,5 +1,9 @@
 import { pinia } from '@/stores/pinia';
 import type { WizardStep } from '@/types/applicationStep';
+import {
+  resetPathwayMachineModeForTests,
+  setPathwayMachineMode,
+} from '@/wizard/pathway/mode';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   attachNavigationHandlers,
@@ -32,10 +36,12 @@ describe('wizardBridge', () => {
   beforeEach(() => {
     uninstallWizardBridgeForTests();
     useWizardStateStore(pinia).reset();
+    setPathwayMachineMode('off');
   });
 
   afterEach(() => {
     uninstallWizardBridgeForTests();
+    resetPathwayMachineModeForTests();
   });
 
   it('exposes the state setters without any component mounted', () => {
@@ -104,5 +110,73 @@ describe('wizardBridge', () => {
     const fn = window.wizardSetSubstepVisibility;
     installWizardBridge();
     expect(window.wizardSetSubstepVisibility).toBe(fn);
+  });
+
+  it('reports substep visibility from the store', () => {
+    installWizardBridge();
+    const store = useWizardStateStore(pinia);
+    expect(window.wizardIsSubstepVisible?.('p10')).toBe(true);
+    store.setSubstepVisibility('p10', false);
+    expect(window.wizardIsSubstepVisible?.('p10')).toBe(false);
+  });
+
+  describe('when the pathway machine owns availability', () => {
+    beforeEach(() => {
+      setPathwayMachineMode('on');
+      installWizardBridge();
+      const store = useWizardStateStore(pinia);
+      store.setSteps(steps);
+      store.init('p9', { hiddenSteps: {}, hiddenSubsteps: {} }, {}, {});
+    });
+
+    it('ignores visibility, ban and clickable calls and logs them', () => {
+      const store = useWizardStateStore(pinia);
+      window.wizardSetStepVisibility?.('filing', false);
+      window.wizardSetSubstepVisibility?.('p10', false);
+      window.wizardSetAllVisibility?.({
+        hiddenSteps: { docs: true },
+        hiddenSubsteps: {},
+      });
+      window.wizardSetStepClickable?.('p10', false);
+      window.wizardBanPathway?.('p9', true);
+
+      expect(store.navState).toEqual({ hiddenSteps: {}, hiddenSubsteps: {} });
+      expect(store.isSubstepHidden('p10')).toBe(false);
+      expect(store.disabledMap).toEqual({});
+      expect(window.__wizardBridgeLog?.map((c) => c.fn)).toEqual([
+        'wizardSetStepVisibility',
+        'wizardSetSubstepVisibility',
+        'wizardSetAllVisibility',
+        'wizardSetStepClickable',
+        'wizardBanPathway',
+      ]);
+    });
+
+    it('ignores the form-full-review status but passes other statuses', () => {
+      const store = useWizardStateStore(pinia);
+      store.setStepStatus('form-full-review', 'error');
+      window.wizardSetStepStatus?.('form-full-review', 'completed');
+      window.wizardSetStepStatus?.('p9', 'completed');
+      window.wizardSetAllStatuses?.({
+        'form-full-review': 'completed',
+        p10: 'error',
+      });
+      expect(store.statusMap).toEqual({
+        'form-full-review': 'error',
+        p10: 'error',
+      });
+    });
+
+    it('still routes navigation', () => {
+      const calls: string[] = [];
+      attachNavigationHandlers({
+        updateSidebar: (key) => calls.push(key),
+        navigateNext: () => calls.push('next'),
+        navigatePrevious: () => calls.push('previous'),
+      });
+      window.wizardUpdateSidebar?.('p10');
+      window.wizardNavigateNext?.();
+      expect(calls).toEqual(['p10', 'next']);
+    });
   });
 });

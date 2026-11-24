@@ -1,3 +1,4 @@
+import { getPathwayMachineMode } from '@/wizard/pathway/mode';
 import type { Pinia } from 'pinia';
 import { pinia as appPinia } from './pinia';
 import { useWizardStateStore } from './WizardStateStore';
@@ -10,6 +11,10 @@ import { useWizardStateStore } from './WizardStateStore';
  * - State setters write straight to WizardStateStore.
  * - Navigation needs the sidebar component; calls made while no sidebar has
  *   attached its handlers are queued and replayed when one attaches.
+ * - While the pathway machine owns availability (mode 'on', see
+ *   wizard/pathway/mode.ts) the visibility / ban / clickable setters and the
+ *   form's own orm-full-review status are ignored and only logged to
+ *   window.__wizardBridgeLog; the machine derives them from the form data.
  *
  * wizardValidateStep / wizardSaveStep / wizardFlushAll / wizardGoToField /
  * wizardGetPersistedPayload stay owned by StepFormViewer (they need the
@@ -86,38 +91,103 @@ export function installWizardBridge(pinia: Pinia = appPinia): void {
     dispatchNavCall({ kind: 'previous', source: sourceStepKey });
 
   window.wizardSetStepStatus = (substepKey, status, sourceStepKey) => {
+    if (substepKey === REVIEW_SUBSTEP && machineOwnsAvailability()) {
+      logIgnored('wizardSetStepStatus', [substepKey, status, sourceStepKey]);
+      return;
+    }
     const s = store();
     if (s.isActiveBridgeSource(sourceStepKey))
       s.setStepStatus(substepKey, status);
   };
   window.wizardSetAllStatuses = (map, sourceStepKey) => {
     const s = store();
-    if (s.isActiveBridgeSource(sourceStepKey)) s.setAllStatuses(map);
+    if (!s.isActiveBridgeSource(sourceStepKey)) return;
+    if (machineOwnsAvailability()) {
+      const next = { ...map };
+      const review = s.statusMap[REVIEW_SUBSTEP];
+      if (review) next[REVIEW_SUBSTEP] = review;
+      else delete next[REVIEW_SUBSTEP];
+      s.setAllStatuses(next);
+      return;
+    }
+    s.setAllStatuses(map);
   };
   window.wizardSetStepVisibility = (stepKey, isVisible, sourceStepKey) => {
+    if (machineOwnsAvailability()) {
+      logIgnored('wizardSetStepVisibility', [
+        stepKey,
+        isVisible,
+        sourceStepKey,
+      ]);
+      return;
+    }
     const s = store();
     if (s.isActiveBridgeSource(sourceStepKey))
       s.setStepVisibility(stepKey, isVisible);
   };
   // No active-source check: the call states the visibility a form's data
   // implies (e.g. formActivationTest), which is valid whenever it's computed.
-  window.wizardSetSubstepVisibility = (substepKey, isVisible) => {
+  window.wizardSetSubstepVisibility = (
+    substepKey,
+    isVisible,
+    sourceStepKey
+  ) => {
+    if (machineOwnsAvailability()) {
+      logIgnored('wizardSetSubstepVisibility', [
+        substepKey,
+        isVisible,
+        sourceStepKey,
+      ]);
+      return;
+    }
     store().setSubstepVisibilityOverride(substepKey, isVisible);
   };
+  window.wizardIsSubstepVisible = (substepKey) =>
+    !store().isSubstepHidden(substepKey);
   window.wizardSetAllVisibility = (nextState, sourceStepKey) => {
+    if (machineOwnsAvailability()) {
+      logIgnored('wizardSetAllVisibility', [nextState, sourceStepKey]);
+      return;
+    }
     const s = store();
     if (s.isActiveBridgeSource(sourceStepKey)) s.setAllVisibility(nextState);
   };
   window.wizardSetStepClickable = (stepKey, isClickable, sourceStepKey) => {
+    if (machineOwnsAvailability()) {
+      logIgnored('wizardSetStepClickable', [
+        stepKey,
+        isClickable,
+        sourceStepKey,
+      ]);
+      return;
+    }
     const s = store();
     if (s.isActiveBridgeSource(sourceStepKey))
       s.setStepClickable(stepKey, isClickable);
   };
   window.wizardBanPathway = (stepKey, isBanned, sourceStepKey) => {
+    if (machineOwnsAvailability()) {
+      logIgnored('wizardBanPathway', [stepKey, isBanned, sourceStepKey]);
+      return;
+    }
     const s = store();
     if (s.isActiveBridgeSource(sourceStepKey))
       s.banPathwayAfter(stepKey, isBanned);
   };
+}
+
+const REVIEW_SUBSTEP = 'form-full-review';
+const MAX_LOGGED_CALLS = 200;
+
+function machineOwnsAvailability(): boolean {
+  return getPathwayMachineMode() === 'on';
+}
+
+function logIgnored(fn: string, args: unknown[]): void {
+  const log = (window.__wizardBridgeLog ??= []);
+  log.push({ fn, args, at: Date.now() });
+  if (log.length > MAX_LOGGED_CALLS)
+    log.splice(0, log.length - MAX_LOGGED_CALLS);
 }
 
 /** Test helper: removes the bridge and clears queued calls/handlers. */
@@ -133,9 +203,11 @@ export function uninstallWizardBridgeForTests(): void {
     'wizardSetAllStatuses',
     'wizardSetStepVisibility',
     'wizardSetSubstepVisibility',
+    'wizardIsSubstepVisible',
     'wizardSetAllVisibility',
     'wizardSetStepClickable',
     'wizardBanPathway',
+    '__wizardBridgeLog',
   ] as const;
   fns.forEach((fn) => delete window[fn]);
 }

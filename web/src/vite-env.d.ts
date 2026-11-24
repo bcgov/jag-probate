@@ -7,6 +7,11 @@ interface ImportMeta {
 }
 
 declare global {
+  interface ImportMetaEnv {
+    /** Pathway machine mode: 'off' | 'observe' | 'on' (default). */
+    readonly VITE_PATHWAY_MACHINE?: string;
+  }
+
   interface Window {
     staticBaseUrl: string;
     probate?: {
