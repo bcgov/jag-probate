@@ -14,6 +14,7 @@ using Newtonsoft.Json.Serialization;
 using Probate.Api.Helpers;
 using Probate.Api.Infrastructure.Authentication;
 using Probate.Api.Infrastructure.Chefs;
+using Probate.Api.Infrastructure.DataProtection;
 using Probate.Api.Infrastructure.EFiling;
 using Probate.Api.Infrastructure.Options;
 using Probate.Api.Infrastructure.WeasyPrint;
@@ -100,9 +101,9 @@ namespace Probate.Api
             });
 
             // Persist keys so auth cookies survive restarts and work across replicas.
+            // Keys are AES-256-GCM encrypted with DataProtection__EncryptionKey before storage.
             services
-                .AddDataProtection()
-                .SetApplicationName("probate")
+                .AddProbateDataProtection(Configuration)
                 .PersistKeysToDbContext<ProbateDbContext>();
 
             var corsOptions = Configuration.GetSection(CorsOptions.SectionName).Get<CorsOptions>()
