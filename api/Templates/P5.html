@@ -238,128 +238,7 @@
   </head>
 
   <body>
-    {% assign applicant = Model.applicant %} {% assign roleLetter = '[section
-    130 paragraph]' %} {% assign isNominated = false %} {% assign isOrganization
-    = false %} {% assign organizationName = applicant.applicantOrgName |
-    default: '[organization name]' %} {% assign deponentName =
-    applicant.applicantName %} {% if applicant.applicantCreditorType ==
-    'organization' %} {% assign organizationName = applicant.applicantName |
-    default: '[organization name]' %} {% assign deponentName =
-    applicant.applicantCreditorRepName | default: '[Representative name
-    missing]' %} {% endif %} {% assign organizationTitle =
-    applicant.applicantOrgTitle | default: '[organizational title]' %} {% assign
-    isPgtDeliveryRequired = false %} {% assign hasTestamentaryDocuments = false
-    %} {% assign documentSearchKnown = false %} {% assign testamentaryDocuments
-    = nil %} {% assign grantStatus = 'unknown' %} {% assign showWillsNotice =
-    false %} {% assign willsNoticeResult = 'Wills-notice search result reason is
-    missing or unrecognized' %} {% assign willsNoticeReason = 'Reason for not
-    finding the indicated document has not been provided.' %} {% case
-    Model.willsNoticeDidNotFindIndicatedWillsReason %} {% when 'lost' %} {%
-    assign willsNoticeResult = 'The will is believed to have been lost' %} {%
-    when 'destroyed' %} {% assign willsNoticeResult = 'The will is believed to
-    have been destroyed' %} {% when 'willsNoticeInError' %} {% assign
-    willsNoticeResult = 'The Wills Notice filed in relation to an alleged
-    testamentary document is believed to be in error' %} {% endcase %} {% case
-    applicant.applicantSection130Pathway %} {% when 's130a' %}{% assign
-    roleLetter = 'a' %} {% when 's130b' %}{% assign roleLetter = 'b' %} {% when
-    's130c' %}{% assign roleLetter = 'c' %} {% when 's130d' %}{% assign
-    roleLetter = 'd' %} {% when 's130e' %}{% assign roleLetter = 'e' %} {% when
-    's130e1', 's130e.1' %}{% assign roleLetter = 'e.1' %} {% when 's130f' %}{%
-    assign roleLetter = 'f' %} {% when 's130f1', 's130f.1' %}{% assign
-    roleLetter = 'f.1' %} {% when 's130g' %}{% assign roleLetter = 'g' %} {%
-    endcase %} {% if applicant.applicantSection130Nominated == true %}{% assign
-    isNominated = true %}{% endif %} {% if applicant.applicantIsOrg == true or
-    applicant.applicantNomineeIsOrg == 'yes' or applicant.applicantCreditorType
-    == 'organization' or applicant.applicantCourtOrg == 'yes' %} {% assign
-    isOrganization = true %} {% endif %} {% for recipient in
-    Model.notifyPeople.notifyPeopleData %} {% if recipient.isPGT == true %}{%
-    assign isPgtDeliveryRequired = true %}{% endif %} {% endfor %} {% if
-    Model.willExists == 'yes' %}{% assign hasTestamentaryDocuments = true %}{%
-    endif %} {% if Model.HaveYouLookedForDeceasedWillWellYN == 'yes' and
-    Model.willExists == 'no' %} {% assign documentSearchKnown = true %} {% endif
-    %} {% if Model.willsNoticeResultsReceived == 'yes' and
-    Model.willsNoticeHasResults == 'yes' %} {% if
-    Model.willsNoticeFoundIndicatedWills == 'yes' %} {% assign
-    hasTestamentaryDocuments = true %} {% if
-    Model.willsNoticeIndicatedWillsOtherDocExists == 'yes' %} {% assign
-    testamentaryDocuments =
-    Model.willsNoticeIndicatedWillsOtherTestamentaryDocumentsEditor %} {% endif
-    %} {% elsif Model.willsNoticeFoundIndicatedWills == 'no' %} {% assign
-    showWillsNotice = true %} {% if
-    Model.willsNoticeDidNotFindIndicatedWillsOtherDocExists == 'yes' %} {%
-    assign hasTestamentaryDocuments = true %} {% assign testamentaryDocuments =
-    Model.willsNoticeDidNotFindIndicatedWillsOtherTestamentaryDocumentsEditor %}
-    {% elsif Model.willsNoticeDidNotFindIndicatedWillsOtherDocExists == 'no' %}
-    {% assign documentSearchKnown = true %} {% endif %} {% endif %} {% elsif
-    Model.willsNoticeResultsReceived == 'yes' and Model.willsNoticeHasResults ==
-    'no' %} {% if Model.willsNoticeFoundWillOrOtherTestDocs == 'yes' %} {%
-    assign hasTestamentaryDocuments = true %} {% assign testamentaryDocuments =
-    Model.willsNoticeOtherTestamentaryDocumentsEditor %} {% elsif
-    Model.willsNoticeFoundWillOrOtherTestDocs == 'no' %} {% assign
-    documentSearchKnown = true %} {% endif %} {% elsif
-    Model.willsNoticeResultsReceived == 'no' %} {% if
-    Model.willsNoticeResultsPendingOtherDocExists == 'yes' %} {% assign
-    hasTestamentaryDocuments = true %} {% assign testamentaryDocuments =
-    Model.willsNoticeResultsPendingOtherTestamentaryDocumentsEditor %} {% endif
-    %} {% endif %} {% if Model.willsNoticeDidNotFindIndicatedWillsReasonTxt and
-    Model.willsNoticeDidNotFindIndicatedWillsReasonTxt != '' %} {% assign
-    willsNoticeReason = Model.willsNoticeDidNotFindIndicatedWillsReasonTxt %} {%
-    endif %} {% if Model.willGrantExists == 'yes' %} {% assign grantStatus =
-    'issued' %} {% elsif Model.willGrantExists == 'no' %} {% if
-    Model.noExistingGrantAwareOfOtherApplicantsYesNo == 'yes' %} {% assign
-    grantStatus = 'other-applicants' %} {% elsif
-    Model.noExistingGrantAwareOfOtherApplicantsYesNo == 'no' %} {% assign
-    grantStatus = 'none' %} {% endif %} {% endif %} {% capture
-    testamentaryDocumentRows %} {% for document in testamentaryDocuments %} {%
-    assign hasDocumentRow = false %} {% if document.type != nil and
-    document.type != '' %} {% assign hasDocumentRow = true %} {% elsif
-    document.identifier != nil and document.identifier != '' %} {% assign
-    hasDocumentRow = true %} {% endif %} {% if hasDocumentRow %} {% capture
-    documentReasons %} {% if document.reason.lackOfCapacity %}
-    <li>Lack of capacity.</li>
-    {% endif %} {% if document.reason.undueInfluence %}
-    <li>Undue influence.</li>
-    {% endif %} {% if document.reason.willNotBCProperty %}
-    <li>Will does not apply to property in British Columbia.</li>
-    {% endif %} {% if document.invalidReasonText and document.invalidReasonText
-    != '' %}
-    <li>
-      <b class="multiline">{{ document.invalidReasonText | escape }}</b>
-    </li>
-    {% elsif document.reason.other %}
-    <li>Other reason has not been provided.</li>
-    {% endif %} {% endcapture %} {% assign documentReasons = documentReasons |
-    strip %}
-    <tr>
-      <td>
-        <b class="multiline"
-          >{{ document.type | default: 'Document type has not been provided.' |
-          escape }}</b
-        >
-      </td>
-      <td>
-        <b class="multiline"
-          >{{ document.identifier | default: 'Date or identifier has not been
-          provided.' | escape }}</b
-        >
-      </td>
-      <td>
-        <ul>
-          {% if documentReasons != '' %}{{ documentReasons }}{% else %}
-          <li>Reason has not been provided.</li>
-          {% endif %}
-        </ul>
-      </td>
-    </tr>
-    {% endif %} {% endfor %} {% endcapture %} {% assign testamentaryDocumentRows
-    = testamentaryDocumentRows | strip %} {% if testamentaryDocumentRows == ''
-    %} {% capture testamentaryDocumentRows %}
-    <tr>
-      <td colspan="3">
-        Details of the found testamentary documents have not been provided.
-      </td>
-    </tr>
-    {% endcapture %} {% endif %} {% capture administrationParagraph %}
+    {% capture administrationParagraph %}
     <p class="paragraph">
       <span class="paragraph-number">8.</span>I will administer according to law
       all of the deceased's estate, I will prepare an accounting as to how the
@@ -379,7 +258,7 @@
           >
         </div>
         <p class="text-right">
-          of <b>{{ deponentName | escape }}</b> in this case
+          of <b>{{ Model.p5DeponentName | escape }}</b> in this case
         </p>
         <div class="certificate-row">
           <span>and was made on</span><span class="certificate-line"></span>
@@ -401,25 +280,9 @@
         AFFIDAVIT OF APPLICANT FOR GRANT OF ADMINISTRATION WITHOUT WILL ANNEXED
       </h1>
       <p>
-        I, <b>{{ deponentName | escape }}</b>, of
+        I, <b>{{ Model.p5DeponentName | escape }}</b>, of
         <b class="multiline"
-          >{% if isOrganization %}{{
-          applicant.applicantOrgAddressStreet | escape }}, {{
-          applicant.applicantOrgAddressCity | escape }}, {% if
-          applicant.applicantOrgAddressCountry == 'Canada' %}{{
-          applicant.applicantOrgAddressProvince | escape }}{% elsif
-          applicant.applicantOrgAddressCountry == 'United States' %}{{
-          applicant.applicantOrgAddressState | escape }}{% else %}{{
-          applicant.applicantOrgAddressProvinceText | escape }}{% endif %}, {{
-          applicant.applicantOrgAddressPostalCode | escape }}, {{
-          applicant.applicantOrgAddressCountry | escape }}{% else %}{{
-          Model.applicant.applicantOrdinaryAddressStreet | escape }}, {{
-          Model.applicant.applicantOrdinaryAddressCity | escape }}, {{
-          Model.applicant.applicantOrdinaryAddressProvince | escape }}{{
-          Model.applicant.applicantOrdinaryAddressState | escape }}{{
-          Model.applicant.applicantOrdinaryAddressProvinceText | escape }}, {{
-          Model.applicant.applicantOrdinaryAddressPostalCode | escape }}, {{
-          Model.applicant.applicantOrdinaryAddressCountry | escape }}{% endif %}</b
+          >{{ Model.p5ApplicantAddress | escape }}</b
         >, <b>{{ Model.applicant.applicantOccupation | escape }}</b>, SWEAR (OR
         AFFIRM) THAT:
       </p>
@@ -431,30 +294,30 @@
         applying for a grant of administration without will annexed.
       </p>
       <p class="paragraph">
-        <span class="paragraph-number">2.</span>{% if isOrganization %}<b
-          >{{ organizationName | escape }}</b
+        <span class="paragraph-number">2.</span>{% if Model.p5IsOrganization %}<b
+          >{{ Model.p5OrganizationName | escape }}</b
         >
-        is a person referred to in paragraph (<b>{{ roleLetter }}</b>) of
+        is a person referred to in paragraph (<b>{{ Model.p5Section130Letter }}</b>) of
         section 130 of the <i>Wills, Estates and Succession Act</i>. I am the
-        <b>{{ organizationTitle | escape }}</b> of
-        <b>{{ organizationName | escape }}</b> and I am authorized by the
+        <b>{{ Model.p5OrganizationTitle | escape }}</b> of
+        <b>{{ Model.p5OrganizationName | escape }}</b> and I am authorized by the
         applicant to swear this affidavit on the behalf as applicant.{% elsif
-        isNominated %}I am a person nominated under paragraph (<b
-          >{{ roleLetter }}</b
+        Model.applicant.applicantSection130Nominated %}I am a person nominated under paragraph (<b
+          >{{ Model.p5Section130Letter }}</b
         >) of section 130 of the <i>Wills, Estates and Succession Act</i>.{%
-        else %}I am a person referred to in paragraph (<b>{{ roleLetter }}</b>)
+        else %}I am a person referred to in paragraph (<b>{{ Model.p5Section130Letter }}</b>)
         of section 130 of the <i>Wills, Estates and Succession Act</i>.{% endif
         %}
       </p>
       <p class="paragraph">
         <span class="paragraph-number">3.</span>I am {% unless
-        isPgtDeliveryRequired %}not {% endunless %}obliged under Rule 25-3 (11)
+        Model.p5IsPgtDeliveryRequired %}not {% endunless %}obliged under Rule 25-3 (11)
         to deliver a filed copy of this submission for estate grant to the
         Public Guardian and Trustee.
       </p>
-      {% if hasTestamentaryDocuments or documentSearchKnown %}
+      {% if Model.p5DocumentSearchComplete %}
       <p
-        class="paragraph{% if hasTestamentaryDocuments %} table-intro{% endif %}"
+        class="paragraph{% if Model.p5HasTestamentaryDocuments %} table-intro{% endif %}"
       >
         <span class="paragraph-number">4.</span>I am satisfied that a diligent
         search for a testamentary document of the deceased has been made in each
@@ -462,7 +325,7 @@
         testamentary document may be found, including, without limitation, in
         all places, both physical and electronic, where the deceased usually
         kept the deceased's important documents and {% if
-        hasTestamentaryDocuments %}one or more testamentary documents have been
+        Model.p5HasTestamentaryDocuments %}one or more testamentary documents have been
         found. A copy of the testamentary document(s) is/are attached as an
         exhibit to the affidavit. I believe that the testamentary document(s)
         is/are invalid or otherwise not relevant to this application for the
@@ -474,7 +337,7 @@
         <span class="paragraph-number">4.</span>Testamentary-document search
         information is incomplete.
       </p>
-      {% endif %} {% if hasTestamentaryDocuments %}
+      {% endif %} {% if Model.p5HasTestamentaryDocuments %}
       <table class="document-table">
         <colgroup>
           <col style="width: 22%" />
@@ -489,7 +352,27 @@
           </tr>
         </thead>
         <tbody>
-          {{ testamentaryDocumentRows }}
+          {% for row in Model.p5TestamentaryDocumentRows %}
+          <tr>
+            <td><b class="multiline">{{ row.type | escape }}</b></td>
+            <td><b class="multiline">{{ row.identifier | escape }}</b></td>
+            <td>
+              <ul>
+                {% for reason in row.reasons %}
+                <li>
+                  {% if reason.isCustom %}<b class="multiline">{{ reason.text | escape }}</b>{% else %}{{ reason.text }}{% endif %}
+                </li>
+                {% endfor %}
+              </ul>
+            </td>
+          </tr>
+          {% else %}
+          <tr>
+            <td colspan="3">
+              Details of the found testamentary documents have not been provided.
+            </td>
+          </tr>
+          {% endfor %}
         </tbody>
       </table>
       {% endif %}
@@ -498,7 +381,7 @@
         <span class="paragraph-number">5.</span>I believe that there is no will
         of the deceased.
       </p>
-      {% if grantStatus == 'issued' %}
+      {% if Model.p5GrantStatus == 'issued' %}
       <p class="paragraph">
         <span class="paragraph-number">6.</span>The following grant(s) of
         probate or administration, or equivalent, has/have been issued in
@@ -510,7 +393,7 @@
           >{{ Model.existedGrantNotRelevantReasonsTxt | escape }}</b
         >
       </p>
-      {% elsif grantStatus == 'other-applicants' %}
+      {% elsif Model.p5GrantStatus == 'other-applicants' %}
       <p class="paragraph">
         <span class="paragraph-number">6.</span>The following person(s) has/have
         also applied for a grant of probate or administration:
@@ -518,7 +401,7 @@
           >{{ Model.noExistingGrantOtherApplicantsNamesTxt | escape }}</b
         >
       </p>
-      {% elsif grantStatus == 'none' %}
+      {% elsif Model.p5GrantStatus == 'none' %}
       <p class="paragraph">
         <span class="paragraph-number">6.</span>I am not aware of there being
         any application for a grant of probate or administration, or any grant
@@ -538,13 +421,13 @@
         believe that the information contained in that submission for estate
         grant and those documents is correct and complete.
       </p>
-      {% if showWillsNotice %}{{ administrationParagraph }}{% endif %}
+      {% if Model.p5ShowWillsNotice %}{{ administrationParagraph }}{% endif %}
       <div class="tail-group">
-        {% if showWillsNotice %}
+        {% if Model.p5ShowWillsNotice %}
         <p class="paragraph">
-          <span class="paragraph-number">9.</span>{{ willsNoticeResult | escape
+          <span class="paragraph-number">9.</span>{{ Model.p5WillsNoticeResult | escape
           }}.
-          <b class="multiline">{{ willsNoticeReason | escape }}</b>
+          <b class="multiline">{{ Model.p5WillsNoticeReason | escape }}</b>
         </p>
         {% else %} {{ administrationParagraph }} {% endif %}
         <div class="closing-block">
@@ -573,7 +456,7 @@
                 </td>
                 <td class="caption">
                   Signature of
-                  <b><u>{{ deponentName | escape }}</u></b>
+                  <b><u>{{ Model.p5DeponentName | escape }}</u></b>
                 </td>
               </tr>
               <tr>
