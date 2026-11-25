@@ -95,11 +95,7 @@ public class SubmissionEnricherTests
                     ["childGchildExists"] = "yes",
                     ["gchildData"] = new JArray
                     {
-                        new JObject
-                        {
-                            ["grandchildName"] = "test",
-                            ["grandchildIsAlive"] = "yes",
-                        },
+                        new JObject { ["grandchildName"] = "test", ["grandchildIsAlive"] = "yes" },
                     },
                 },
             },
@@ -126,7 +122,11 @@ public class SubmissionEnricherTests
                 ["spouseExists"] = "no",
                 ["spouseData"] = new JArray
                 {
-                    new JObject { ["spouseName"] = "Hidden Nested Spouse", ["spouseIsAlive"] = "yes" },
+                    new JObject
+                    {
+                        ["spouseName"] = "Hidden Nested Spouse",
+                        ["spouseIsAlive"] = "yes",
+                    },
                 },
             },
             ["childExists"] = "no",
@@ -474,6 +474,213 @@ public class SubmissionEnricherTests
 
         Assert.Equal("", applicant.Value<string>("applicantSection130Pathway"));
         Assert.False(applicant.Value<bool>("applicantSection130Nominated"));
+    }
+
+    [Theory]
+    [InlineData("s130a", "a")]
+    [InlineData("s130e.1", "e.1")]
+    [InlineData("s130f1", "f.1")]
+    [InlineData("s130g", "g")]
+    [InlineData("", "[section 130 paragraph]")]
+    public void EnrichP5_BuildsSection130Letter(string pathway, string expected)
+    {
+        var payload = P5Payload(
+            new JObject
+            {
+                ["applicantName"] = "Cal Child",
+                ["applicantSection130Pathway"] = pathway,
+            }
+        );
+
+        var result = (JObject)SubmissionEnricher.EnrichP5(payload);
+
+        Assert.Equal(expected, result.Value<string>("p5Section130Letter"));
+    }
+
+    [Fact]
+    public void EnrichP5_BuildsDeponentAndOrganizationNamesForCreditorOrganization()
+    {
+        var payload = P5Payload(
+            new JObject
+            {
+                ["applicantName"] = "Creditor Org Ltd.",
+                ["applicantCreditorType"] = "organization",
+                ["applicantCreditorRepName"] = "",
+                ["applicantOrgTitle"] = "Director",
+            }
+        );
+
+        var result = (JObject)SubmissionEnricher.EnrichP5(payload);
+
+        Assert.True(result.Value<bool>("p5IsOrganization"));
+        Assert.Equal("Creditor Org Ltd.", result.Value<string>("p5OrganizationName"));
+        Assert.Equal("[Representative name missing]", result.Value<string>("p5DeponentName"));
+        Assert.Equal("Director", result.Value<string>("p5OrganizationTitle"));
+    }
+
+    [Theory]
+    [InlineData("Canada", "BC")]
+    [InlineData("United States", "WA")]
+    [InlineData("France", "Region")]
+    public void EnrichP5_BuildsOrganizationAddressByCountry(string country, string expectedRegion)
+    {
+        var payload = P5Payload(
+            new JObject
+            {
+                ["applicantCourtOrg"] = "yes",
+                ["applicantOrgAddressStreet"] = "1 Main St",
+                ["applicantOrgAddressCity"] = "Town",
+                ["applicantOrgAddressProvince"] = "BC",
+                ["applicantOrgAddressState"] = "WA",
+                ["applicantOrgAddressProvinceText"] = "Region",
+                ["applicantOrgAddressPostalCode"] = "V1V 1V1",
+                ["applicantOrgAddressCountry"] = country,
+            }
+        );
+
+        var result = (JObject)SubmissionEnricher.EnrichP5(payload);
+
+        Assert.Equal(
+            $"1 Main St, Town, {expectedRegion}, V1V 1V1, {country}",
+            result.Value<string>("p5ApplicantAddress")
+        );
+    }
+
+    [Fact]
+    public void EnrichP5_BuildsOrdinaryAddressAndPgtFlag()
+    {
+        var payload = P5Payload(
+            new JObject
+            {
+                ["applicantOrdinaryAddressStreet"] = "2 Side St",
+                ["applicantOrdinaryAddressCity"] = "City",
+                ["applicantOrdinaryAddressProvince"] = "BC",
+                ["applicantOrdinaryAddressPostalCode"] = "V2V 2V2",
+                ["applicantOrdinaryAddressCountry"] = "Canada",
+            }
+        );
+        payload["notifyPeople"] = new JObject
+        {
+            ["notifyPeopleData"] = new JArray(
+                new JObject { ["isPGT"] = false },
+                new JObject { ["isPGT"] = true }
+            ),
+        };
+
+        var result = (JObject)SubmissionEnricher.EnrichP5(payload);
+
+        Assert.False(result.Value<bool>("p5IsOrganization"));
+        Assert.Equal(
+            "2 Side St, City, BC, V2V 2V2, Canada",
+            result.Value<string>("p5ApplicantAddress")
+        );
+        Assert.True(result.Value<bool>("p5IsPgtDeliveryRequired"));
+    }
+
+    [Fact]
+    public void EnrichP5_BuildsTestamentaryDocumentRowsFromWillsNoticeResults()
+    {
+        var payload = P5Payload(new JObject { ["applicantName"] = "Cal Child" });
+        payload["willsNoticeResultsReceived"] = "yes";
+        payload["willsNoticeHasResults"] = "yes";
+        payload["willsNoticeFoundIndicatedWills"] = "yes";
+        payload["willsNoticeIndicatedWillsOtherDocExists"] = "yes";
+        payload["willsNoticeIndicatedWillsOtherTestamentaryDocumentsEditor"] = new JArray(
+            new JObject
+            {
+                ["type"] = "Will",
+                ["identifier"] = "",
+                ["reason"] = new JObject { ["lackOfCapacity"] = true, ["other"] = true },
+                ["invalidReasonText"] = "Custom reason",
+            },
+            new JObject { ["type"] = "", ["identifier"] = "" },
+            new JObject { ["type"] = "Codicil", ["identifier"] = "2020" }
+        );
+
+        var result = (JObject)SubmissionEnricher.EnrichP5(payload);
+
+        Assert.True(result.Value<bool>("p5HasTestamentaryDocuments"));
+        Assert.True(result.Value<bool>("p5DocumentSearchComplete"));
+        Assert.False(result.Value<bool>("p5ShowWillsNotice"));
+        var rows = (JArray)result["p5TestamentaryDocumentRows"]!;
+        Assert.Equal(2, rows.Count);
+        Assert.Equal(
+            "Date or identifier has not been provided.",
+            rows[0].Value<string>("identifier")
+        );
+        var reasons = (JArray)rows[0]["reasons"]!;
+        Assert.Equal("Lack of capacity.", reasons[0].Value<string>("text"));
+        Assert.False(reasons[0].Value<bool>("isCustom"));
+        Assert.Equal("Custom reason", reasons[1].Value<string>("text"));
+        Assert.True(reasons[1].Value<bool>("isCustom"));
+        Assert.Equal(
+            "Reason has not been provided.",
+            rows[1]["reasons"]![0]!.Value<string>("text")
+        );
+    }
+
+    [Theory]
+    [InlineData(
+        "lost",
+        "",
+        "The will is believed to have been lost",
+        "Reason for not finding the indicated document has not been provided."
+    )]
+    [InlineData(
+        "willsNoticeInError",
+        "Typo",
+        "The Wills Notice filed in relation to an alleged testamentary document is believed to be in error",
+        "Typo"
+    )]
+    [InlineData(
+        "other",
+        "",
+        "Wills-notice search result reason is missing or unrecognized",
+        "Reason for not finding the indicated document has not been provided."
+    )]
+    public void EnrichP5_BuildsWillsNoticeText(
+        string reason,
+        string reasonText,
+        string expectedResult,
+        string expectedReason
+    )
+    {
+        var payload = P5Payload(new JObject { ["applicantName"] = "Cal Child" });
+        payload["willsNoticeResultsReceived"] = "yes";
+        payload["willsNoticeHasResults"] = "yes";
+        payload["willsNoticeFoundIndicatedWills"] = "no";
+        payload["willsNoticeDidNotFindIndicatedWillsOtherDocExists"] = "no";
+        payload["willsNoticeDidNotFindIndicatedWillsReason"] = reason;
+        payload["willsNoticeDidNotFindIndicatedWillsReasonTxt"] = reasonText;
+
+        var result = (JObject)SubmissionEnricher.EnrichP5(payload);
+
+        Assert.True(result.Value<bool>("p5ShowWillsNotice"));
+        Assert.False(result.Value<bool>("p5HasTestamentaryDocuments"));
+        Assert.True(result.Value<bool>("p5DocumentSearchComplete"));
+        Assert.Equal(expectedResult, result.Value<string>("p5WillsNoticeResult"));
+        Assert.Equal(expectedReason, result.Value<string>("p5WillsNoticeReason"));
+    }
+
+    [Theory]
+    [InlineData("yes", "", "issued")]
+    [InlineData("no", "yes", "other-applicants")]
+    [InlineData("no", "no", "none")]
+    [InlineData("no", "", "unknown")]
+    [InlineData("", "", "unknown")]
+    public void EnrichP5_BuildsGrantStatus(
+        string grantExists,
+        string otherApplicants,
+        string expected
+    )
+    {
+        var payload = P5Payload(new JObject { ["applicantName"] = "Cal Child" });
+        payload["willGrantExists"] = grantExists;
+        payload["noExistingGrantAwareOfOtherApplicantsYesNo"] = otherApplicants;
+
+        var result = (JObject)SubmissionEnricher.EnrichP5(payload);
+
+        Assert.Equal(expected, result.Value<string>("p5GrantStatus"));
     }
 
     private static JObject P5Payload(JObject applicant) =>
