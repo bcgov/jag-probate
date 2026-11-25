@@ -365,6 +365,8 @@ public static class SubmissionEnricher
     /// - nominated by spouse -> a
     /// - nominated by child with consent -> c
     /// - nominated by another intestate successor with consent -> e.1
+    /// - not nominated, intestate successor other than spouse/child/grandchild/parent/sibling,
+    ///   with no same-priority successors, no Step 3 related people, and no CHEFS pathway set -> e
     /// - applicant is the spouse -> a
     /// Otherwise the CHEFS value is kept. applicant.applicantSection130Nominated is
     /// true when the paragraph is a nomination paragraph.
@@ -417,6 +419,15 @@ public static class SubmissionEnricher
 
         if (applicant.Value<string>("applicantCourtAppointed") == "yes")
             return ("s130g", false);
+
+        if (
+            applicant.Value<string>("applicantHasBeenNominated") == "no"
+            && applicant.Value<string>("applicantIsOtherSuccessor") == "yes"
+            && applicant.Value<string>("applicantHasSamePrioritySuccessors") == "no"
+            && applicant.Value<bool?>("applicantStep3PeopleExist") != true
+            && string.IsNullOrEmpty(applicant.Value<string>("applicantSection130Pathway"))
+        )
+            return ("s130e", false);
 
         var applicantName = applicant.Value<string>("applicantName")?.Trim();
         if (
