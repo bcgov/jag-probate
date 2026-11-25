@@ -435,6 +435,28 @@ public class SubmissionEnricherTests
     }
 
     [Fact]
+    public void EnrichP5_DerivesS130eForNonNominatedOtherIntestateSuccessor()
+    {
+        var payload = P5Payload(
+            new JObject
+            {
+                ["applicantName"] = "Aunt 1",
+                ["applicantNameSelection"] = "__other__",
+                ["applicantHasBeenNominated"] = "no",
+                ["applicantIsOtherSuccessor"] = "yes",
+                ["applicantStep3PeopleExist"] = false,
+                ["applicantHasSamePrioritySuccessors"] = "no",
+                ["applicantSection130Pathway"] = "",
+            }
+        );
+
+        var applicant = (JObject)((JObject)SubmissionEnricher.EnrichP5(payload))["applicant"]!;
+
+        Assert.Equal("s130e", applicant.Value<string>("applicantSection130Pathway"));
+        Assert.False(applicant.Value<bool>("applicantSection130Nominated"));
+    }
+
+    [Fact]
     public void EnrichP5_LeavesPathwayUnsetWhenNominationConsentIsMissing()
     {
         var payload = P5Payload(
