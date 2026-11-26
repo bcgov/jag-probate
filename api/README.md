@@ -16,6 +16,14 @@ Templates use Fluid's built-in money filters with CAD as the default currency.
 The shared options set `MoneyFormat` to `{{amount}}` because the exhibit templates
 already supply the dollar sign: `1134.65` renders as `$1,134.65`.
 
+The template service passes `HtmlEncoder.Default` to Fluid when rendering HTML.
+Model values are HTML-encoded by default, including when a client time zone is
+provided. For example, `<span style="background-color:purple">TestHTML</span>`
+is displayed as literal text in the PDF, not as a styled element. Static template
+markup is unchanged; existing `escape` filters and captured output are not
+encoded again. Do not use Fluid's `raw` filter on model values, as it bypasses
+the encoder. This encoding is separate from HTML sanitization.
+
 ### Health Check
 
 #### GET /api/health
