@@ -37,9 +37,9 @@ public class SubmissionOwnershipIntegrationTests : IDisposable
         foreach (
             var (id, username, deleted) in new[]
             {
+                (_deletedId, "alice", true),
                 (_bobId, "bob", false),
                 (_aliceId, "alice", false),
-                (_deletedId, "alice", true),
             }
         )
         {
@@ -265,6 +265,34 @@ public class SubmissionOwnershipIntegrationTests : IDisposable
         Assert.Equal(SubmissionStatus.Draft, bob.Status);
         Assert.Equal("{}", bob.SubmissionData);
         Assert.Equal("{\"privateValue\":\"bob-private\"}", Assert.Single(bob.StepDataEntries).Data);
+    }
+
+    [Fact]
+    public async Task Delete_DuplicateOwnerIdWithDeletedRowFirst_DeletesLiveSubmission()
+    {
+        DateTime? originalDeletedAt;
+        int deletedRowId;
+        using (var db = new ProbateDbContext(_dbOptions))
+        {
+            var deleted = await db.Submissions.SingleAsync(s => s.PublicId == _deletedId);
+            deleted.PublicId = _aliceId;
+            originalDeletedAt = deleted.DeletedAt;
+            deletedRowId = deleted.Id;
+            await db.SaveChangesAsync();
+        }
+
+        using var response = await SendAsync("DELETE", _aliceId, "");
+        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+        using var get = await SendAsync("GET", _aliceId, "");
+        Assert.Equal(HttpStatusCode.NotFound, get.StatusCode);
+        using var stored = new ProbateDbContext(_dbOptions);
+        Assert.All(await stored.Submissions.Where(s => s.PublicId == _aliceId).ToListAsync(), s =>
+            Assert.NotNull(s.DeletedAt)
+        );
+        Assert.Equal(
+            originalDeletedAt,
+            (await stored.Submissions.SingleAsync(s => s.Id == deletedRowId)).DeletedAt
+        );
     }
 
     private async Task<HttpResponseMessage> SendAsync(string method, Guid id, string suffix)

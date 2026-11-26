@@ -17,6 +17,8 @@ runs. Submission and step-data service lookups also require the same username,
 so duplicate legacy public IDs cannot authorize one owner's row and access
 another owner's row. Foreign, missing, and soft-deleted submissions return the same `404`;
 an authenticated principal without a usable username returns `401`.
+Deletion prefers live owner-matching rows over legacy rows already soft-deleted;
+the service remains idempotent when no live row remains.
 Draft creation and submission listing already use the authenticated username.
 
 All 18 controller endpoints were reviewed:
