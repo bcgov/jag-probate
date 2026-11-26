@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Probate.Api.Infrastructure.Authentication;
 using Probate.Api.Models;
 using Probate.Api.Services;
 
@@ -13,6 +14,7 @@ namespace Probate.Api.Controllers
     [Route("api/submissions/{publicId}/steps")]
     [ApiController]
     [Authorize]
+    [SubmissionOwnership("publicId")]
     public class StepDataController : ControllerBase
     {
         private readonly IStepDataService _stepDataService;

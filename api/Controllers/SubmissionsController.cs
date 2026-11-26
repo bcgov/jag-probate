@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json.Linq;
+using Probate.Api.Infrastructure.Authentication;
 using Probate.Api.Models;
 using Probate.Api.Services;
 
@@ -59,6 +60,7 @@ namespace Probate.Api.Controllers
         /// Gets a single submission by its DB id.
         /// </summary>
         [HttpGet("{id}")]
+        [SubmissionOwnership("id")]
         [ProducesResponseType(typeof(SubmissionResponseDto), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
         public async Task<ActionResult<SubmissionResponseDto>> GetSubmission(
@@ -108,6 +110,7 @@ namespace Probate.Api.Controllers
         /// The submission remains editable.
         /// </summary>
         [HttpPost("{id}/submit")]
+        [SubmissionOwnership("id")]
         [ProducesResponseType(typeof(SubmissionResponseDto), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
         public async Task<ActionResult<SubmissionResponseDto>> SubmitApplication(
@@ -140,6 +143,7 @@ namespace Probate.Api.Controllers
         /// Soft deletes a local submission record.
         /// </summary>
         [HttpDelete("{id}")]
+        [SubmissionOwnership("id")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
         public async Task<IActionResult> DeleteSubmission(
