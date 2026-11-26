@@ -184,6 +184,65 @@ public class TemplateServiceTests
     }
 
     [Theory]
+    [InlineData(null)]
+    [InlineData("Asia/Tokyo")]
+    [InlineData("invalid/time-zone")]
+    public void RenderTemplates_HtmlEncodesModelValues(string? timeZoneId)
+    {
+        const string value = """<span style="background-color:purple">TestHTML</span>""";
+        const string encoded =
+            "&lt;span style=&quot;background-color:purple&quot;&gt;TestHTML&lt;/span&gt;";
+        var temporaryDirectory = Directory.CreateTempSubdirectory();
+        try
+        {
+            var templatesPath = Path.Join(temporaryDirectory.FullName, "Templates");
+            Directory.CreateDirectory(templatesPath);
+            File.WriteAllText(
+                Path.Join(templatesPath, "test.html"),
+                "<div>{{ Model.applicant.name }}</div>"
+                    + "{% for item in Model.items %}<p>{{ item | strip }}</p>{% endfor %}"
+                    + "{% capture name %}{{ Model.applicant.name }}{% endcapture %}<b>{{ name }}</b>"
+                    + "<i>{{ Model.applicant.name | escape }}</i>"
+            );
+
+            var environment = new Mock<IWebHostEnvironment>();
+            environment
+                .SetupGet(value => value.ContentRootPath)
+                .Returns(temporaryDirectory.FullName);
+            var options = Microsoft.Extensions.Options.Options.Create(
+                new TemplateOptions
+                {
+                    Groups = new Dictionary<string, string[]> { ["test"] = ["test.html"] },
+                }
+            );
+            var service = new TemplateService(
+                environment.Object,
+                options,
+                NullLogger<TemplateService>.Instance
+            );
+
+            var documents = service.RenderTemplates(
+                "test",
+                new JObject
+                {
+                    ["applicant"] = new JObject { ["name"] = value },
+                    ["items"] = new JArray(value),
+                },
+                timeZoneId
+            );
+
+            Assert.Equal(
+                $"<div>{encoded}</div><p>{encoded}</p><b>{encoded}</b><i>{encoded}</i>",
+                Assert.Single(documents)
+            );
+        }
+        finally
+        {
+            temporaryDirectory.Delete(recursive: true);
+        }
+    }
+
+    [Theory]
     [InlineData("deceasedAddressProvince", "British Columbia")]
     [InlineData("deceasedAddressState", "Washington")]
     [InlineData("deceasedAddressProvinceText", "Bavaria")]

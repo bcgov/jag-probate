@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Text.Encodings.Web;
 using Fluid;
 using Fluid.Filters;
 using Microsoft.AspNetCore.Hosting;
@@ -104,7 +105,7 @@ public class TemplateService : ITemplateService
 
             var context = new TemplateContext(options);
             context.SetValue("Model", submissionData);
-            documents.Add(template.Render(context));
+            documents.Add(template.Render(context, HtmlEncoder.Default));
         }
 
         return documents;
