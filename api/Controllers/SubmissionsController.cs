@@ -68,7 +68,11 @@ namespace Probate.Api.Controllers
             CancellationToken cancellationToken = default
         )
         {
-            var result = await _submissionService.GetSubmissionByIdAsync(id, cancellationToken);
+            var result = await _submissionService.GetSubmissionByIdAsync(
+                id,
+                User.FindFirstValue("preferred_username")!,
+                cancellationToken
+            );
             if (result is null)
                 return NotFound(new { message = $"Submission {id} not found." });
             return Ok(result);
@@ -122,11 +126,13 @@ namespace Probate.Api.Controllers
             {
                 var compiledData = await _stepDataService.GetCompiledDataAsync(
                     id,
+                    User.FindFirstValue("preferred_username")!,
                     cancellationToken
                 );
 
                 var result = await _submissionService.FinalizeSubmissionAsync(
                     id,
+                    User.FindFirstValue("preferred_username")!,
                     compiledData,
                     cancellationToken
                 );
@@ -151,7 +157,11 @@ namespace Probate.Api.Controllers
             CancellationToken cancellationToken = default
         )
         {
-            await _submissionService.DeleteSubmissionAsync(id, cancellationToken);
+            await _submissionService.DeleteSubmissionAsync(
+                id,
+                User.FindFirstValue("preferred_username")!,
+                cancellationToken
+            );
             return NoContent();
         }
     }

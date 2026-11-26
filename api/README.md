@@ -13,7 +13,9 @@ Local Development: `http://localhost:5000`
 Submission-by-ID reads, finalization, deletion, and all step-data routes require
 the authenticated `preferred_username` to match the submission's `CreatedBy`.
 `SubmissionOwnershipAttribute` checks ownership before the controller action
-runs. Foreign, missing, and soft-deleted submissions return the same `404`;
+runs. Submission and step-data service lookups also require the same username,
+so duplicate legacy public IDs cannot authorize one owner's row and access
+another owner's row. Foreign, missing, and soft-deleted submissions return the same `404`;
 an authenticated principal without a usable username returns `401`.
 Draft creation and submission listing already use the authenticated username.
 

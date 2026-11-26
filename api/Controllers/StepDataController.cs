@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Security.Claims;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
@@ -44,6 +45,7 @@ namespace Probate.Api.Controllers
             {
                 var result = await _stepDataService.UpsertStepDataAsync(
                     publicId,
+                    User.FindFirstValue("preferred_username")!,
                     dto,
                     cancellationToken
                 );
@@ -69,6 +71,7 @@ namespace Probate.Api.Controllers
         {
             var result = await _stepDataService.GetStepDataAsync(
                 publicId,
+                User.FindFirstValue("preferred_username")!,
                 formId,
                 cancellationToken
             );
@@ -89,7 +92,11 @@ namespace Probate.Api.Controllers
             CancellationToken cancellationToken = default
         )
         {
-            var result = await _stepDataService.GetAllStepDataAsync(publicId, cancellationToken);
+            var result = await _stepDataService.GetAllStepDataAsync(
+                publicId,
+                User.FindFirstValue("preferred_username")!,
+                cancellationToken
+            );
             return Ok(result);
         }
 
@@ -109,6 +116,7 @@ namespace Probate.Api.Controllers
             {
                 var result = await _stepDataService.GetCompiledDataAsync(
                     publicId,
+                    User.FindFirstValue("preferred_username")!,
                     cancellationToken
                 );
                 return Content(result, "application/json");

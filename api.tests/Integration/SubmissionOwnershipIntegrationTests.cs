@@ -37,8 +37,8 @@ public class SubmissionOwnershipIntegrationTests : IDisposable
         foreach (
             var (id, username, deleted) in new[]
             {
-                (_aliceId, "alice", false),
                 (_bobId, "bob", false),
+                (_aliceId, "alice", false),
                 (_deletedId, "alice", true),
             }
         )
@@ -212,6 +212,59 @@ public class SubmissionOwnershipIntegrationTests : IDisposable
             "alice",
             (await db.Submissions.SingleAsync(s => s.PublicId == createdId)).CreatedBy
         );
+    }
+
+    [Theory]
+    [MemberData(nameof(Endpoints))]
+    public async Task IdentifierRoutes_DuplicateLegacyPublicIds_OnlyAccessAuthorizedOwner(
+        string method,
+        string suffix
+    )
+    {
+        using (var db = new ProbateDbContext(_dbOptions))
+        {
+            // The legacy migration gave all existing submissions the same empty GUID.
+            foreach (
+                var submission in await db.Submissions.Where(s => s.DeletedAt == null).ToListAsync()
+            )
+                submission.PublicId = Guid.Empty;
+            await db.SaveChangesAsync();
+        }
+
+        using var response = await SendAsync(method, Guid.Empty, suffix);
+        Assert.Equal(
+            method == "DELETE" ? HttpStatusCode.NoContent : HttpStatusCode.OK,
+            response.StatusCode
+        );
+        var body = await response.Content.ReadAsStringAsync();
+        Assert.DoesNotContain("bob", body);
+        if (method == "GET" && suffix.StartsWith("/steps"))
+            Assert.Contains("alice-private", body);
+
+        using var stored = new ProbateDbContext(_dbOptions);
+        var alice = await stored
+            .Submissions.Include(s => s.StepDataEntries)
+            .SingleAsync(s => s.CreatedBy == "alice" && s.PublicId == Guid.Empty);
+        if (method == "DELETE")
+            Assert.NotNull(alice.DeletedAt);
+        if (method == "POST")
+        {
+            Assert.Equal(SubmissionStatus.ReadyToPrint, alice.Status);
+            Assert.Contains("alice-private", alice.SubmissionData);
+        }
+        if (method == "PUT")
+            Assert.Equal(
+                "{\"privateValue\":\"updated\"}",
+                Assert.Single(alice.StepDataEntries).Data
+            );
+        var bob = await stored
+            .Submissions.Include(s => s.StepDataEntries)
+            .SingleAsync(s => s.CreatedBy == "bob");
+        Assert.Null(bob.DeletedAt);
+        Assert.Null(bob.LastUpdatedAt);
+        Assert.Equal(SubmissionStatus.Draft, bob.Status);
+        Assert.Equal("{}", bob.SubmissionData);
+        Assert.Equal("{\"privateValue\":\"bob-private\"}", Assert.Single(bob.StepDataEntries).Data);
     }
 
     private async Task<HttpResponseMessage> SendAsync(string method, Guid id, string suffix)

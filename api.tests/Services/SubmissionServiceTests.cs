@@ -15,7 +15,11 @@ public class SubmissionServiceTests
         await db.SaveChangesAsync();
         var service = CreateService(db);
 
-        var result = await service.FinalizeSubmissionAsync(submission.PublicId, "{\"a\":1}");
+        var result = await service.FinalizeSubmissionAsync(
+            submission.PublicId,
+            "test-user",
+            "{\"a\":1}"
+        );
 
         var stored = await db.Submissions.SingleAsync();
         Assert.Equal("{\"a\":1}", stored.SubmissionData);
@@ -32,7 +36,7 @@ public class SubmissionServiceTests
         var service = CreateService(db);
 
         await Assert.ThrowsAsync<KeyNotFoundException>(() =>
-            service.FinalizeSubmissionAsync(Guid.NewGuid(), "{}")
+            service.FinalizeSubmissionAsync(Guid.NewGuid(), "test-user", "{}")
         );
     }
 
@@ -47,7 +51,7 @@ public class SubmissionServiceTests
         var service = CreateService(db);
 
         await Assert.ThrowsAsync<KeyNotFoundException>(() =>
-            service.FinalizeSubmissionAsync(submission.PublicId, "{}")
+            service.FinalizeSubmissionAsync(submission.PublicId, "test-user", "{}")
         );
     }
 
@@ -60,9 +64,9 @@ public class SubmissionServiceTests
         await db.SaveChangesAsync();
         var service = CreateService(db);
 
-        await service.DeleteSubmissionAsync(submission.PublicId);
+        await service.DeleteSubmissionAsync(submission.PublicId, "test-user");
         var firstDeletedAt = (await db.Submissions.SingleAsync()).DeletedAt;
-        await service.DeleteSubmissionAsync(submission.PublicId);
+        await service.DeleteSubmissionAsync(submission.PublicId, "test-user");
 
         Assert.NotNull(firstDeletedAt);
         Assert.Equal(firstDeletedAt, (await db.Submissions.SingleAsync()).DeletedAt);
@@ -75,7 +79,7 @@ public class SubmissionServiceTests
         var service = CreateService(db);
 
         await Assert.ThrowsAsync<KeyNotFoundException>(() =>
-            service.DeleteSubmissionAsync(Guid.NewGuid())
+            service.DeleteSubmissionAsync(Guid.NewGuid(), "test-user")
         );
     }
 

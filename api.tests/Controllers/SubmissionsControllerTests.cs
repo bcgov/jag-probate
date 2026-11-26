@@ -31,6 +31,7 @@ public class SubmissionsControllerTests
             _mockStepDataService.Object,
             _mockLogger.Object
         );
+        SetUser("jdoe");
     }
 
     /// Sets up the controller's User principal with the given preferred_username claim.
@@ -64,7 +65,9 @@ public class SubmissionsControllerTests
         };
 
         _mockService
-            .Setup(x => x.GetSubmissionByIdAsync(submissionId, It.IsAny<CancellationToken>()))
+            .Setup(x =>
+                x.GetSubmissionByIdAsync(submissionId, "jdoe", It.IsAny<CancellationToken>())
+            )
             .ReturnsAsync(expected);
 
         // Act
@@ -86,7 +89,7 @@ public class SubmissionsControllerTests
         // Arrange
         var missingId = Guid.NewGuid();
         _mockService
-            .Setup(x => x.GetSubmissionByIdAsync(missingId, It.IsAny<CancellationToken>()))
+            .Setup(x => x.GetSubmissionByIdAsync(missingId, "jdoe", It.IsAny<CancellationToken>()))
             .ReturnsAsync((SubmissionResponseDto?)null);
 
         // Act
@@ -111,7 +114,7 @@ public class SubmissionsControllerTests
         using var cts = new CancellationTokenSource();
         var submissionId = Guid.NewGuid();
         _mockService
-            .Setup(x => x.GetSubmissionByIdAsync(submissionId, cts.Token))
+            .Setup(x => x.GetSubmissionByIdAsync(submissionId, "jdoe", cts.Token))
             .ReturnsAsync(
                 new SubmissionResponseDto
                 {
@@ -126,7 +129,10 @@ public class SubmissionsControllerTests
         await _controller.GetSubmission(submissionId, cts.Token);
 
         // Assert
-        _mockService.Verify(x => x.GetSubmissionByIdAsync(submissionId, cts.Token), Times.Once);
+        _mockService.Verify(
+            x => x.GetSubmissionByIdAsync(submissionId, "jdoe", cts.Token),
+            Times.Once
+        );
     }
 
     // ── GET /api/Submissions ──────────────────────────────────────────────
@@ -240,7 +246,7 @@ public class SubmissionsControllerTests
         // Arrange
         var deleteId = Guid.NewGuid();
         _mockService
-            .Setup(x => x.DeleteSubmissionAsync(deleteId, It.IsAny<CancellationToken>()))
+            .Setup(x => x.DeleteSubmissionAsync(deleteId, "jdoe", It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
 
         // Act
@@ -257,7 +263,7 @@ public class SubmissionsControllerTests
         // Arrange
         var deleteId = Guid.NewGuid();
         _mockService
-            .Setup(x => x.DeleteSubmissionAsync(deleteId, It.IsAny<CancellationToken>()))
+            .Setup(x => x.DeleteSubmissionAsync(deleteId, "jdoe", It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
 
         // Act
@@ -265,7 +271,7 @@ public class SubmissionsControllerTests
 
         // Assert
         _mockService.Verify(
-            x => x.DeleteSubmissionAsync(deleteId, It.IsAny<CancellationToken>()),
+            x => x.DeleteSubmissionAsync(deleteId, "jdoe", It.IsAny<CancellationToken>()),
             Times.Once
         );
     }
@@ -277,14 +283,14 @@ public class SubmissionsControllerTests
         using var cts = new CancellationTokenSource();
         var deleteId = Guid.NewGuid();
         _mockService
-            .Setup(x => x.DeleteSubmissionAsync(deleteId, cts.Token))
+            .Setup(x => x.DeleteSubmissionAsync(deleteId, "jdoe", cts.Token))
             .Returns(Task.CompletedTask);
 
         // Act
         await _controller.DeleteSubmission(deleteId, cts.Token);
 
         // Assert
-        _mockService.Verify(x => x.DeleteSubmissionAsync(deleteId, cts.Token), Times.Once);
+        _mockService.Verify(x => x.DeleteSubmissionAsync(deleteId, "jdoe", cts.Token), Times.Once);
     }
 
     // ── POST /api/Submissions/{id}/submit ────────────────────────────────
@@ -305,11 +311,16 @@ public class SubmissionsControllerTests
         };
 
         _mockStepDataService
-            .Setup(x => x.GetCompiledDataAsync(publicId, It.IsAny<CancellationToken>()))
+            .Setup(x => x.GetCompiledDataAsync(publicId, "jdoe", It.IsAny<CancellationToken>()))
             .ReturnsAsync(compiledData);
         _mockService
             .Setup(x =>
-                x.FinalizeSubmissionAsync(publicId, compiledData, It.IsAny<CancellationToken>())
+                x.FinalizeSubmissionAsync(
+                    publicId,
+                    "jdoe",
+                    compiledData,
+                    It.IsAny<CancellationToken>()
+                )
             )
             .ReturnsAsync(finalized);
 
@@ -331,7 +342,7 @@ public class SubmissionsControllerTests
         var publicId = Guid.NewGuid();
 
         _mockStepDataService
-            .Setup(x => x.GetCompiledDataAsync(publicId, It.IsAny<CancellationToken>()))
+            .Setup(x => x.GetCompiledDataAsync(publicId, "jdoe", It.IsAny<CancellationToken>()))
             .ThrowsAsync(new KeyNotFoundException());
 
         // Act
@@ -350,11 +361,16 @@ public class SubmissionsControllerTests
         var compiledData = "{\"step1\":\"data\",\"step3\":\"data\"}";
 
         _mockStepDataService
-            .Setup(x => x.GetCompiledDataAsync(publicId, It.IsAny<CancellationToken>()))
+            .Setup(x => x.GetCompiledDataAsync(publicId, "jdoe", It.IsAny<CancellationToken>()))
             .ReturnsAsync(compiledData);
         _mockService
             .Setup(x =>
-                x.FinalizeSubmissionAsync(publicId, compiledData, It.IsAny<CancellationToken>())
+                x.FinalizeSubmissionAsync(
+                    publicId,
+                    "jdoe",
+                    compiledData,
+                    It.IsAny<CancellationToken>()
+                )
             )
             .ReturnsAsync(
                 new SubmissionResponseDto
@@ -371,7 +387,13 @@ public class SubmissionsControllerTests
 
         // Assert
         _mockService.Verify(
-            x => x.FinalizeSubmissionAsync(publicId, compiledData, It.IsAny<CancellationToken>()),
+            x =>
+                x.FinalizeSubmissionAsync(
+                    publicId,
+                    "jdoe",
+                    compiledData,
+                    It.IsAny<CancellationToken>()
+                ),
             Times.Once
         );
     }

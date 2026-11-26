@@ -16,13 +16,18 @@ namespace Probate.Api.Services
     {
         Task<SubmissionResponseDto?> GetSubmissionByIdAsync(
             Guid id,
+            string username,
             CancellationToken cancellationToken = default
         );
         Task<IReadOnlyList<SubmissionResponseDto>> GetSubmissionsByUserAsync(
             string username,
             CancellationToken cancellationToken = default
         );
-        Task DeleteSubmissionAsync(Guid id, CancellationToken cancellationToken = default);
+        Task DeleteSubmissionAsync(
+            Guid id,
+            string username,
+            CancellationToken cancellationToken = default
+        );
 
         /// <summary>
         /// Creates a bare draft submission for the step-based wizard flow.
@@ -39,6 +44,7 @@ namespace Probate.Api.Services
         /// </summary>
         Task<SubmissionResponseDto> FinalizeSubmissionAsync(
             Guid publicId,
+            string username,
             string compiledData,
             CancellationToken cancellationToken = default
         );
@@ -79,11 +85,12 @@ namespace Probate.Api.Services
 
         public async Task<SubmissionResponseDto?> GetSubmissionByIdAsync(
             Guid id,
+            string username,
             CancellationToken cancellationToken = default
         )
         {
             var submission = await _db.Submissions.FirstOrDefaultAsync(
-                s => s.PublicId == id && s.DeletedAt == null,
+                s => s.PublicId == id && s.CreatedBy == username && s.DeletedAt == null,
                 cancellationToken
             );
             return submission?.Adapt<SubmissionResponseDto>();
@@ -140,12 +147,13 @@ namespace Probate.Api.Services
 
         public async Task<SubmissionResponseDto> FinalizeSubmissionAsync(
             Guid publicId,
+            string username,
             string compiledData,
             CancellationToken cancellationToken = default
         )
         {
             var submission = await _db.Submissions.FirstOrDefaultAsync(
-                s => s.PublicId == publicId && s.DeletedAt == null,
+                s => s.PublicId == publicId && s.CreatedBy == username && s.DeletedAt == null,
                 cancellationToken
             ) ?? throw new KeyNotFoundException($"Submission {publicId} not found.");
 
@@ -160,11 +168,12 @@ namespace Probate.Api.Services
 
         public async Task DeleteSubmissionAsync(
             Guid id,
+            string username,
             CancellationToken cancellationToken = default
         )
         {
             var submission = await _db.Submissions.FirstOrDefaultAsync(
-                s => s.PublicId == id,
+                s => s.PublicId == id && s.CreatedBy == username,
                 cancellationToken
             ) ?? throw new KeyNotFoundException($"Submission {id} not found.");
 

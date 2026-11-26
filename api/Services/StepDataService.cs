@@ -17,23 +17,27 @@ namespace Probate.Api.Services
     {
         Task<StepDataResponseDto> UpsertStepDataAsync(
             Guid submissionPublicId,
+            string username,
             UpsertStepDataDto dto,
             CancellationToken cancellationToken = default
         );
 
         Task<StepDataResponseDto?> GetStepDataAsync(
             Guid submissionPublicId,
+            string username,
             string formId,
             CancellationToken cancellationToken = default
         );
 
         Task<IReadOnlyList<StepDataResponseDto>> GetAllStepDataAsync(
             Guid submissionPublicId,
+            string username,
             CancellationToken cancellationToken = default
         );
 
         Task<string> GetCompiledDataAsync(
             Guid submissionPublicId,
+            string username,
             CancellationToken cancellationToken = default
         );
     }
@@ -51,12 +55,16 @@ namespace Probate.Api.Services
 
         public async Task<StepDataResponseDto> UpsertStepDataAsync(
             Guid submissionPublicId,
+            string username,
             UpsertStepDataDto dto,
             CancellationToken cancellationToken = default
         )
         {
             var submission = await _db.Submissions.FirstOrDefaultAsync(
-                s => s.PublicId == submissionPublicId && s.DeletedAt == null,
+                s =>
+                    s.PublicId == submissionPublicId
+                    && s.CreatedBy == username
+                    && s.DeletedAt == null,
                 cancellationToken
             ) ?? throw new KeyNotFoundException($"Submission {submissionPublicId} not found.");
 
@@ -109,12 +117,16 @@ namespace Probate.Api.Services
 
         public async Task<StepDataResponseDto?> GetStepDataAsync(
             Guid submissionPublicId,
+            string username,
             string formId,
             CancellationToken cancellationToken = default
         )
         {
             var submission = await _db.Submissions.FirstOrDefaultAsync(
-                s => s.PublicId == submissionPublicId && s.DeletedAt == null,
+                s =>
+                    s.PublicId == submissionPublicId
+                    && s.CreatedBy == username
+                    && s.DeletedAt == null,
                 cancellationToken
             );
 
@@ -131,11 +143,15 @@ namespace Probate.Api.Services
 
         public async Task<IReadOnlyList<StepDataResponseDto>> GetAllStepDataAsync(
             Guid submissionPublicId,
+            string username,
             CancellationToken cancellationToken = default
         )
         {
             var submission = await _db.Submissions.FirstOrDefaultAsync(
-                s => s.PublicId == submissionPublicId && s.DeletedAt == null,
+                s =>
+                    s.PublicId == submissionPublicId
+                    && s.CreatedBy == username
+                    && s.DeletedAt == null,
                 cancellationToken
             );
 
@@ -155,11 +171,15 @@ namespace Probate.Api.Services
         /// </summary>
         public async Task<string> GetCompiledDataAsync(
             Guid submissionPublicId,
+            string username,
             CancellationToken cancellationToken = default
         )
         {
             var submission = await _db.Submissions.FirstOrDefaultAsync(
-                s => s.PublicId == submissionPublicId && s.DeletedAt == null,
+                s =>
+                    s.PublicId == submissionPublicId
+                    && s.CreatedBy == username
+                    && s.DeletedAt == null,
                 cancellationToken
             ) ?? throw new KeyNotFoundException($"Submission {submissionPublicId} not found.");
 
