@@ -438,15 +438,12 @@ public static class SubmissionEnricher
             applicant.Value<string>("applicantSection130Pathway")
         );
 
-        var isPgtDeliveryRequired = false;
-        if (root.SelectToken("notifyPeople.notifyPeopleData") is JArray notifyPeople)
-        {
-            foreach (var recipient in notifyPeople.OfType<JObject>())
-            {
-                if (IsTrue(recipient["isPGT"]))
-                    isPgtDeliveryRequired = true;
-            }
-        }
+        var isPgtDeliveryRequired =
+            root.SelectToken("notifyPeople.notifyPeopleData") is JArray notifyPeople
+            && notifyPeople
+                .Where(token => token is JObject)
+                .Cast<JObject>()
+                .Any(recipient => IsTrue(recipient["isPGT"]));
         root["p5IsPgtDeliveryRequired"] = isPgtDeliveryRequired;
 
         EnrichP5TestamentaryDocuments(root);
