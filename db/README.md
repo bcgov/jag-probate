@@ -25,6 +25,41 @@ Migrations are automatically applied when the API starts up. However, you can ma
 dotnet ef database update --project db --startup-project api
 ```
 
+### Removing unused tables
+
+The `RemoveUnusedEntities` migration removes the unused `cases`, `documents`,
+and `users` tables. Before deploying, check all environments for rows and
+external dependencies on these tables. The migration ignores tables already
+absent from the current schema. It locks existing tables and fails if any
+contain data; because migrations run at startup, this prevents the API from
+starting until the data has been reviewed and safely handled.
+
+Back up any data that must be retained before removing it. Rolling back the
+migration recreates the empty tables but does not restore their former data.
+The migration does not remove submissions, step data, or data-protection keys.
+
+To check which tables are present before deployment:
+
+```sql
+SELECT table_name
+FROM information_schema.tables
+WHERE table_schema = current_schema()
+  AND table_name IN ('cases', 'documents', 'users');
+```
+
+For each table returned, check its row count, for example
+`SELECT count(*) FROM cases;`.
+
+The migration integration tests require a disposable PostgreSQL database. Set
+`PROBATE_MIGRATION_TEST_CONNECTION_STRING` to its connection string, then run:
+
+```bash
+dotnet test api.tests --filter FullyQualifiedName~RemoveUnusedEntitiesMigrationTests
+```
+
+The test user must be able to create and drop schemas. Tests are skipped when
+the connection string is not set.
+
 ### Reverting Migrations
 
 ```bash
@@ -59,10 +94,10 @@ docker exec -it jag-probate-db-1 psql -U probate -d probatedb
 \dt
 
 -- Describe table
-\d+ cases
+\d+ submissions
 
--- Show all cases
-SELECT * FROM cases;
+-- Show submissions
+SELECT * FROM submissions;
 
 -- Exit
 \q

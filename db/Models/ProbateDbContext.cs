@@ -22,9 +22,6 @@ namespace Probate.Db.Models
 
         // This maps to the table that stores keys.
         public DbSet<DataProtectionKey> DataProtectionKeys { get; set; }
-        public DbSet<Case> Cases { get; set; }
-        public DbSet<User> Users { get; set; }
-        public DbSet<Document> Documents { get; set; }
         public DbSet<Submission> Submissions { get; set; }
         public DbSet<StepData> StepData { get; set; }
 

@@ -45,103 +45,6 @@ namespace Probate.Db.Migrations
                     b.ToTable("data_protection_keys", (string)null);
                 });
 
-            modelBuilder.Entity("Probate.Db.Models.Case", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer")
-                        .HasColumnName("id");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("CaseNumber")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)")
-                        .HasColumnName("case_number");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at");
-
-                    b.Property<string>("Description")
-                        .HasColumnType("text")
-                        .HasColumnName("description");
-
-                    b.Property<DateTime?>("FiledDate")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("filed_date");
-
-                    b.Property<string>("Status")
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)")
-                        .HasColumnName("status");
-
-                    b.Property<string>("Title")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)")
-                        .HasColumnName("title");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("updated_at");
-
-                    b.HasKey("Id")
-                        .HasName("pk_cases");
-
-                    b.ToTable("cases", (string)null);
-                });
-
-            modelBuilder.Entity("Probate.Db.Models.Document", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer")
-                        .HasColumnName("id");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<int>("CaseId")
-                        .HasColumnType("integer")
-                        .HasColumnName("case_id");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at");
-
-                    b.Property<string>("FileName")
-                        .IsRequired()
-                        .HasMaxLength(255)
-                        .HasColumnType("character varying(255)")
-                        .HasColumnName("file_name");
-
-                    b.Property<string>("FilePath")
-                        .HasColumnType("text")
-                        .HasColumnName("file_path");
-
-                    b.Property<long>("FileSize")
-                        .HasColumnType("bigint")
-                        .HasColumnName("file_size");
-
-                    b.Property<string>("FileType")
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)")
-                        .HasColumnName("file_type");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("updated_at");
-
-                    b.HasKey("Id")
-                        .HasName("pk_documents");
-
-                    b.HasIndex("CaseId")
-                        .HasDatabaseName("ix_documents_case_id");
-
-                    b.ToTable("documents", (string)null);
-                });
-
             modelBuilder.Entity("Probate.Db.Models.StepData", b =>
                 {
                     b.Property<int>("Id")
@@ -255,76 +158,6 @@ namespace Probate.Db.Migrations
                     b.ToTable("submissions", (string)null);
                 });
 
-            modelBuilder.Entity("Probate.Db.Models.User", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer")
-                        .HasColumnName("id");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<Guid?>("ADId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("ad_id");
-
-                    b.Property<string>("ADUsername")
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)")
-                        .HasColumnName("ad_username");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at");
-
-                    b.Property<string>("Email")
-                        .IsRequired()
-                        .HasMaxLength(255)
-                        .HasColumnType("character varying(255)")
-                        .HasColumnName("email");
-
-                    b.Property<string>("FirstName")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)")
-                        .HasColumnName("first_name");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("boolean")
-                        .HasColumnName("is_active");
-
-                    b.Property<string>("LastName")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)")
-                        .HasColumnName("last_name");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("updated_at");
-
-                    b.Property<string>("UserGuid")
-                        .HasColumnType("text")
-                        .HasColumnName("user_guid");
-
-                    b.HasKey("Id")
-                        .HasName("pk_users");
-
-                    b.ToTable("users", (string)null);
-                });
-
-            modelBuilder.Entity("Probate.Db.Models.Document", b =>
-                {
-                    b.HasOne("Probate.Db.Models.Case", "Case")
-                        .WithMany("Documents")
-                        .HasForeignKey("CaseId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired()
-                        .HasConstraintName("fk_documents_cases_case_id");
-
-                    b.Navigation("Case");
-                });
-
             modelBuilder.Entity("Probate.Db.Models.StepData", b =>
                 {
                     b.HasOne("Probate.Db.Models.Submission", "Submission")
@@ -335,11 +168,6 @@ namespace Probate.Db.Migrations
                         .HasConstraintName("fk_step_data_submissions_submission_id");
 
                     b.Navigation("Submission");
-                });
-
-            modelBuilder.Entity("Probate.Db.Models.Case", b =>
-                {
-                    b.Navigation("Documents");
                 });
 
             modelBuilder.Entity("Probate.Db.Models.Submission", b =>
