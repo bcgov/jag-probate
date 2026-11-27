@@ -358,9 +358,9 @@ public static class SubmissionEnricher
 
     /// <summary>
     /// Enriches P5 submission data with the WESA s.130 paragraph for the applicant.
-    /// The CHEFS-calculated applicant.applicantSection130Pathway only covers the
-    /// direct child/grandchild/parent/sibling/other-successor paths (b, d, e, f), so
-    /// spouse, nominated and court-appointed paths are derived here:
+    /// The whole s.130 classification lives here; CHEFS only stores the raw answers.
+    /// The direct child/grandchild/parent/sibling/other-successor paths (b, d, e, f)
+    /// are calculated first, then spouse, nominated and court-appointed paths override:
     /// - court appointed (not nominated) -> g
     /// - nominated by spouse -> a
     /// - nominated by child with consent -> c
@@ -368,7 +368,7 @@ public static class SubmissionEnricher
     /// - not nominated, intestate successor other than spouse/child/grandchild/parent/sibling,
     ///   with no same-priority successors, no Step 3 related people, and no CHEFS pathway set -> e
     /// - applicant is the spouse -> a
-    /// Otherwise the CHEFS value is kept. applicant.applicantSection130Nominated is
+    /// Otherwise the calculated direct-path value is kept. applicant.applicantSection130Nominated is
     /// true when the paragraph is a nomination paragraph.
     /// </summary>
     public static object EnrichP5(object submissionData)
@@ -381,8 +381,7 @@ public static class SubmissionEnricher
         if (applicant != null)
         {
             var (pathway, nominated) = DeduceSection130Pathway(root, applicant);
-            if (pathway != null)
-                applicant["applicantSection130Pathway"] = pathway;
+            applicant["applicantSection130Pathway"] = pathway ?? "";
             applicant["applicantSection130Nominated"] = nominated;
         }
 
@@ -690,19 +689,33 @@ public static class SubmissionEnricher
         || token.Type == JTokenType.Null
         || (token.Type == JTokenType.String && token.Value<string>() == "");
 
+    /// <summary>
+    /// Single source of the WESA s.130 paragraph. Nomination, Court appointment and
+    /// spouse rules take precedence; otherwise the paragraph follows the direct
+    /// child/grandchild/parent/sibling/other-successor consent answers.
+    /// </summary>
     private static (string? Pathway, bool Nominated) DeduceSection130Pathway(
         JObject root,
         JObject applicant
     )
     {
-        if (applicant.Value<string>("applicantHasBeenNominated") == "yes")
+        var nominatedAnswer = applicant.Value<string>("applicantHasBeenNominated");
+        var consent = applicant.Value<string>("applicantMajorityInInterestConsent");
+        var samePriority = applicant.Value<string>("applicantHasSamePrioritySuccessors");
+        var step3PeopleExist = applicant.Value<bool?>("applicantStep3PeopleExist") == true;
+        var isOtherNotNominatedSuccessor =
+            applicant.Value<string>("applicantNameSelection") == "__other__"
+            && nominatedAnswer == "no"
+            && applicant.Value<string>("applicantIsOtherSuccessor") == "yes";
+
+        if (nominatedAnswer == "yes")
         {
             var nominator = applicant.Value<string>("applicantNominator") ?? "";
             var role = nominator.Contains("::", StringComparison.Ordinal)
                 ? nominator[..nominator.IndexOf("::", StringComparison.Ordinal)]
                 : "";
 
-            return role switch
+            var matched = role switch
             {
                 "spouse" => ("s130a", true),
                 "child" when applicant.Value<string>("applicantChildConsent") == "yes" => (
@@ -715,30 +728,86 @@ public static class SubmissionEnricher
                     "s130e1",
                     true
                 ),
-                _ => (null, false),
+                _ => ((string?)null, false),
             };
+            if (matched.Item1 != null)
+                return matched;
+        }
+        else if (applicant.Value<string>("applicantCourtAppointed") == "yes")
+        {
+            return ("s130g", false);
         }
 
-        if (applicant.Value<string>("applicantCourtAppointed") == "yes")
-            return ("s130g", false);
-
-        if (
-            applicant.Value<string>("applicantHasBeenNominated") == "no"
-            && applicant.Value<string>("applicantIsOtherSuccessor") == "yes"
-            && applicant.Value<string>("applicantHasSamePrioritySuccessors") == "no"
-            && applicant.Value<bool?>("applicantStep3PeopleExist") != true
-            && string.IsNullOrEmpty(applicant.Value<string>("applicantSection130Pathway"))
-        )
+        var applicantName = applicant.Value<string>("applicantName")?.Trim();
+        var isSoleOtherSuccessor =
+            isOtherNotNominatedSuccessor
+            && samePriority == "no"
+            && !step3PeopleExist
+            && !IsDirectSuccessor(applicant);
+        if (isSoleOtherSuccessor)
             return ("s130e", false);
 
-        var applicantName = applicant.Value<string>("applicantName")?.Trim();
         if (
             !string.IsNullOrEmpty(applicantName)
             && NameExistsInArray(root, "spouse.spouseData", "spouseName", applicantName)
         )
             return ("s130a", false);
 
-        return (null, false);
+        return (DirectSuccessorPathway(applicant, isOtherNotNominatedSuccessor), false);
+    }
+
+    private static bool IsDirectSuccessor(JObject applicant) =>
+        IsTruthy(applicant["applicantIsChild"])
+        || IsDirectGrandchild(applicant)
+        || IsTruthy(applicant["applicantIsParent"])
+        || IsTruthy(applicant["applicantIsSibling"]);
+
+    private static bool IsDirectGrandchild(JObject applicant) =>
+        IsTruthy(applicant["applicantIsGrandchild"])
+        && !IsTruthy(applicant["applicantGrandchildHasSpouse"])
+        && !IsTruthy(applicant["applicantGrandchildHasChild"]);
+
+    // Paragraphs b, d, e, f (and a for a nominated child with a spouse), driven by the
+    // consent answers of the direct child/grandchild/parent/sibling/other-successor paths.
+    private static string? DirectSuccessorPathway(
+        JObject applicant,
+        bool isOtherNotNominatedSuccessor
+    )
+    {
+        var consent = applicant.Value<string>("applicantMajorityInInterestConsent");
+
+        if (IsTruthy(applicant["applicantIsChild"]))
+        {
+            if (IsTruthy(applicant["applicantChildHasSpouse"]))
+                return applicant.Value<string>("applicantHasBeenNominated") == "yes"
+                    ? "s130a"
+                    : null;
+            return consent switch
+            {
+                "yes" => "s130b",
+                "no" => "s130d",
+                _ => null,
+            };
+        }
+
+        var directOther =
+            isOtherNotNominatedSuccessor
+            && applicant.Value<bool?>("applicantStep3PeopleExist") != true
+            && applicant.Value<string>("applicantHasSamePrioritySuccessors") == "yes";
+        if (
+            !IsDirectGrandchild(applicant)
+            && !directOther
+            && !IsTruthy(applicant["applicantIsParent"])
+            && !IsTruthy(applicant["applicantIsSibling"])
+        )
+            return null;
+
+        return consent switch
+        {
+            "yes" => "s130e",
+            "no" => "s130f",
+            _ => null,
+        };
     }
 
     private static void CollectFromSpouseData(

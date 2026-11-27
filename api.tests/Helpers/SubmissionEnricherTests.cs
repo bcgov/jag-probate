@@ -413,25 +413,265 @@ public class SubmissionEnricherTests
         Assert.True(applicant.Value<bool>("applicantSection130Nominated"));
     }
 
-    [Theory]
-    [InlineData("s130b")]
-    [InlineData("s130d")]
-    [InlineData("s130e")]
-    [InlineData("s130f")]
-    public void EnrichP5_KeepsCalculatedDirectSuccessorPathway(string pathway)
-    {
-        var payload = P5Payload(
-            new JObject
+    private static JObject Section130Scenario(string scenario) =>
+        scenario switch
+        {
+            "child-spouse-nominated" => new JObject
             {
-                ["applicantName"] = "Cal Child",
-                ["applicantSection130Pathway"] = pathway,
-            }
+                ["applicantIsChild"] = true,
+                ["applicantChildHasSpouse"] = true,
+                ["applicantHasBeenNominated"] = "yes",
+            },
+            "child-spouse-court" => new JObject
+            {
+                ["applicantIsChild"] = true,
+                ["applicantChildHasSpouse"] = true,
+                ["applicantHasBeenNominated"] = "no",
+                ["applicantCourtAppointed"] = "yes",
+            },
+            "child-spouse-court-no" => new JObject
+            {
+                ["applicantIsChild"] = true,
+                ["applicantChildHasSpouse"] = true,
+                ["applicantHasBeenNominated"] = "no",
+                ["applicantCourtAppointed"] = "no",
+            },
+            "child-spouse-unanswered" => new JObject
+            {
+                ["applicantIsChild"] = true,
+                ["applicantChildHasSpouse"] = true,
+            },
+            "child-majority-yes" => new JObject
+            {
+                ["applicantIsChild"] = true,
+                ["applicantChildHasSpouse"] = false,
+                ["applicantMajorityInInterestConsent"] = "yes",
+            },
+            "child-majority-no" => new JObject
+            {
+                ["applicantIsChild"] = true,
+                ["applicantChildHasSpouse"] = false,
+                ["applicantMajorityInInterestConsent"] = "no",
+            },
+            "child-majority-unanswered" => new JObject
+            {
+                ["applicantIsChild"] = true,
+                ["applicantChildHasSpouse"] = false,
+            },
+            "parent-yes" => new JObject
+            {
+                ["applicantIsParent"] = true,
+                ["applicantMajorityInInterestConsent"] = "yes",
+            },
+            "parent-no" => new JObject
+            {
+                ["applicantIsParent"] = true,
+                ["applicantMajorityInInterestConsent"] = "no",
+            },
+            "parent-unanswered" => new JObject { ["applicantIsParent"] = true },
+            "sibling-yes" => new JObject
+            {
+                ["applicantIsSibling"] = true,
+                ["applicantMajorityInInterestConsent"] = "yes",
+            },
+            "sibling-no" => new JObject
+            {
+                ["applicantIsSibling"] = true,
+                ["applicantMajorityInInterestConsent"] = "no",
+            },
+            "grandchild-direct-yes" => new JObject
+            {
+                ["applicantIsGrandchild"] = true,
+                ["applicantGrandchildHasSpouse"] = false,
+                ["applicantGrandchildHasChild"] = false,
+                ["applicantMajorityInInterestConsent"] = "yes",
+            },
+            "grandchild-direct-no" => new JObject
+            {
+                ["applicantIsGrandchild"] = true,
+                ["applicantGrandchildHasSpouse"] = false,
+                ["applicantGrandchildHasChild"] = false,
+                ["applicantMajorityInInterestConsent"] = "no",
+            },
+            "grandchild-with-child-consent-ignored" => new JObject
+            {
+                ["applicantIsGrandchild"] = true,
+                ["applicantGrandchildHasChild"] = true,
+                ["applicantMajorityInInterestConsent"] = "yes",
+            },
+            "grandchild-with-spouse-consent-ignored" => new JObject
+            {
+                ["applicantIsGrandchild"] = true,
+                ["applicantGrandchildHasSpouse"] = true,
+                ["applicantMajorityInInterestConsent"] = "no",
+            },
+            "other-same-priority-yes" => OtherSuccessor("yes", "yes", false),
+            "other-same-priority-no-consent" => OtherSuccessor("yes", "no", false),
+            "other-same-priority-unanswered" => OtherSuccessor("yes", null, false),
+            "other-sole-successor" => OtherSuccessor("no", null, false),
+            "other-step3-people-consent-ignored" => OtherSuccessor("yes", "yes", true),
+            "other-step3-people-court" => OtherSuccessor("yes", "yes", true, court: "yes"),
+            "other-not-successor-consent-ignored" => new JObject
+            {
+                ["applicantNameSelection"] = "__other__",
+                ["applicantHasBeenNominated"] = "no",
+                ["applicantIsOtherSuccessor"] = "no",
+                ["applicantMajorityInInterestConsent"] = "yes",
+            },
+            "grandchild-nominated-by-spouse" => new JObject
+            {
+                ["applicantIsGrandchild"] = true,
+                ["applicantGrandchildHasSpouse"] = true,
+                ["applicantHasBeenNominated"] = "yes",
+                ["applicantNominator"] = "spouse::Sam Spouse",
+            },
+            "grandchild-nominated-by-child" => new JObject
+            {
+                ["applicantIsGrandchild"] = true,
+                ["applicantGrandchildHasChild"] = true,
+                ["applicantHasBeenNominated"] = "yes",
+                ["applicantNominator"] = "child::Cal Child",
+                ["applicantChildConsent"] = "yes",
+            },
+            "grandchild-court" => new JObject
+            {
+                ["applicantIsGrandchild"] = true,
+                ["applicantGrandchildHasChild"] = true,
+                ["applicantHasBeenNominated"] = "no",
+                ["applicantCourtAppointed"] = "yes",
+            },
+            "creditor-court" => new JObject
+            {
+                ["applicantCreditorType"] = "individual",
+                ["applicantHasBeenNominated"] = "no",
+                ["applicantCourtAppointed"] = "yes",
+            },
+            "child-no-spouse-stale-court" => new JObject
+            {
+                ["applicantIsChild"] = true,
+                ["applicantChildHasSpouse"] = false,
+                ["applicantMajorityInInterestConsent"] = "yes",
+                ["applicantCourtAppointed"] = "yes",
+            },
+            _ => new JObject(),
+        };
+
+    private static JObject OtherSuccessor(
+        string samePriority,
+        string? consent,
+        bool step3PeopleExist,
+        string court = ""
+    )
+    {
+        var applicant = new JObject
+        {
+            ["applicantNameSelection"] = "__other__",
+            ["applicantHasBeenNominated"] = "no",
+            ["applicantIsOtherSuccessor"] = "yes",
+            ["applicantHasSamePrioritySuccessors"] = samePriority,
+            ["applicantStep3PeopleExist"] = step3PeopleExist,
+            ["applicantCourtAppointed"] = court,
+        };
+        if (consent != null)
+            applicant["applicantMajorityInInterestConsent"] = consent;
+        return applicant;
+    }
+
+    // Pins the behaviour of the former CHEFS applicantSection130Pathway calculation
+    // plus the enricher overrides; expected values are the pre-move results.
+    [Theory]
+    [InlineData("child-spouse-nominated", "s130a", "a")]
+    [InlineData("child-spouse-court", "s130g", "g")]
+    [InlineData("child-spouse-court-no", "", "[section 130 paragraph]")]
+    [InlineData("child-spouse-unanswered", "", "[section 130 paragraph]")]
+    [InlineData("child-majority-yes", "s130b", "b")]
+    [InlineData("child-majority-no", "s130d", "d")]
+    [InlineData("child-majority-unanswered", "", "[section 130 paragraph]")]
+    [InlineData("parent-yes", "s130e", "e")]
+    [InlineData("parent-no", "s130f", "f")]
+    [InlineData("parent-unanswered", "", "[section 130 paragraph]")]
+    [InlineData("sibling-yes", "s130e", "e")]
+    [InlineData("sibling-no", "s130f", "f")]
+    [InlineData("grandchild-direct-yes", "s130e", "e")]
+    [InlineData("grandchild-direct-no", "s130f", "f")]
+    [InlineData("grandchild-with-child-consent-ignored", "", "[section 130 paragraph]")]
+    [InlineData("grandchild-with-spouse-consent-ignored", "", "[section 130 paragraph]")]
+    [InlineData("other-same-priority-yes", "s130e", "e")]
+    [InlineData("other-same-priority-no-consent", "s130f", "f")]
+    [InlineData("other-same-priority-unanswered", "", "[section 130 paragraph]")]
+    [InlineData("other-sole-successor", "s130e", "e")]
+    [InlineData("other-step3-people-consent-ignored", "", "[section 130 paragraph]")]
+    [InlineData("other-step3-people-court", "s130g", "g")]
+    [InlineData("other-not-successor-consent-ignored", "", "[section 130 paragraph]")]
+    [InlineData("grandchild-nominated-by-spouse", "s130a", "a")]
+    [InlineData("grandchild-nominated-by-child", "s130c", "c")]
+    [InlineData("grandchild-court", "s130g", "g")]
+    [InlineData("creditor-court", "s130g", "g")]
+    [InlineData("child-no-spouse-stale-court", "s130g", "g")]
+    public void EnrichP5_CalculatesSection130FromRawAnswers(
+        string scenario,
+        string expectedPathway,
+        string expectedLetter
+    )
+    {
+        var applicant = Section130Scenario(scenario);
+        applicant["applicantName"] = "Test Applicant";
+        var payload = P5Payload(applicant);
+
+        var result = (JObject)SubmissionEnricher.EnrichP5(payload);
+
+        Assert.Equal(
+            expectedPathway,
+            result["applicant"]!.Value<string>("applicantSection130Pathway")
         );
+        Assert.Equal(expectedLetter, result.Value<string>("p5Section130Letter"));
+    }
 
-        var applicant = (JObject)((JObject)SubmissionEnricher.EnrichP5(payload))["applicant"]!;
+    [Fact]
+    public void EnrichP5_IgnoresIncomingSection130Pathway()
+    {
+        var applicant = Section130Scenario("parent-yes");
+        applicant["applicantName"] = "Test Applicant";
+        applicant["applicantSection130Pathway"] = "s130b";
 
-        Assert.Equal(pathway, applicant.Value<string>("applicantSection130Pathway"));
-        Assert.False(applicant.Value<bool>("applicantSection130Nominated"));
+        var result = (JObject)SubmissionEnricher.EnrichP5(P5Payload(applicant));
+
+        Assert.Equal("s130e", result["applicant"]!.Value<string>("applicantSection130Pathway"));
+    }
+
+    [Fact]
+    public void EnrichP5_SpouseNameOverridesCalculatedPathway()
+    {
+        var applicant = Section130Scenario("child-majority-yes");
+        applicant["applicantName"] = "Sam Spouse";
+
+        var result = (JObject)SubmissionEnricher.EnrichP5(P5Payload(applicant));
+
+        Assert.Equal("s130a", result["applicant"]!.Value<string>("applicantSection130Pathway"));
+        Assert.False(result["applicant"]!.Value<bool>("applicantSection130Nominated"));
+    }
+
+    [Fact]
+    public void EnrichP5_BuildsSection130LetterForNominatedIntestateSuccessor()
+    {
+        var applicant = Section130Scenario("");
+        applicant["applicantName"] = "Nina Nominee";
+        applicant["applicantHasBeenNominated"] = "yes";
+        applicant["applicantNominator"] = "parent::Pat Parent";
+        applicant["applicantIntestateConsent"] = "yes";
+
+        var result = (JObject)SubmissionEnricher.EnrichP5(P5Payload(applicant));
+
+        Assert.Equal("e.1", result.Value<string>("p5Section130Letter"));
+    }
+
+    [Fact]
+    public void EnrichP5_LeavesLetterPlaceholderWhenNothingApplies()
+    {
+        var result = (JObject)
+            SubmissionEnricher.EnrichP5(P5Payload(new JObject { ["applicantName"] = "Cal Child" }));
+
+        Assert.Equal("[section 130 paragraph]", result.Value<string>("p5Section130Letter"));
     }
 
     [Fact]
@@ -474,27 +714,6 @@ public class SubmissionEnricherTests
 
         Assert.Equal("", applicant.Value<string>("applicantSection130Pathway"));
         Assert.False(applicant.Value<bool>("applicantSection130Nominated"));
-    }
-
-    [Theory]
-    [InlineData("s130a", "a")]
-    [InlineData("s130e.1", "e.1")]
-    [InlineData("s130f1", "f.1")]
-    [InlineData("s130g", "g")]
-    [InlineData("", "[section 130 paragraph]")]
-    public void EnrichP5_BuildsSection130Letter(string pathway, string expected)
-    {
-        var payload = P5Payload(
-            new JObject
-            {
-                ["applicantName"] = "Cal Child",
-                ["applicantSection130Pathway"] = pathway,
-            }
-        );
-
-        var result = (JObject)SubmissionEnricher.EnrichP5(payload);
-
-        Assert.Equal(expected, result.Value<string>("p5Section130Letter"));
     }
 
     [Fact]
