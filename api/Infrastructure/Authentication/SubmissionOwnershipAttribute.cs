@@ -17,7 +17,7 @@ public sealed class SubmissionOwnershipAttribute : TypeFilterAttribute
     {
         Arguments = new object[] { idParameter };
         // Identity/resource checks must precede ApiController's automatic model validation.
-        Order = -3000;
+        Order = -4000;
     }
 }
 

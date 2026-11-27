@@ -1,18 +1,28 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Security.Claims;
+using System.Text;
 using System.Text.Encodings.Web;
 using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.OpenIdConnect;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization.Policy;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Microsoft.IdentityModel.Protocols;
+using Microsoft.IdentityModel.Protocols.OpenIdConnect;
+using Moq;
 using Newtonsoft.Json.Linq;
 using Probate.Api.Controllers;
+using Probate.Api.Infrastructure.Authentication;
+using Probate.Api.Infrastructure.Options;
 using Probate.Api.Services;
 using Probate.Db.Models;
 
@@ -30,6 +40,8 @@ public class SubmissionOwnershipIntegrationTests : IDisposable
     public SubmissionOwnershipIntegrationTests()
     {
         var databaseName = Guid.NewGuid().ToString();
+        var environment = new Mock<IWebHostEnvironment>();
+        environment.SetupGet(env => env.EnvironmentName).Returns(Environments.Development);
         _dbOptions = new DbContextOptionsBuilder<ProbateDbContext>()
             .UseInMemoryDatabase(databaseName)
             .Options;
@@ -74,8 +86,36 @@ public class SubmissionOwnershipIntegrationTests : IDisposable
                         );
                         services.AddScoped<ISubmissionService, SubmissionService>();
                         services.AddScoped<IStepDataService, StepDataService>();
+                        services.Configure<KeycloakOptions>(options =>
+                        {
+                            options.Authority = "https://keycloak.example";
+                            options.Client = "probate";
+                            options.Secret = "test-secret";
+                        });
+                        services.AddProbateAuthentication(
+                            environment.Object,
+                            new ConfigurationBuilder().Build()
+                        );
+                        services.PostConfigure<OpenIdConnectOptions>(
+                            OpenIdConnectDefaults.AuthenticationScheme,
+                            options =>
+                            {
+                                var oidcConfiguration = new OpenIdConnectConfiguration
+                                {
+                                    AuthorizationEndpoint = "https://keycloak.example/authorize",
+                                };
+                                options.Configuration = oidcConfiguration;
+                                options.ConfigurationManager =
+                                    new StaticConfigurationManager<OpenIdConnectConfiguration>(
+                                        oidcConfiguration
+                                    );
+                            }
+                        );
                         services
-                            .AddAuthentication("Test")
+                            .AddAuthentication(options =>
+                            {
+                                options.DefaultAuthenticateScheme = "Test";
+                            })
                             .AddScheme<AuthenticationSchemeOptions, TestAuthenticationHandler>(
                                 "Test",
                                 _ => { }
@@ -380,6 +420,27 @@ public class SubmissionOwnershipIntegrationTests : IDisposable
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
 
+    [Fact]
+    public async Task AnonymousSubmissionApiRequestReturns401InsteadOfAuthenticationRedirect()
+    {
+        _client.DefaultRequestHeaders.Remove("Test-User");
+        using var response = await _client.GetAsync("/api/submissions");
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        Assert.Null(response.Headers.Location);
+    }
+
+    [Fact]
+    public async Task ExplicitLoginStillUsesConfiguredOpenIdConnectChallenge()
+    {
+        _client.DefaultRequestHeaders.Remove("Test-User");
+        using var response = await _client.GetAsync("/api/auth/login");
+        Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
+        Assert.StartsWith(
+            "https://keycloak.example/authorize",
+            response.Headers.Location?.ToString()
+        );
+    }
+
     [Theory]
     [MemberData(nameof(Endpoints))]
     public async Task IdentifierRoutes_MissingUsernameCannotClaimLegacyRow(
@@ -410,6 +471,31 @@ public class SubmissionOwnershipIntegrationTests : IDisposable
             $"/api/submissions/{_aliceId}/steps/step1",
             new { }
         );
+        Assert.Equal(expected, response.StatusCode);
+        using var stored = new ProbateDbContext(_dbOptions);
+        Assert.Null(
+            (await stored.Submissions.SingleAsync(s => s.PublicId == _aliceId)).CreatedByUserId
+        );
+    }
+
+    [Theory]
+    [InlineData(null, HttpStatusCode.Unauthorized)]
+    [InlineData("other-id", HttpStatusCode.NotFound)]
+    [InlineData("alice-id", HttpStatusCode.UnsupportedMediaType)]
+    public async Task UnsupportedContentType_DoesNotBypassIdentityOrOwnershipChecks(
+        string? subject,
+        HttpStatusCode expected
+    )
+    {
+        SetIdentity(subject, subject == "other-id" ? "other-name" : "alice");
+        using var request = new HttpRequestMessage(
+            HttpMethod.Put,
+            $"/api/submissions/{_aliceId}/steps/step1"
+        )
+        {
+            Content = new StringContent("invalid", Encoding.UTF8, "text/plain"),
+        };
+        using var response = await _client.SendAsync(request);
         Assert.Equal(expected, response.StatusCode);
         using var stored = new ProbateDbContext(_dbOptions);
         Assert.Null(
@@ -489,6 +575,12 @@ public class SubmissionOwnershipIntegrationTests : IDisposable
                     )
                 )
             );
+        }
+
+        protected override Task HandleChallengeAsync(AuthenticationProperties properties)
+        {
+            Response.Redirect("https://keycloak.example/authorize");
+            return Task.CompletedTask;
         }
     }
 }

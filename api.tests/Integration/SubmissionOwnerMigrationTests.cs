@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
+using Microsoft.Extensions.Logging.Abstractions;
 using Npgsql;
 using Probate.Api.Infrastructure.Authentication;
 using Probate.Api.Services;
@@ -23,7 +24,7 @@ public class SubmissionOwnerMigrationTests
         var migrator = db.GetService<IMigrator>();
         await migrator.MigrateAsync(PreviousMigration);
         var publicId = Guid.NewGuid();
-        await db.Database.ExecuteSqlInterpolatedAsync(
+        await db.Database.ExecuteSqlAsync(
             $$"""
             INSERT INTO submissions (public_id, applicant_name, created_by, status, submission_data, created_at)
             VALUES ({{publicId}}, 'Legacy', 'alice', 'draft', '{}', now())
@@ -136,6 +137,198 @@ public class SubmissionOwnerMigrationTests
                 new SubmissionOwner("different-id", "alice")
             )
         );
+    }
+
+    [OwnershipPostgresFact]
+    public async Task ListAfterConcurrentPartialClaim_ClaimsRemainingRowsAndOmitsLostRow()
+    {
+        await using var schema = await TestSchema.CreateAsync();
+        await using (var db = schema.CreateContext())
+        {
+            await db.Database.MigrateAsync();
+            db.Submissions.AddRange(
+                new Submission
+                {
+                    PublicId = Guid.NewGuid(),
+                    ApplicantName = "Claimed elsewhere",
+                    CreatedBy = "alice",
+                    Status = "draft",
+                },
+                new Submission
+                {
+                    PublicId = Guid.NewGuid(),
+                    ApplicantName = "Still available",
+                    CreatedBy = "alice",
+                    Status = "draft",
+                }
+            );
+            await db.SaveChangesAsync();
+        }
+
+        var pause = new SubmissionServiceTests.PauseClaimInterceptor();
+        await using var first = schema.CreateContext(pause);
+        var publicIds = await first
+            .Submissions.OrderBy(s => s.Id)
+            .Select(s => s.PublicId)
+            .ToListAsync();
+        var pendingList = new SubmissionService(first).GetSubmissionsByUserAsync(
+            new SubmissionOwner("first-id", "alice")
+        );
+        await pause.Started.Task.WaitAsync(TimeSpan.FromSeconds(10));
+        try
+        {
+            await using var second = schema.CreateContext();
+            Assert.NotNull(
+                await new SubmissionService(second).GetSubmissionByIdAsync(
+                    publicIds[0],
+                    new SubmissionOwner("winner-id", "alice")
+                )
+            );
+        }
+        finally
+        {
+            pause.Resume.TrySetResult();
+        }
+
+        var listed = await pendingList;
+        var remaining = Assert.Single(listed);
+        Assert.Equal(publicIds[1], remaining.PublicId);
+        await using var stored = schema.CreateContext();
+        Assert.Equal(
+            "winner-id",
+            (await stored.Submissions.SingleAsync(s => s.PublicId == publicIds[0])).CreatedByUserId
+        );
+        Assert.Equal(
+            "first-id",
+            (await stored.Submissions.SingleAsync(s => s.PublicId == publicIds[1])).CreatedByUserId
+        );
+    }
+
+    [OwnershipPostgresFact]
+    public async Task DuplicatePublicIdClaimRace_RetriesAnotherOwnedCandidate()
+    {
+        await using var schema = await TestSchema.CreateAsync();
+        var publicId = Guid.Empty;
+        await using (var db = schema.CreateContext())
+        {
+            await db.Database.MigrateAsync();
+            db.Submissions.AddRange(
+                new Submission
+                {
+                    Id = 10,
+                    PublicId = publicId,
+                    ApplicantName = "First row",
+                    CreatedBy = "alice",
+                    Status = "draft",
+                },
+                new Submission
+                {
+                    Id = 20,
+                    PublicId = publicId,
+                    ApplicantName = "Second row",
+                    CreatedBy = "alice",
+                    Status = "draft",
+                }
+            );
+            await db.SaveChangesAsync();
+        }
+
+        var pause = new SubmissionServiceTests.PauseClaimInterceptor();
+        await using var first = schema.CreateContext(pause);
+        var pendingRead = new SubmissionService(first).GetSubmissionByIdAsync(
+            publicId,
+            new SubmissionOwner("first-id", "alice")
+        );
+        await pause.Started.Task.WaitAsync(TimeSpan.FromSeconds(10));
+        try
+        {
+            await using var second = schema.CreateContext();
+            Assert.NotNull(
+                await new SubmissionService(second).GetSubmissionByIdAsync(
+                    publicId,
+                    new SubmissionOwner("winner-id", "alice")
+                )
+            );
+        }
+        finally
+        {
+            pause.Resume.TrySetResult();
+        }
+
+        Assert.Equal("Second row", (await pendingRead)?.ApplicantName);
+        await using var stored = schema.CreateContext();
+        Assert.Equal(
+            "winner-id",
+            (await stored.Submissions.SingleAsync(s => s.Id == 10)).CreatedByUserId
+        );
+        Assert.Equal(
+            "first-id",
+            (await stored.Submissions.SingleAsync(s => s.Id == 20)).CreatedByUserId
+        );
+    }
+
+    [OwnershipPostgresFact]
+    public async Task DuplicatePublicId_FinalizationUsesSamePrimaryKeyForCompileAndWrite()
+    {
+        await using var schema = await TestSchema.CreateAsync();
+        var publicId = Guid.Empty;
+        await using (var db = schema.CreateContext())
+        {
+            await db.Database.MigrateAsync();
+            db.Submissions.AddRange(
+                new Submission
+                {
+                    Id = 10,
+                    PublicId = publicId,
+                    ApplicantName = "First row",
+                    CreatedBy = "alice",
+                    Status = "draft",
+                },
+                new Submission
+                {
+                    Id = 20,
+                    PublicId = publicId,
+                    ApplicantName = "Second row",
+                    CreatedBy = "alice",
+                    Status = "draft",
+                }
+            );
+            db.StepData.AddRange(
+                new StepData
+                {
+                    SubmissionId = 10,
+                    FormId = "step1",
+                    FormVersion = "1",
+                    Data = "{\"selected\":\"first\"}",
+                },
+                new StepData
+                {
+                    SubmissionId = 20,
+                    FormId = "step1",
+                    FormVersion = "1",
+                    Data = "{\"selected\":\"second\"}",
+                }
+            );
+            await db.SaveChangesAsync();
+        }
+
+        var owner = new SubmissionOwner("alice-id", "alice");
+        await using (var db = schema.CreateContext())
+        {
+            var compiled = await new StepDataService(
+                db,
+                NullLogger<StepDataService>.Instance
+            ).GetCompiledDataAsync(publicId, owner);
+            await new SubmissionService(db).FinalizeSubmissionAsync(publicId, owner, compiled);
+        }
+
+        await using var stored = schema.CreateContext();
+        var finalized = await stored.Submissions.SingleAsync(s => s.Id == 10);
+        var untouched = await stored.Submissions.SingleAsync(s => s.Id == 20);
+        Assert.Contains("\"selected\":\"first\"", finalized.SubmissionData);
+        Assert.Equal(SubmissionStatus.ReadyToPrint, finalized.Status);
+        Assert.Null(untouched.SubmissionData);
+        Assert.Equal(SubmissionStatus.Draft, untouched.Status);
     }
 
     private sealed class ClaimCommandInterceptor : DbCommandInterceptor

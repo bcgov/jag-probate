@@ -45,7 +45,8 @@ public static class SubmissionOwnership
         var query = db
             .Submissions.Where(OwnedBy(owner))
             .Where(s => s.DeletedAt == null)
-            .OrderByDescending(s => s.CreatedAt);
+            .OrderByDescending(s => s.CreatedAt)
+            .ThenBy(s => s.Id);
         var rows = await query.ToListAsync(cancellationToken);
         var legacy = rows.Where(s => s.CreatedByUserId == null).ToList();
         if (legacy.Count == 0)
@@ -62,7 +63,24 @@ public static class SubmissionOwnership
         {
             foreach (var submission in rows)
                 db.Entry(submission).State = EntityState.Detached;
-            return await query.AsNoTracking().ToListAsync(cancellationToken);
+
+            var remainingIds = await query
+                .AsNoTracking()
+                .Select(s => s.Id)
+                .ToListAsync(cancellationToken);
+            var claimedRows = new List<Submission>(remainingIds.Count);
+            foreach (var id in remainingIds)
+            {
+                var submission = await FindAndClaimAsync(
+                    db,
+                    owner,
+                    s => s.Id == id,
+                    cancellationToken
+                );
+                if (submission != null)
+                    claimedRows.Add(submission);
+            }
+            return claimedRows;
         }
     }
 
@@ -85,26 +103,59 @@ public static class SubmissionOwnership
         if (!includeDeleted)
             query = query.Where(s => s.DeletedAt == null);
 
-        var submission = await query
+        var firstSubmission = await query
             .OrderBy(s => s.DeletedAt != null)
+            .ThenBy(s => s.Id)
             .FirstOrDefaultAsync(cancellationToken);
-        if (submission == null || submission.CreatedByUserId != null)
-            return submission;
+        if (firstSubmission == null)
+            return null;
 
-        submission.CreatedByUserId = owner.UserId;
-        try
+        var firstId = firstSubmission.Id;
+        var claimedSubmission = await TryClaimAsync(firstSubmission);
+        if (claimedSubmission != null)
+            return claimedSubmission;
+
+        var remainingIds = await query
+            .Where(s => s.Id != firstId)
+            .OrderBy(s => s.DeletedAt != null)
+            .ThenBy(s => s.Id)
+            .Select(s => s.Id)
+            .ToListAsync(cancellationToken);
+        foreach (var id in remainingIds)
         {
-            await db.SaveChangesAsync(cancellationToken);
-            return submission;
-        }
-        catch (DbUpdateConcurrencyException ex)
-            when (ex.Entries.Count == 1 && ReferenceEquals(ex.Entries[0].Entity, submission))
-        {
-            // Discard the losing claim; requery only this row under authoritative ownership.
-            db.Entry(submission).State = EntityState.Detached;
-            return await query
-                .Where(s => s.Id == submission.Id && s.CreatedByUserId == owner.UserId)
+            var submission = await query
+                .Where(s => s.Id == id)
                 .FirstOrDefaultAsync(cancellationToken);
+            if (submission == null)
+                continue;
+            claimedSubmission = await TryClaimAsync(submission);
+            if (claimedSubmission != null)
+                return claimedSubmission;
+        }
+
+        return null;
+
+        async Task<Submission?> TryClaimAsync(Submission submission)
+        {
+            if (submission.CreatedByUserId != null)
+                return submission;
+
+            var id = submission.Id;
+            submission.CreatedByUserId = owner.UserId;
+            try
+            {
+                await db.SaveChangesAsync(cancellationToken);
+                return submission;
+            }
+            catch (DbUpdateConcurrencyException ex)
+                when (ex.Entries.Count == 1 && ReferenceEquals(ex.Entries[0].Entity, submission))
+            {
+                // Retry another authorized duplicate if another subject won this claim.
+                db.Entry(submission).State = EntityState.Detached;
+                return await query
+                    .Where(s => s.Id == id && s.CreatedByUserId == owner.UserId)
+                    .FirstOrDefaultAsync(cancellationToken);
+            }
         }
     }
 }
