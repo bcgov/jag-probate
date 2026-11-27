@@ -358,15 +358,17 @@ public static class SubmissionEnricher
 
     /// <summary>
     /// Enriches P5 submission data with the WESA s.130 paragraph for the applicant.
-    /// The CHEFS-calculated applicant.applicantSection130Pathway only covers the
-    /// direct child/grandchild/parent/sibling/other-successor paths (b, d, e, f), so
-    /// spouse, nominated and court-appointed paths are derived here:
+    /// The whole s.130 classification lives here; CHEFS only stores the raw answers.
+    /// The direct child/grandchild/parent/sibling/other-successor paths (b, d, e, f)
+    /// are calculated first, then spouse, nominated and court-appointed paths override:
     /// - court appointed (not nominated) -> g
     /// - nominated by spouse -> a
     /// - nominated by child with consent -> c
     /// - nominated by another intestate successor with consent -> e.1
+    /// - not nominated, intestate successor other than spouse/child/grandchild/parent/sibling,
+    ///   with no same-priority successors, no Step 3 related people, and no CHEFS pathway set -> e
     /// - applicant is the spouse -> a
-    /// Otherwise the CHEFS value is kept. applicant.applicantSection130Nominated is
+    /// Otherwise the calculated direct-path value is kept. applicant.applicantSection130Nominated is
     /// true when the paragraph is a nomination paragraph.
     /// </summary>
     public static object EnrichP5(object submissionData)
@@ -375,30 +377,345 @@ public static class SubmissionEnricher
             ? jo
             : JObject.Parse(JsonSerializer.Serialize(submissionData));
 
-        if (root["applicant"] is not JObject applicant)
-            return root;
+        var applicant = root["applicant"] as JObject;
+        if (applicant != null)
+        {
+            var (pathway, nominated) = DeduceSection130Pathway(root, applicant);
+            applicant["applicantSection130Pathway"] = pathway ?? "";
+            applicant["applicantSection130Nominated"] = nominated;
+        }
 
-        var (pathway, nominated) = DeduceSection130Pathway(root, applicant);
-        if (pathway != null)
-            applicant["applicantSection130Pathway"] = pathway;
-        applicant["applicantSection130Nominated"] = nominated;
+        EnrichP5Display(root, applicant ?? new JObject());
 
         return root;
     }
 
+    /// <summary>
+    /// Adds display-ready P5 fields: deponent/organization names, applicant address,
+    /// section 130 paragraph letter, PGT delivery flag, testamentary document search
+    /// results, wills-notice text and existing-grant status.
+    /// </summary>
+    private static void EnrichP5Display(JObject root, JObject applicant)
+    {
+        var isOrganizationCreditor =
+            applicant.Value<string>("applicantCreditorType") == "organization";
+
+        var organizationName = DefaultIfEmpty(
+            applicant.Value<string>("applicantOrgName"),
+            "[organization name]"
+        );
+        var deponentName = applicant.Value<string>("applicantName") ?? "";
+        if (isOrganizationCreditor)
+        {
+            organizationName = DefaultIfEmpty(
+                applicant.Value<string>("applicantName"),
+                "[organization name]"
+            );
+            deponentName = DefaultIfEmpty(
+                applicant.Value<string>("applicantCreditorRepName"),
+                "[Representative name missing]"
+            );
+        }
+
+        var isOrganization =
+            IsTrue(applicant["applicantIsOrg"])
+            || applicant.Value<string>("applicantNomineeIsOrg") == "yes"
+            || isOrganizationCreditor
+            || applicant.Value<string>("applicantCourtOrg") == "yes";
+
+        root["p5DeponentName"] = deponentName;
+        root["p5IsOrganization"] = isOrganization;
+        root["p5OrganizationName"] = organizationName;
+        root["p5OrganizationTitle"] = DefaultIfEmpty(
+            applicant.Value<string>("applicantOrgTitle"),
+            "[organizational title]"
+        );
+        root["p5ApplicantAddress"] = isOrganization
+            ? BuildP5OrganizationAddress(applicant)
+            : BuildP5OrdinaryAddress(applicant);
+        root["p5Section130Letter"] = P5Section130Letter(
+            applicant.Value<string>("applicantSection130Pathway")
+        );
+
+        var isPgtDeliveryRequired =
+            root.SelectToken("notifyPeople.notifyPeopleData") is JArray notifyPeople
+            && notifyPeople
+                .Where(token => token is JObject)
+                .Cast<JObject>()
+                .Any(recipient => IsTrue(recipient["isPGT"]));
+        root["p5IsPgtDeliveryRequired"] = isPgtDeliveryRequired;
+
+        EnrichP5TestamentaryDocuments(root);
+        EnrichP5Grant(root);
+    }
+
+    private static void EnrichP5TestamentaryDocuments(JObject root)
+    {
+        var hasTestamentaryDocuments = false;
+        var documentSearchKnown = false;
+        var showWillsNotice = false;
+        JToken? testamentaryDocuments = null;
+
+        if (root.Value<string>("willExists") == "yes")
+            hasTestamentaryDocuments = true;
+
+        if (
+            root.Value<string>("HaveYouLookedForDeceasedWillWellYN") == "yes"
+            && root.Value<string>("willExists") == "no"
+        )
+            documentSearchKnown = true;
+
+        if (
+            root.Value<string>("willsNoticeResultsReceived") == "yes"
+            && root.Value<string>("willsNoticeHasResults") == "yes"
+        )
+        {
+            if (root.Value<string>("willsNoticeFoundIndicatedWills") == "yes")
+            {
+                hasTestamentaryDocuments = true;
+                if (root.Value<string>("willsNoticeIndicatedWillsOtherDocExists") == "yes")
+                    testamentaryDocuments = root[
+                        "willsNoticeIndicatedWillsOtherTestamentaryDocumentsEditor"
+                    ];
+            }
+            else if (root.Value<string>("willsNoticeFoundIndicatedWills") == "no")
+            {
+                showWillsNotice = true;
+                if (
+                    root.Value<string>("willsNoticeDidNotFindIndicatedWillsOtherDocExists") == "yes"
+                )
+                {
+                    hasTestamentaryDocuments = true;
+                    testamentaryDocuments = root[
+                        "willsNoticeDidNotFindIndicatedWillsOtherTestamentaryDocumentsEditor"
+                    ];
+                }
+                else if (
+                    root.Value<string>("willsNoticeDidNotFindIndicatedWillsOtherDocExists") == "no"
+                )
+                {
+                    documentSearchKnown = true;
+                }
+            }
+        }
+        else if (
+            root.Value<string>("willsNoticeResultsReceived") == "yes"
+            && root.Value<string>("willsNoticeHasResults") == "no"
+        )
+        {
+            if (root.Value<string>("willsNoticeFoundWillOrOtherTestDocs") == "yes")
+            {
+                hasTestamentaryDocuments = true;
+                testamentaryDocuments = root["willsNoticeOtherTestamentaryDocumentsEditor"];
+            }
+            else if (root.Value<string>("willsNoticeFoundWillOrOtherTestDocs") == "no")
+            {
+                documentSearchKnown = true;
+            }
+        }
+        else if (root.Value<string>("willsNoticeResultsReceived") == "no")
+        {
+            if (root.Value<string>("willsNoticeResultsPendingOtherDocExists") == "yes")
+            {
+                hasTestamentaryDocuments = true;
+                testamentaryDocuments = root[
+                    "willsNoticeResultsPendingOtherTestamentaryDocumentsEditor"
+                ];
+            }
+        }
+
+        var willsNoticeReason =
+            "Reason for not finding the indicated document has not been provided.";
+        var reasonText = root.Value<string>("willsNoticeDidNotFindIndicatedWillsReasonTxt");
+        if (!string.IsNullOrEmpty(reasonText))
+            willsNoticeReason = reasonText;
+
+        var willsNoticeResult = root.Value<string>(
+            "willsNoticeDidNotFindIndicatedWillsReason"
+        ) switch
+        {
+            "lost" => "The will is believed to have been lost",
+            "destroyed" => "The will is believed to have been destroyed",
+            "willsNoticeInError" =>
+                "The Wills Notice filed in relation to an alleged testamentary document is believed to be in error",
+            _ => "Wills-notice search result reason is missing or unrecognized",
+        };
+
+        var rows = new JArray();
+        if (testamentaryDocuments is JArray documents)
+        {
+            foreach (var document in documents.OfType<JObject>())
+            {
+                var type = document["type"];
+                var identifier = document["identifier"];
+                if (IsNullOrEmptyToken(type) && IsNullOrEmptyToken(identifier))
+                    continue;
+
+                rows.Add(
+                    new JObject
+                    {
+                        ["type"] = IsNullOrEmptyToken(type)
+                            ? "Document type has not been provided."
+                            : type!.ToString(),
+                        ["identifier"] = IsNullOrEmptyToken(identifier)
+                            ? "Date or identifier has not been provided."
+                            : identifier!.ToString(),
+                        ["reasons"] = BuildP5DocumentReasons(document),
+                    }
+                );
+            }
+        }
+
+        root["p5HasTestamentaryDocuments"] = hasTestamentaryDocuments;
+        root["p5DocumentSearchComplete"] = hasTestamentaryDocuments || documentSearchKnown;
+        root["p5TestamentaryDocumentRows"] = rows;
+        root["p5ShowWillsNotice"] = showWillsNotice;
+        root["p5WillsNoticeResult"] = willsNoticeResult;
+        root["p5WillsNoticeReason"] = willsNoticeReason;
+    }
+
+    private static JArray BuildP5DocumentReasons(JObject document)
+    {
+        var reasons = new JArray();
+        var reason = document["reason"] as JObject;
+
+        if (IsTruthy(reason?["lackOfCapacity"]))
+            reasons.Add(new JObject { ["text"] = "Lack of capacity.", ["isCustom"] = false });
+        if (IsTruthy(reason?["undueInfluence"]))
+            reasons.Add(new JObject { ["text"] = "Undue influence.", ["isCustom"] = false });
+        if (IsTruthy(reason?["willNotBCProperty"]))
+            reasons.Add(
+                new JObject
+                {
+                    ["text"] = "Will does not apply to property in British Columbia.",
+                    ["isCustom"] = false,
+                }
+            );
+
+        var invalidReasonText = document["invalidReasonText"];
+        if (IsTruthy(invalidReasonText) && !IsNullOrEmptyToken(invalidReasonText))
+            reasons.Add(
+                new JObject { ["text"] = invalidReasonText!.ToString(), ["isCustom"] = true }
+            );
+        else if (IsTruthy(reason?["other"]))
+            reasons.Add(
+                new JObject
+                {
+                    ["text"] = "Other reason has not been provided.",
+                    ["isCustom"] = false,
+                }
+            );
+
+        if (reasons.Count == 0)
+            reasons.Add(
+                new JObject { ["text"] = "Reason has not been provided.", ["isCustom"] = false }
+            );
+
+        return reasons;
+    }
+
+    private static void EnrichP5Grant(JObject root)
+    {
+        var grantStatus = "unknown";
+        if (root.Value<string>("willGrantExists") == "yes")
+        {
+            grantStatus = "issued";
+        }
+        else if (root.Value<string>("willGrantExists") == "no")
+        {
+            if (root.Value<string>("noExistingGrantAwareOfOtherApplicantsYesNo") == "yes")
+                grantStatus = "other-applicants";
+            else if (root.Value<string>("noExistingGrantAwareOfOtherApplicantsYesNo") == "no")
+                grantStatus = "none";
+        }
+
+        root["p5GrantStatus"] = grantStatus;
+    }
+
+    private static string BuildP5OrganizationAddress(JObject applicant)
+    {
+        var country = applicant.Value<string>("applicantOrgAddressCountry");
+        var region = country switch
+        {
+            "Canada" => applicant.Value<string>("applicantOrgAddressProvince"),
+            "United States" => applicant.Value<string>("applicantOrgAddressState"),
+            _ => applicant.Value<string>("applicantOrgAddressProvinceText"),
+        };
+
+        return $"{applicant.Value<string>("applicantOrgAddressStreet")}, "
+            + $"{applicant.Value<string>("applicantOrgAddressCity")}, "
+            + $"{region}, "
+            + $"{applicant.Value<string>("applicantOrgAddressPostalCode")}, "
+            + $"{country}";
+    }
+
+    private static string BuildP5OrdinaryAddress(JObject applicant) =>
+        $"{applicant.Value<string>("applicantOrdinaryAddressStreet")}, "
+        + $"{applicant.Value<string>("applicantOrdinaryAddressCity")}, "
+        + $"{applicant.Value<string>("applicantOrdinaryAddressProvince")}"
+        + $"{applicant.Value<string>("applicantOrdinaryAddressState")}"
+        + $"{applicant.Value<string>("applicantOrdinaryAddressProvinceText")}, "
+        + $"{applicant.Value<string>("applicantOrdinaryAddressPostalCode")}, "
+        + $"{applicant.Value<string>("applicantOrdinaryAddressCountry")}";
+
+    private static string P5Section130Letter(string? pathway) =>
+        pathway switch
+        {
+            "s130a" => "a",
+            "s130b" => "b",
+            "s130c" => "c",
+            "s130d" => "d",
+            "s130e" => "e",
+            "s130e1" or "s130e.1" => "e.1",
+            "s130f" => "f",
+            "s130f1" or "s130f.1" => "f.1",
+            "s130g" => "g",
+            _ => "[section 130 paragraph]",
+        };
+
+    private static string DefaultIfEmpty(string? value, string fallback) =>
+        string.IsNullOrEmpty(value) ? fallback : value;
+
+    private static bool IsTrue(JToken? token) =>
+        token?.Type == JTokenType.Boolean && token.Value<bool>();
+
+    private static bool IsTruthy(JToken? token) =>
+        token != null
+        && token.Type != JTokenType.Null
+        && !(token.Type == JTokenType.Boolean && !token.Value<bool>());
+
+    private static bool IsNullOrEmptyToken(JToken? token) =>
+        token == null
+        || token.Type == JTokenType.Null
+        || (token.Type == JTokenType.String && token.Value<string>() == "");
+
+    /// <summary>
+    /// Single source of the WESA s.130 paragraph. Nomination, Court appointment and
+    /// spouse rules take precedence; otherwise the paragraph follows the direct
+    /// child/grandchild/parent/sibling/other-successor consent answers.
+    /// </summary>
     private static (string? Pathway, bool Nominated) DeduceSection130Pathway(
         JObject root,
         JObject applicant
     )
     {
-        if (applicant.Value<string>("applicantHasBeenNominated") == "yes")
+        var nominatedAnswer = applicant.Value<string>("applicantHasBeenNominated");
+        var consent = applicant.Value<string>("applicantMajorityInInterestConsent");
+        var samePriority = applicant.Value<string>("applicantHasSamePrioritySuccessors");
+        var step3PeopleExist = applicant.Value<bool?>("applicantStep3PeopleExist") == true;
+        var isOtherNotNominatedSuccessor =
+            applicant.Value<string>("applicantNameSelection") == "__other__"
+            && nominatedAnswer == "no"
+            && applicant.Value<string>("applicantIsOtherSuccessor") == "yes";
+
+        if (nominatedAnswer == "yes")
         {
             var nominator = applicant.Value<string>("applicantNominator") ?? "";
             var role = nominator.Contains("::", StringComparison.Ordinal)
                 ? nominator[..nominator.IndexOf("::", StringComparison.Ordinal)]
                 : "";
 
-            return role switch
+            var matched = role switch
             {
                 "spouse" => ("s130a", true),
                 "child" when applicant.Value<string>("applicantChildConsent") == "yes" => (
@@ -411,21 +728,86 @@ public static class SubmissionEnricher
                     "s130e1",
                     true
                 ),
-                _ => (null, false),
+                _ => ((string?)null, false),
             };
+            if (matched.Item1 != null)
+                return matched;
+        }
+        else if (applicant.Value<string>("applicantCourtAppointed") == "yes")
+        {
+            return ("s130g", false);
         }
 
-        if (applicant.Value<string>("applicantCourtAppointed") == "yes")
-            return ("s130g", false);
-
         var applicantName = applicant.Value<string>("applicantName")?.Trim();
+        var isSoleOtherSuccessor =
+            isOtherNotNominatedSuccessor
+            && samePriority == "no"
+            && !step3PeopleExist
+            && !IsDirectSuccessor(applicant);
+        if (isSoleOtherSuccessor)
+            return ("s130e", false);
+
         if (
             !string.IsNullOrEmpty(applicantName)
             && NameExistsInArray(root, "spouse.spouseData", "spouseName", applicantName)
         )
             return ("s130a", false);
 
-        return (null, false);
+        return (DirectSuccessorPathway(applicant, isOtherNotNominatedSuccessor), false);
+    }
+
+    private static bool IsDirectSuccessor(JObject applicant) =>
+        IsTruthy(applicant["applicantIsChild"])
+        || IsDirectGrandchild(applicant)
+        || IsTruthy(applicant["applicantIsParent"])
+        || IsTruthy(applicant["applicantIsSibling"]);
+
+    private static bool IsDirectGrandchild(JObject applicant) =>
+        IsTruthy(applicant["applicantIsGrandchild"])
+        && !IsTruthy(applicant["applicantGrandchildHasSpouse"])
+        && !IsTruthy(applicant["applicantGrandchildHasChild"]);
+
+    // Paragraphs b, d, e, f (and a for a nominated child with a spouse), driven by the
+    // consent answers of the direct child/grandchild/parent/sibling/other-successor paths.
+    private static string? DirectSuccessorPathway(
+        JObject applicant,
+        bool isOtherNotNominatedSuccessor
+    )
+    {
+        var consent = applicant.Value<string>("applicantMajorityInInterestConsent");
+
+        if (IsTruthy(applicant["applicantIsChild"]))
+        {
+            if (IsTruthy(applicant["applicantChildHasSpouse"]))
+                return applicant.Value<string>("applicantHasBeenNominated") == "yes"
+                    ? "s130a"
+                    : null;
+            return consent switch
+            {
+                "yes" => "s130b",
+                "no" => "s130d",
+                _ => null,
+            };
+        }
+
+        var directOther =
+            isOtherNotNominatedSuccessor
+            && applicant.Value<bool?>("applicantStep3PeopleExist") != true
+            && applicant.Value<string>("applicantHasSamePrioritySuccessors") == "yes";
+        if (
+            !IsDirectGrandchild(applicant)
+            && !directOther
+            && !IsTruthy(applicant["applicantIsParent"])
+            && !IsTruthy(applicant["applicantIsSibling"])
+        )
+            return null;
+
+        return consent switch
+        {
+            "yes" => "s130e",
+            "no" => "s130f",
+            _ => null,
+        };
     }
 
     private static void CollectFromSpouseData(
