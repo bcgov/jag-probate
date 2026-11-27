@@ -31,6 +31,9 @@ namespace Probate.Db.Models
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             modelBuilder.ApplyAllConfigurations();
+            modelBuilder.Entity<Submission>().Property(s => s.CreatedBy).IsConcurrencyToken();
+            modelBuilder.Entity<Submission>().Property(s => s.CreatedByUserId).IsConcurrencyToken();
+            modelBuilder.Entity<Submission>().HasIndex(s => s.CreatedByUserId);
             modelBuilder.Entity<StepData>().HasIndex(stepData => stepData.SubmissionId);
             modelBuilder
                 .Entity<StepData>()

@@ -10,16 +10,43 @@ Local Development: `http://localhost:5000`
 
 ## Application ownership
 
-Submission-by-ID reads, finalization, deletion, and all step-data routes require
-the authenticated `preferred_username` to match the submission's `CreatedBy`.
-`SubmissionOwnershipAttribute` checks ownership before the controller action
-runs. Submission and step-data service lookups also require the same username,
-so duplicate legacy public IDs cannot authorize one owner's row and access
-another owner's row. Foreign, missing, and soft-deleted submissions return the same `404`;
-an authenticated principal without a usable username returns `401`.
+All submission and step endpoints require a nonblank Keycloak `sub`, falling
+back to ASP.NET's mapped `ClaimTypes.NameIdentifier`. Username alone never
+authorizes access. Missing user IDs return `401`, including on listing and draft
+creation. `preferred_username` is optional and used only for legacy rows.
+
+The shared `SubmissionOwnership.OwnedBy` database predicate accepts:
+
+- `CreatedByUserId == currentUserId` (the authoritative owner).
+- `CreatedByUserId IS NULL` and an exact, nonblank legacy username match.
+
+A different non-null owner ID always denies access, even with the same username.
+No case folding or trimming is performed. Ownership and public-ID/soft-delete
+filters are applied together in SQL, never by checking a fetched row in memory.
+Foreign, missing, and soft-deleted submissions return `404`.
+`SubmissionOwnershipAttribute` enforces identity/resource guards before
+automatic request validation and controller execution. Services repeat the
+shared predicate, so duplicate legacy public IDs cannot cross user boundaries.
+
+Successful reads **and** writes atomically claim accessed legacy rows before
+returning data or performing the requested operation. Listing loads owned live
+rows in one query and claims its legacy rows in one guarded `SaveChanges` batch;
+if a concurrent claim wins, the batch rolls back and the list is reloaded under
+the shared predicate. `FindAndClaimAsync` updates only the owner ID;
+EF concurrency tokens put the original null owner ID and exact legacy username
+in the UPDATE's WHERE clause. A losing claim is discarded and the same row is
+requeried under authoritative ownership: a different user receives no data;
+another request from the same user may proceed. Existing usernames are preserved.
+
+New drafts populate only `CreatedByUserId` and leave `CreatedBy` null. No `users`
+table lookup or write is used. Submission responses do not expose owner IDs or
+`sub`; deprecated `createdBy` remains nullable for compatibility.
 Deletion prefers live owner-matching rows over legacy rows already soft-deleted;
 the service remains idempotent when no live row remains.
-Draft creation and submission listing already use the authenticated username.
+
+See [the staged database rollout](../db/README.md#staged-submission-owner-id-migration)
+for deployment order, unclaimed-row counts, rollback restrictions, and the later
+removal of the username fallback and column.
 
 All 18 controller endpoints were reviewed:
 
@@ -34,6 +61,22 @@ All 18 controller endpoints were reviewed:
 | `GET /api/auth/user` | Current principal only |
 | `GET /api/auth/login`, `GET /api/auth/logout`, `GET /api/auth/status` | Current session/login flow |
 | `GET /api/health` | Public health response; no user data |
+
+### Ownership validation
+
+Focused HTTP/service tests cover subject mapping, missing identities, new drafts,
+listing, foreign-ID denial, username changes, legacy claims, concurrent claim
+winners/losers, and duplicate public IDs. PostgreSQL migration/claim tests use
+isolated temporary schemas and verify the actual guarded UPDATE and generated
+ownership SQL:
+
+```powershell
+$env:PROBATE_OWNERSHIP_TEST_CONNECTION_STRING = '<isolated test PostgreSQL connection>'
+dotnet test api.tests\api.tests.csproj --filter "FullyQualifiedName~SubmissionOwnerMigrationTests|FullyQualifiedName~SubmissionOwnershipIntegrationTests|FullyQualifiedName~SubmissionServiceTests|FullyQualifiedName~SubmissionsControllerTests|FullyQualifiedName~StepDataControllerTests"
+```
+
+Without the test connection, only the PostgreSQL-specific tests are skipped.
+Never point these tests at a production or shared application database.
 
 CHEFS gateway permissions are managed by CHEFS, outside this API. Application
 data is stored locally; form embedding tokens must not grant access to other

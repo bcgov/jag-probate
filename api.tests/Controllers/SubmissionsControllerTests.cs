@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Probate.Api.Controllers;
+using Probate.Api.Infrastructure.Authentication;
 using Probate.Api.Models;
 using Probate.Api.Services;
 using Xunit;
@@ -20,6 +21,7 @@ public class SubmissionsControllerTests
     private readonly Mock<IStepDataService> _mockStepDataService;
     private readonly Mock<ILogger<SubmissionsController>> _mockLogger;
     private readonly SubmissionsController _controller;
+    private static readonly SubmissionOwner DefaultOwner = new("jdoe-id", "jdoe");
 
     public SubmissionsControllerTests()
     {
@@ -34,11 +36,15 @@ public class SubmissionsControllerTests
         SetUser("jdoe");
     }
 
-    /// Sets up the controller's User principal with the given preferred_username claim.
+    /// Sets the authoritative user ID and optional legacy username.
     private void SetUser(string? username)
     {
         var claims = username is not null
-            ? new[] { new Claim("preferred_username", username) }
+            ? new[]
+            {
+                new Claim("sub", username + "-id"),
+                new Claim("preferred_username", username),
+            }
             : Array.Empty<Claim>();
         var identity = new ClaimsIdentity(claims, "TestAuth");
         var principal = new ClaimsPrincipal(identity);
@@ -66,7 +72,7 @@ public class SubmissionsControllerTests
 
         _mockService
             .Setup(x =>
-                x.GetSubmissionByIdAsync(submissionId, "jdoe", It.IsAny<CancellationToken>())
+                x.GetSubmissionByIdAsync(submissionId, DefaultOwner, It.IsAny<CancellationToken>())
             )
             .ReturnsAsync(expected);
 
@@ -89,7 +95,9 @@ public class SubmissionsControllerTests
         // Arrange
         var missingId = Guid.NewGuid();
         _mockService
-            .Setup(x => x.GetSubmissionByIdAsync(missingId, "jdoe", It.IsAny<CancellationToken>()))
+            .Setup(x =>
+                x.GetSubmissionByIdAsync(missingId, DefaultOwner, It.IsAny<CancellationToken>())
+            )
             .ReturnsAsync((SubmissionResponseDto?)null);
 
         // Act
@@ -114,7 +122,7 @@ public class SubmissionsControllerTests
         using var cts = new CancellationTokenSource();
         var submissionId = Guid.NewGuid();
         _mockService
-            .Setup(x => x.GetSubmissionByIdAsync(submissionId, "jdoe", cts.Token))
+            .Setup(x => x.GetSubmissionByIdAsync(submissionId, DefaultOwner, cts.Token))
             .ReturnsAsync(
                 new SubmissionResponseDto
                 {
@@ -130,7 +138,7 @@ public class SubmissionsControllerTests
 
         // Assert
         _mockService.Verify(
-            x => x.GetSubmissionByIdAsync(submissionId, "jdoe", cts.Token),
+            x => x.GetSubmissionByIdAsync(submissionId, DefaultOwner, cts.Token),
             Times.Once
         );
     }
@@ -161,7 +169,7 @@ public class SubmissionsControllerTests
         };
 
         _mockService
-            .Setup(x => x.GetSubmissionsByUserAsync("jdoe", It.IsAny<CancellationToken>()))
+            .Setup(x => x.GetSubmissionsByUserAsync(DefaultOwner, It.IsAny<CancellationToken>()))
             .ReturnsAsync(submissions);
 
         // Act
@@ -177,9 +185,9 @@ public class SubmissionsControllerTests
     }
 
     [Fact]
-    public async Task GetSubmissions_WithNoUsernameClaim_ReturnsUnauthorized()
+    public async Task GetSubmissions_WithNoUserIdClaim_ReturnsUnauthorized()
     {
-        // Arrange — authenticated but no preferred_username claim
+        // Arrange — authenticated but no user ID claim
         SetUser(null);
 
         // Act
@@ -199,12 +207,17 @@ public class SubmissionsControllerTests
     }
 
     [Fact]
-    public async Task GetSubmissions_WithAuthenticatedUser_PassesUsernameToService()
+    public async Task GetSubmissions_WithAuthenticatedUser_PassesIdentityToService()
     {
         // Arrange
         SetUser("alice");
         _mockService
-            .Setup(x => x.GetSubmissionsByUserAsync("alice", It.IsAny<CancellationToken>()))
+            .Setup(x =>
+                x.GetSubmissionsByUserAsync(
+                    new SubmissionOwner("alice-id", "alice"),
+                    It.IsAny<CancellationToken>()
+                )
+            )
             .ReturnsAsync(new List<SubmissionResponseDto>());
 
         // Act
@@ -212,7 +225,11 @@ public class SubmissionsControllerTests
 
         // Assert
         _mockService.Verify(
-            x => x.GetSubmissionsByUserAsync("alice", It.IsAny<CancellationToken>()),
+            x =>
+                x.GetSubmissionsByUserAsync(
+                    new SubmissionOwner("alice-id", "alice"),
+                    It.IsAny<CancellationToken>()
+                ),
             Times.Once
         );
     }
@@ -223,7 +240,12 @@ public class SubmissionsControllerTests
         // Arrange
         SetUser("newuser");
         _mockService
-            .Setup(x => x.GetSubmissionsByUserAsync("newuser", It.IsAny<CancellationToken>()))
+            .Setup(x =>
+                x.GetSubmissionsByUserAsync(
+                    new SubmissionOwner("newuser-id", "newuser"),
+                    It.IsAny<CancellationToken>()
+                )
+            )
             .ReturnsAsync(new List<SubmissionResponseDto>());
 
         // Act
@@ -246,7 +268,9 @@ public class SubmissionsControllerTests
         // Arrange
         var deleteId = Guid.NewGuid();
         _mockService
-            .Setup(x => x.DeleteSubmissionAsync(deleteId, "jdoe", It.IsAny<CancellationToken>()))
+            .Setup(x =>
+                x.DeleteSubmissionAsync(deleteId, DefaultOwner, It.IsAny<CancellationToken>())
+            )
             .Returns(Task.CompletedTask);
 
         // Act
@@ -263,7 +287,9 @@ public class SubmissionsControllerTests
         // Arrange
         var deleteId = Guid.NewGuid();
         _mockService
-            .Setup(x => x.DeleteSubmissionAsync(deleteId, "jdoe", It.IsAny<CancellationToken>()))
+            .Setup(x =>
+                x.DeleteSubmissionAsync(deleteId, DefaultOwner, It.IsAny<CancellationToken>())
+            )
             .Returns(Task.CompletedTask);
 
         // Act
@@ -271,7 +297,7 @@ public class SubmissionsControllerTests
 
         // Assert
         _mockService.Verify(
-            x => x.DeleteSubmissionAsync(deleteId, "jdoe", It.IsAny<CancellationToken>()),
+            x => x.DeleteSubmissionAsync(deleteId, DefaultOwner, It.IsAny<CancellationToken>()),
             Times.Once
         );
     }
@@ -283,14 +309,17 @@ public class SubmissionsControllerTests
         using var cts = new CancellationTokenSource();
         var deleteId = Guid.NewGuid();
         _mockService
-            .Setup(x => x.DeleteSubmissionAsync(deleteId, "jdoe", cts.Token))
+            .Setup(x => x.DeleteSubmissionAsync(deleteId, DefaultOwner, cts.Token))
             .Returns(Task.CompletedTask);
 
         // Act
         await _controller.DeleteSubmission(deleteId, cts.Token);
 
         // Assert
-        _mockService.Verify(x => x.DeleteSubmissionAsync(deleteId, "jdoe", cts.Token), Times.Once);
+        _mockService.Verify(
+            x => x.DeleteSubmissionAsync(deleteId, DefaultOwner, cts.Token),
+            Times.Once
+        );
     }
 
     // ── POST /api/Submissions/{id}/submit ────────────────────────────────
@@ -311,13 +340,15 @@ public class SubmissionsControllerTests
         };
 
         _mockStepDataService
-            .Setup(x => x.GetCompiledDataAsync(publicId, "jdoe", It.IsAny<CancellationToken>()))
+            .Setup(x =>
+                x.GetCompiledDataAsync(publicId, DefaultOwner, It.IsAny<CancellationToken>())
+            )
             .ReturnsAsync(compiledData);
         _mockService
             .Setup(x =>
                 x.FinalizeSubmissionAsync(
                     publicId,
-                    "jdoe",
+                    DefaultOwner,
                     compiledData,
                     It.IsAny<CancellationToken>()
                 )
@@ -342,7 +373,9 @@ public class SubmissionsControllerTests
         var publicId = Guid.NewGuid();
 
         _mockStepDataService
-            .Setup(x => x.GetCompiledDataAsync(publicId, "jdoe", It.IsAny<CancellationToken>()))
+            .Setup(x =>
+                x.GetCompiledDataAsync(publicId, DefaultOwner, It.IsAny<CancellationToken>())
+            )
             .ThrowsAsync(new KeyNotFoundException());
 
         // Act
@@ -361,13 +394,15 @@ public class SubmissionsControllerTests
         var compiledData = "{\"step1\":\"data\",\"step3\":\"data\"}";
 
         _mockStepDataService
-            .Setup(x => x.GetCompiledDataAsync(publicId, "jdoe", It.IsAny<CancellationToken>()))
+            .Setup(x =>
+                x.GetCompiledDataAsync(publicId, DefaultOwner, It.IsAny<CancellationToken>())
+            )
             .ReturnsAsync(compiledData);
         _mockService
             .Setup(x =>
                 x.FinalizeSubmissionAsync(
                     publicId,
-                    "jdoe",
+                    DefaultOwner,
                     compiledData,
                     It.IsAny<CancellationToken>()
                 )
@@ -390,7 +425,7 @@ public class SubmissionsControllerTests
             x =>
                 x.FinalizeSubmissionAsync(
                     publicId,
-                    "jdoe",
+                    DefaultOwner,
                     compiledData,
                     It.IsAny<CancellationToken>()
                 ),
@@ -409,13 +444,13 @@ public class SubmissionsControllerTests
         {
             PublicId = Guid.NewGuid(),
             ApplicantName = "",
-            CreatedBy = "jdoe",
+            CreatedBy = null,
             Status = "draft",
             CreatedAt = DateTime.UtcNow,
         };
 
         _mockService
-            .Setup(x => x.CreateDraftSubmissionAsync("jdoe", It.IsAny<CancellationToken>()))
+            .Setup(x => x.CreateDraftSubmissionAsync(DefaultOwner, It.IsAny<CancellationToken>()))
             .ReturnsAsync(created);
 
         // Act
@@ -427,11 +462,11 @@ public class SubmissionsControllerTests
         Assert.Equal(StatusCodes.Status201Created, createdResult.StatusCode);
         var returned = Assert.IsType<SubmissionResponseDto>(createdResult.Value);
         Assert.Equal("draft", returned.Status);
-        Assert.Equal("jdoe", returned.CreatedBy);
+        Assert.Null(returned.CreatedBy);
     }
 
     [Fact]
-    public async Task CreateDraftSubmission_WithNoUsernameClaim_ReturnsUnauthorized()
+    public async Task CreateDraftSubmission_WithNoUserIdClaim_ReturnsUnauthorized()
     {
         // Arrange
         SetUser(null);

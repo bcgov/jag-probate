@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Security.Claims;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
@@ -28,6 +27,7 @@ namespace Probate.Api.Controllers
         /// <summary>
         /// Upserts a single step's data for a submission.
         /// Used by auto-save and manual save — only touches the targeted step.
+        /// Claims the owned legacy parent before writing; user-ID ownership is authoritative.
         /// </summary>
         [HttpPut("{formId}")]
         [ProducesResponseType(typeof(StepDataResponseDto), StatusCodes.Status200OK)]
@@ -45,7 +45,7 @@ namespace Probate.Api.Controllers
             {
                 var result = await _stepDataService.UpsertStepDataAsync(
                     publicId,
-                    User.FindFirstValue("preferred_username")!,
+                    SubmissionOwner.FromPrincipal(User)!,
                     dto,
                     cancellationToken
                 );
@@ -58,7 +58,7 @@ namespace Probate.Api.Controllers
         }
 
         /// <summary>
-        /// Gets a single step's data for hydration.
+        /// Claims the owned parent and reads one step; username fallback is limited to null owner IDs.
         /// </summary>
         [HttpGet("{formId}")]
         [ProducesResponseType(typeof(StepDataResponseDto), StatusCodes.Status200OK)]
@@ -71,7 +71,7 @@ namespace Probate.Api.Controllers
         {
             var result = await _stepDataService.GetStepDataAsync(
                 publicId,
-                User.FindFirstValue("preferred_username")!,
+                SubmissionOwner.FromPrincipal(User)!,
                 formId,
                 cancellationToken
             );
@@ -83,7 +83,7 @@ namespace Probate.Api.Controllers
         }
 
         /// <summary>
-        /// Gets all step data for a submission.
+        /// Claims the owned parent and reads its steps; no user ID is exposed in responses.
         /// </summary>
         [HttpGet]
         [ProducesResponseType(typeof(IReadOnlyList<StepDataResponseDto>), StatusCodes.Status200OK)]
@@ -92,17 +92,25 @@ namespace Probate.Api.Controllers
             CancellationToken cancellationToken = default
         )
         {
-            var result = await _stepDataService.GetAllStepDataAsync(
-                publicId,
-                User.FindFirstValue("preferred_username")!,
-                cancellationToken
-            );
-            return Ok(result);
+            try
+            {
+                var result = await _stepDataService.GetAllStepDataAsync(
+                    publicId,
+                    SubmissionOwner.FromPrincipal(User)!,
+                    cancellationToken
+                );
+                return Ok(result);
+            }
+            catch (KeyNotFoundException)
+            {
+                return NotFound(new { message = $"Submission {publicId} not found." });
+            }
         }
 
         /// <summary>
         /// Returns the compiled (merged) JSON data from all steps.
         /// Used for PDF generation and final submission review.
+        /// Claims legacy ownership atomically before reading the parent's data.
         /// </summary>
         [HttpGet("compiled")]
         [ProducesResponseType(typeof(string), StatusCodes.Status200OK)]
@@ -116,7 +124,7 @@ namespace Probate.Api.Controllers
             {
                 var result = await _stepDataService.GetCompiledDataAsync(
                     publicId,
-                    User.FindFirstValue("preferred_username")!,
+                    SubmissionOwner.FromPrincipal(User)!,
                     cancellationToken
                 );
                 return Content(result, "application/json");

@@ -143,10 +143,7 @@ public class SubmissionOwnershipIntegrationTests : IDisposable
 
     [Theory]
     [MemberData(nameof(Endpoints))]
-    public async Task IdentifierRoutes_RejectAnonymousAndMissingUsername(
-        string method,
-        string suffix
-    )
+    public async Task IdentifierRoutes_RejectAnonymousAndMissingUserId(string method, string suffix)
     {
         foreach (var username in new string?[] { null, "missing-claim", " " })
         {
@@ -176,6 +173,8 @@ public class SubmissionOwnershipIntegrationTests : IDisposable
         var alice = await db
             .Submissions.Include(s => s.StepDataEntries)
             .SingleAsync(s => s.PublicId == _aliceId);
+        Assert.Equal("alice-id", alice.CreatedByUserId);
+        Assert.Equal("alice", alice.CreatedBy);
         if (method == "DELETE")
             Assert.NotNull(alice.DeletedAt);
         if (method == "POST")
@@ -205,13 +204,14 @@ public class SubmissionOwnershipIntegrationTests : IDisposable
         );
         Assert.Equal(HttpStatusCode.Created, draft.StatusCode);
         var created = JObject.Parse(await draft.Content.ReadAsStringAsync());
-        Assert.Equal("alice", created.Value<string>("createdBy"));
+        Assert.Null(created.Value<string>("createdBy"));
+        Assert.Null(created["createdByUserId"]);
+        Assert.Null(created["sub"]);
         var createdId = created["publicId"]!.ToObject<Guid>();
         using var db = new ProbateDbContext(_dbOptions);
-        Assert.Equal(
-            "alice",
-            (await db.Submissions.SingleAsync(s => s.PublicId == createdId)).CreatedBy
-        );
+        var stored = await db.Submissions.SingleAsync(s => s.PublicId == createdId);
+        Assert.Equal("alice-id", stored.CreatedByUserId);
+        Assert.Null(stored.CreatedBy);
     }
 
     [Theory]
@@ -295,6 +295,137 @@ public class SubmissionOwnershipIntegrationTests : IDisposable
         );
     }
 
+    [Theory]
+    [MemberData(nameof(Endpoints))]
+    public async Task IdentifierRoutes_NonNullForeignUserIdNeverFallsBackToMatchingUsername(
+        string method,
+        string suffix
+    )
+    {
+        using (var db = new ProbateDbContext(_dbOptions))
+        {
+            var row = await db.Submissions.SingleAsync(s => s.PublicId == _aliceId);
+            row.CreatedByUserId = "other-id";
+            await db.SaveChangesAsync();
+        }
+        using var response = await SendAsync(method, _aliceId, suffix);
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        using var stored = new ProbateDbContext(_dbOptions);
+        var submission = await stored.Submissions.SingleAsync(s => s.PublicId == _aliceId);
+        Assert.Equal("other-id", submission.CreatedByUserId);
+        Assert.Null(submission.LastUpdatedAt);
+        Assert.Null(submission.DeletedAt);
+    }
+
+    [Theory]
+    [MemberData(nameof(Endpoints))]
+    public async Task IdentifierRoutes_UserIdOwnerSurvivesUsernameChangeOrAbsence(
+        string method,
+        string suffix
+    )
+    {
+        using (var db = new ProbateDbContext(_dbOptions))
+        {
+            var row = await db.Submissions.SingleAsync(s => s.PublicId == _aliceId);
+            row.CreatedByUserId = "alice-id";
+            await db.SaveChangesAsync();
+        }
+        SetIdentity("alice-id", method == "GET" ? null : "new-username");
+        using var response = await SendAsync(method, _aliceId, suffix);
+        Assert.Equal(
+            method == "DELETE" ? HttpStatusCode.NoContent : HttpStatusCode.OK,
+            response.StatusCode
+        );
+        Assert.DoesNotContain("alice-id", await response.Content.ReadAsStringAsync());
+    }
+
+    [Theory]
+    [InlineData("sub", "alice")]
+    [InlineData("mapped", "alice")]
+    [InlineData("sub", null)]
+    [InlineData("mapped", null)]
+    public async Task Draft_UsesSubOrMappedNameIdentifierAndDoesNotExposeOwnerId(
+        string claim,
+        string? username
+    )
+    {
+        SetIdentity(claim == "sub" ? "subject-id" : null, username);
+        _client.DefaultRequestHeaders.Add("Test-NameIdentifier", "mapped-id");
+        using var response = await _client.PostAsJsonAsync(
+            "/api/submissions/draft",
+            new { createdBy = "bob", createdByUserId = "injected-id" }
+        );
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        var json = JObject.Parse(await response.Content.ReadAsStringAsync());
+        Assert.Null(json["createdByUserId"]);
+        Assert.Null(json["sub"]);
+        Assert.Null(json.Value<string>("createdBy"));
+        using var stored = new ProbateDbContext(_dbOptions);
+        var publicId = json["publicId"]!.ToObject<Guid>();
+        var row = await stored.Submissions.SingleAsync(s => s.PublicId == publicId);
+        Assert.Equal(claim == "sub" ? "subject-id" : "mapped-id", row.CreatedByUserId);
+        Assert.Null(row.CreatedBy);
+    }
+
+    [Theory]
+    [InlineData("GET")]
+    [InlineData("POST")]
+    public async Task ListAndDraft_RequireUserIdEvenWithLegacyUsername(string method)
+    {
+        SetIdentity(null, "alice");
+        using var response =
+            method == "GET"
+                ? await _client.GetAsync("/api/submissions")
+                : await _client.PostAsync("/api/submissions/draft", null);
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Theory]
+    [MemberData(nameof(Endpoints))]
+    public async Task IdentifierRoutes_MissingUsernameCannotClaimLegacyRow(
+        string method,
+        string suffix
+    )
+    {
+        SetIdentity("alice-id", null);
+        using var response = await SendAsync(method, _aliceId, suffix);
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        using var stored = new ProbateDbContext(_dbOptions);
+        Assert.Null(
+            (await stored.Submissions.SingleAsync(s => s.PublicId == _aliceId)).CreatedByUserId
+        );
+    }
+
+    [Theory]
+    [InlineData(null, HttpStatusCode.Unauthorized)]
+    [InlineData("other-id", HttpStatusCode.NotFound)]
+    [InlineData("alice-id", HttpStatusCode.BadRequest)]
+    public async Task InvalidBody_DoesNotBypassIdentityOrOwnershipChecks(
+        string? subject,
+        HttpStatusCode expected
+    )
+    {
+        SetIdentity(subject, subject == "other-id" ? "other-name" : "alice");
+        using var response = await _client.PutAsJsonAsync(
+            $"/api/submissions/{_aliceId}/steps/step1",
+            new { }
+        );
+        Assert.Equal(expected, response.StatusCode);
+        using var stored = new ProbateDbContext(_dbOptions);
+        Assert.Null(
+            (await stored.Submissions.SingleAsync(s => s.PublicId == _aliceId)).CreatedByUserId
+        );
+    }
+
+    private void SetIdentity(string? subject, string? username)
+    {
+        _client.DefaultRequestHeaders.Remove("Test-User");
+        _client.DefaultRequestHeaders.Remove("Test-Subject");
+        _client.DefaultRequestHeaders.Remove("Test-NameIdentifier");
+        _client.DefaultRequestHeaders.Add("Test-User", username ?? "missing-username");
+        _client.DefaultRequestHeaders.Add("Test-Subject", subject ?? "missing-sub");
+    }
+
     private async Task<HttpResponseMessage> SendAsync(string method, Guid id, string suffix)
     {
         using var request = new HttpRequestMessage(
@@ -334,10 +465,22 @@ public class SubmissionOwnershipIntegrationTests : IDisposable
             if (!Request.Headers.TryGetValue("Test-User", out var username))
                 return Task.FromResult(AuthenticateResult.NoResult());
 
-            var claims =
-                username == "missing-claim"
-                    ? Array.Empty<Claim>()
-                    : new[] { new Claim("preferred_username", username.ToString()) };
+            var claims = new List<Claim>();
+            if (username == "missing-claim")
+                claims.Add(new Claim("preferred_username", "alice"));
+            else if (username != "missing-username")
+                claims.Add(new Claim("preferred_username", username.ToString()));
+
+            if (Request.Headers.TryGetValue("Test-Subject", out var subject))
+            {
+                if (subject != "missing-sub" && !string.IsNullOrWhiteSpace(subject))
+                    claims.Add(new Claim("sub", subject.ToString()));
+            }
+            else if (username != "missing-claim" && !string.IsNullOrWhiteSpace(username))
+                claims.Add(new Claim("sub", username + "-id"));
+
+            if (Request.Headers.TryGetValue("Test-NameIdentifier", out var mapped))
+                claims.Add(new Claim(ClaimTypes.NameIdentifier, mapped.ToString()));
             return Task.FromResult(
                 AuthenticateResult.Success(
                     new AuthenticationTicket(

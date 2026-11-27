@@ -4,9 +4,8 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Mapster;
-using MapsterMapper;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
+using Probate.Api.Infrastructure.Authentication;
 using Probate.Api.Models;
 using Probate.Db.Models;
 
@@ -14,26 +13,31 @@ namespace Probate.Api.Services
 {
     public interface ISubmissionService
     {
+        /// <summary>Reads and claims an owned live row using the authoritative ID or null-ID legacy fallback.</summary>
         Task<SubmissionResponseDto?> GetSubmissionByIdAsync(
             Guid id,
-            string username,
+            SubmissionOwner owner,
             CancellationToken cancellationToken = default
         );
+
+        /// <summary>Lists and claims owned live rows; username fallback applies only to null owner IDs.</summary>
         Task<IReadOnlyList<SubmissionResponseDto>> GetSubmissionsByUserAsync(
-            string username,
+            SubmissionOwner owner,
             CancellationToken cancellationToken = default
         );
+
+        /// <summary>Claims before deleting an owned row; preserves the deprecated username.</summary>
         Task DeleteSubmissionAsync(
             Guid id,
-            string username,
+            SubmissionOwner owner,
             CancellationToken cancellationToken = default
         );
 
         /// <summary>
-        /// Creates a bare draft submission for the step-based wizard flow.
+        /// Creates a draft with only CreatedByUserId; never populates deprecated CreatedBy.
         /// </summary>
         Task<SubmissionResponseDto> CreateDraftSubmissionAsync(
-            string username,
+            SubmissionOwner owner,
             CancellationToken cancellationToken = default
         );
 
@@ -41,10 +45,11 @@ namespace Probate.Api.Services
         /// Compiles all step data into the submission record and marks it as
         /// <see cref="SubmissionStatus.ReadyToPrint"/>. The submission stays
         /// editable; <c>LastFiledAt</c> is only set once the package is eFiled.
+        /// Claims legacy ownership atomically before changing the submission.
         /// </summary>
         Task<SubmissionResponseDto> FinalizeSubmissionAsync(
             Guid publicId,
-            string username,
+            SubmissionOwner owner,
             string compiledData,
             CancellationToken cancellationToken = default
         );
@@ -52,10 +57,11 @@ namespace Probate.Api.Services
         /// <summary>
         /// Returns a single submission including its raw stored form data.
         /// Throws <see cref="KeyNotFoundException"/> if not found or soft-deleted.
+        /// Claims the legacy row before reading; CreatedByUserId is authoritative.
         /// </summary>
         Task<Submission> GetSubmissionByIdAsync(
             int id,
-            string username,
+            SubmissionOwner owner,
             CancellationToken cancellationToken = default
         );
     }
@@ -83,39 +89,47 @@ namespace Probate.Api.Services
             _db = db;
         }
 
+        /// <inheritdoc />
         public async Task<SubmissionResponseDto?> GetSubmissionByIdAsync(
             Guid id,
-            string username,
+            SubmissionOwner owner,
             CancellationToken cancellationToken = default
         )
         {
-            var submission = await _db.Submissions.FirstOrDefaultAsync(
-                s => s.PublicId == id && s.CreatedBy == username && s.DeletedAt == null,
+            var submission = await SubmissionOwnership.FindAndClaimAsync(
+                _db,
+                owner,
+                s => s.PublicId == id,
                 cancellationToken
             );
             return submission?.Adapt<SubmissionResponseDto>();
         }
 
+        /// <inheritdoc />
         public async Task<IReadOnlyList<SubmissionResponseDto>> GetSubmissionsByUserAsync(
-            string username,
+            SubmissionOwner owner,
             CancellationToken cancellationToken = default
         )
         {
-            return await _db
-                .Submissions.Where(s => s.CreatedBy == username && s.DeletedAt == null)
-                .OrderByDescending(s => s.CreatedAt)
-                .ProjectToType<SubmissionResponseDto>()
-                .ToListAsync(cancellationToken);
+            var submissions = await SubmissionOwnership.ListAndClaimAsync(
+                _db,
+                owner,
+                cancellationToken
+            );
+            return submissions.Adapt<List<SubmissionResponseDto>>();
         }
 
+        /// <inheritdoc />
         public async Task<Submission> GetSubmissionByIdAsync(
             int id,
-            string username,
+            SubmissionOwner owner,
             CancellationToken cancellationToken = default
         )
         {
-            var submission = await _db.Submissions.FirstOrDefaultAsync(
-                s => s.Id == id && s.CreatedBy == username && s.DeletedAt == null,
+            var submission = await SubmissionOwnership.FindAndClaimAsync(
+                _db,
+                owner,
+                s => s.Id == id,
                 cancellationToken
             );
 
@@ -125,8 +139,9 @@ namespace Probate.Api.Services
             return submission;
         }
 
+        /// <inheritdoc />
         public async Task<SubmissionResponseDto> CreateDraftSubmissionAsync(
-            string username,
+            SubmissionOwner owner,
             CancellationToken cancellationToken = default
         )
         {
@@ -134,7 +149,7 @@ namespace Probate.Api.Services
             {
                 PublicId = Guid.NewGuid(),
                 ApplicantName = string.Empty,
-                CreatedBy = username,
+                CreatedByUserId = owner.UserId,
                 Status = SubmissionStatus.Draft,
                 LastUpdatedAt = DateTime.UtcNow,
             };
@@ -145,15 +160,18 @@ namespace Probate.Api.Services
             return submission.Adapt<SubmissionResponseDto>();
         }
 
+        /// <inheritdoc />
         public async Task<SubmissionResponseDto> FinalizeSubmissionAsync(
             Guid publicId,
-            string username,
+            SubmissionOwner owner,
             string compiledData,
             CancellationToken cancellationToken = default
         )
         {
-            var submission = await _db.Submissions.FirstOrDefaultAsync(
-                s => s.PublicId == publicId && s.CreatedBy == username && s.DeletedAt == null,
+            var submission = await SubmissionOwnership.FindAndClaimAsync(
+                _db,
+                owner,
+                s => s.PublicId == publicId,
                 cancellationToken
             ) ?? throw new KeyNotFoundException($"Submission {publicId} not found.");
 
@@ -166,17 +184,20 @@ namespace Probate.Api.Services
             return submission.Adapt<SubmissionResponseDto>();
         }
 
+        /// <inheritdoc />
         public async Task DeleteSubmissionAsync(
             Guid id,
-            string username,
+            SubmissionOwner owner,
             CancellationToken cancellationToken = default
         )
         {
-            var submission = await _db
-                .Submissions.Where(s => s.PublicId == id && s.CreatedBy == username)
-                .OrderBy(s => s.DeletedAt != null)
-                .FirstOrDefaultAsync(cancellationToken)
-                ?? throw new KeyNotFoundException($"Submission {id} not found.");
+            var submission = await SubmissionOwnership.FindAndClaimAsync(
+                _db,
+                owner,
+                s => s.PublicId == id,
+                cancellationToken,
+                includeDeleted: true
+            ) ?? throw new KeyNotFoundException($"Submission {id} not found.");
 
             submission.DeletedAt ??= DateTime.UtcNow;
             await _db.SaveChangesAsync(cancellationToken);
