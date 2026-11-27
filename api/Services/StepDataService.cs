@@ -14,6 +14,11 @@ using Probate.Db.Models;
 
 namespace Probate.Api.Services
 {
+    /// <summary>
+    /// Compiled step data bound to the exact owned submission row it came from.
+    /// </summary>
+    public sealed record CompiledSubmissionData(int SubmissionId, string Data);
+
     public interface IStepDataService
     {
         /// <summary>Atomically claims the owned parent before upserting a step; never writes a new legacy username.</summary>
@@ -41,6 +46,16 @@ namespace Probate.Api.Services
 
         /// <summary>Claims the owned live parent and compiles its steps; never reads another owner's data.</summary>
         Task<string> GetCompiledDataAsync(
+            Guid submissionPublicId,
+            SubmissionOwner owner,
+            CancellationToken cancellationToken = default
+        );
+
+        /// <summary>
+        /// Compiles steps and returns the internal ID of the exact owned submission row.
+        /// Use that ID for subsequent writes instead of resolving a potentially duplicate public ID again.
+        /// </summary>
+        Task<CompiledSubmissionData> GetCompiledSubmissionDataAsync(
             Guid submissionPublicId,
             SubmissionOwner owner,
             CancellationToken cancellationToken = default
@@ -179,6 +194,20 @@ namespace Probate.Api.Services
             Guid submissionPublicId,
             SubmissionOwner owner,
             CancellationToken cancellationToken = default
+        ) =>
+            (
+                await GetCompiledSubmissionDataAsync(
+                    submissionPublicId,
+                    owner,
+                    cancellationToken
+                )
+            ).Data;
+
+        /// <inheritdoc />
+        public async Task<CompiledSubmissionData> GetCompiledSubmissionDataAsync(
+            Guid submissionPublicId,
+            SubmissionOwner owner,
+            CancellationToken cancellationToken = default
         )
         {
             var submission = await SubmissionOwnership.FindAndClaimAsync(
@@ -220,7 +249,10 @@ namespace Probate.Api.Services
                 }
             }
 
-            return compiled.ToString(Newtonsoft.Json.Formatting.None);
+            return new CompiledSubmissionData(
+                submission.Id,
+                compiled.ToString(Newtonsoft.Json.Formatting.None)
+            );
         }
     }
 }

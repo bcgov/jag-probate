@@ -48,7 +48,7 @@ namespace Probate.Api.Services
         /// Claims legacy ownership atomically before changing the submission.
         /// </summary>
         Task<SubmissionResponseDto> FinalizeSubmissionAsync(
-            Guid publicId,
+            int submissionId,
             SubmissionOwner owner,
             string compiledData,
             CancellationToken cancellationToken = default
@@ -162,7 +162,7 @@ namespace Probate.Api.Services
 
         /// <inheritdoc />
         public async Task<SubmissionResponseDto> FinalizeSubmissionAsync(
-            Guid publicId,
+            int submissionId,
             SubmissionOwner owner,
             string compiledData,
             CancellationToken cancellationToken = default
@@ -171,9 +171,9 @@ namespace Probate.Api.Services
             var submission = await SubmissionOwnership.FindAndClaimAsync(
                 _db,
                 owner,
-                s => s.PublicId == publicId,
+                s => s.Id == submissionId,
                 cancellationToken
-            ) ?? throw new KeyNotFoundException($"Submission {publicId} not found.");
+            ) ?? throw new KeyNotFoundException($"Submission {submissionId} not found.");
 
             submission.SubmissionData = compiledData;
             submission.Status = SubmissionStatus.ReadyToPrint;

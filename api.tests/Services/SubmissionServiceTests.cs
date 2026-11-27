@@ -19,7 +19,7 @@ public class SubmissionServiceTests
         await db.SaveChangesAsync();
         var service = CreateService(db);
 
-        var result = await service.FinalizeSubmissionAsync(submission.PublicId, Owner, "{\"a\":1}");
+        var result = await service.FinalizeSubmissionAsync(submission.Id, Owner, "{\"a\":1}");
 
         var stored = await db.Submissions.SingleAsync();
         Assert.Equal("{\"a\":1}", stored.SubmissionData);
@@ -36,7 +36,7 @@ public class SubmissionServiceTests
         var service = CreateService(db);
 
         await Assert.ThrowsAsync<KeyNotFoundException>(() =>
-            service.FinalizeSubmissionAsync(Guid.NewGuid(), Owner, "{}")
+            service.FinalizeSubmissionAsync(-1, Owner, "{}")
         );
     }
 
@@ -51,7 +51,7 @@ public class SubmissionServiceTests
         var service = CreateService(db);
 
         await Assert.ThrowsAsync<KeyNotFoundException>(() =>
-            service.FinalizeSubmissionAsync(submission.PublicId, Owner, "{}")
+            service.FinalizeSubmissionAsync(submission.Id, Owner, "{}")
         );
     }
 

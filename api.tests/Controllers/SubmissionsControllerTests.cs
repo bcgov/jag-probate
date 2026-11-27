@@ -329,6 +329,7 @@ public class SubmissionsControllerTests
     {
         // Arrange
         var publicId = Guid.NewGuid();
+        var submissionId = 42;
         var compiledData = "{\"name\":\"test\",\"age\":30}";
         var finalized = new SubmissionResponseDto
         {
@@ -341,13 +342,17 @@ public class SubmissionsControllerTests
 
         _mockStepDataService
             .Setup(x =>
-                x.GetCompiledDataAsync(publicId, DefaultOwner, It.IsAny<CancellationToken>())
+                x.GetCompiledSubmissionDataAsync(
+                    publicId,
+                    DefaultOwner,
+                    It.IsAny<CancellationToken>()
+                )
             )
-            .ReturnsAsync(compiledData);
+            .ReturnsAsync(new CompiledSubmissionData(submissionId, compiledData));
         _mockService
             .Setup(x =>
                 x.FinalizeSubmissionAsync(
-                    publicId,
+                    submissionId,
                     DefaultOwner,
                     compiledData,
                     It.IsAny<CancellationToken>()
@@ -374,7 +379,11 @@ public class SubmissionsControllerTests
 
         _mockStepDataService
             .Setup(x =>
-                x.GetCompiledDataAsync(publicId, DefaultOwner, It.IsAny<CancellationToken>())
+                x.GetCompiledSubmissionDataAsync(
+                    publicId,
+                    DefaultOwner,
+                    It.IsAny<CancellationToken>()
+                )
             )
             .ThrowsAsync(new KeyNotFoundException());
 
@@ -391,17 +400,22 @@ public class SubmissionsControllerTests
     {
         // Arrange
         var publicId = Guid.NewGuid();
+        var submissionId = 42;
         var compiledData = "{\"step1\":\"data\",\"step3\":\"data\"}";
 
         _mockStepDataService
             .Setup(x =>
-                x.GetCompiledDataAsync(publicId, DefaultOwner, It.IsAny<CancellationToken>())
+                x.GetCompiledSubmissionDataAsync(
+                    publicId,
+                    DefaultOwner,
+                    It.IsAny<CancellationToken>()
+                )
             )
-            .ReturnsAsync(compiledData);
+            .ReturnsAsync(new CompiledSubmissionData(submissionId, compiledData));
         _mockService
             .Setup(x =>
                 x.FinalizeSubmissionAsync(
-                    publicId,
+                    submissionId,
                     DefaultOwner,
                     compiledData,
                     It.IsAny<CancellationToken>()
@@ -424,7 +438,7 @@ public class SubmissionsControllerTests
         _mockService.Verify(
             x =>
                 x.FinalizeSubmissionAsync(
-                    publicId,
+                    submissionId,
                     DefaultOwner,
                     compiledData,
                     It.IsAny<CancellationToken>()

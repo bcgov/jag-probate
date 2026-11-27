@@ -318,8 +318,12 @@ public class SubmissionOwnerMigrationTests
             var compiled = await new StepDataService(
                 db,
                 NullLogger<StepDataService>.Instance
-            ).GetCompiledDataAsync(publicId, owner);
-            await new SubmissionService(db).FinalizeSubmissionAsync(publicId, owner, compiled);
+            ).GetCompiledSubmissionDataAsync(publicId, owner);
+            await new SubmissionService(db).FinalizeSubmissionAsync(
+                compiled.SubmissionId,
+                owner,
+                compiled.Data
+            );
         }
 
         await using var stored = schema.CreateContext();
@@ -327,6 +331,91 @@ public class SubmissionOwnerMigrationTests
         var untouched = await stored.Submissions.SingleAsync(s => s.Id == 20);
         Assert.Contains("\"selected\":\"first\"", finalized.SubmissionData);
         Assert.Equal(SubmissionStatus.ReadyToPrint, finalized.Status);
+        Assert.Null(untouched.SubmissionData);
+        Assert.Equal(SubmissionStatus.Draft, untouched.Status);
+    }
+
+    [OwnershipPostgresFact]
+    public async Task DuplicatePublicId_ConcurrentDeleteCannotRedirectFinalization()
+    {
+        await using var schema = await TestSchema.CreateAsync();
+        var publicId = Guid.Empty;
+        await using (var db = schema.CreateContext())
+        {
+            await db.Database.MigrateAsync();
+            db.Submissions.AddRange(
+                new Submission
+                {
+                    Id = 10,
+                    PublicId = publicId,
+                    ApplicantName = "First row",
+                    CreatedBy = "alice",
+                    Status = "draft",
+                },
+                new Submission
+                {
+                    Id = 20,
+                    PublicId = publicId,
+                    ApplicantName = "Second row",
+                    CreatedBy = "alice",
+                    Status = "draft",
+                }
+            );
+            db.StepData.AddRange(
+                new StepData
+                {
+                    SubmissionId = 10,
+                    FormId = "step1",
+                    FormVersion = "1",
+                    Data = "{\"selected\":\"first\"}",
+                },
+                new StepData
+                {
+                    SubmissionId = 20,
+                    FormId = "step1",
+                    FormVersion = "1",
+                    Data = "{\"selected\":\"second\"}",
+                }
+            );
+            await db.SaveChangesAsync();
+        }
+
+        var owner = new SubmissionOwner("alice-id", "alice");
+        CompiledSubmissionData compiled;
+        await using (var db = schema.CreateContext())
+        {
+            compiled = await new StepDataService(
+                db,
+                NullLogger<StepDataService>.Instance
+            ).GetCompiledSubmissionDataAsync(publicId, owner);
+        }
+
+        Assert.Equal(10, compiled.SubmissionId);
+        Assert.Contains("\"selected\":\"first\"", compiled.Data);
+
+        await using (var db = schema.CreateContext())
+        {
+            var selected = await db.Submissions.SingleAsync(s => s.Id == compiled.SubmissionId);
+            selected.DeletedAt = DateTime.UtcNow;
+            await db.SaveChangesAsync();
+        }
+
+        await using (var db = schema.CreateContext())
+        {
+            await Assert.ThrowsAsync<KeyNotFoundException>(() =>
+                new SubmissionService(db).FinalizeSubmissionAsync(
+                    compiled.SubmissionId,
+                    owner,
+                    compiled.Data
+                )
+            );
+        }
+
+        await using var stored = schema.CreateContext();
+        var deleted = await stored.Submissions.SingleAsync(s => s.Id == 10);
+        var untouched = await stored.Submissions.SingleAsync(s => s.Id == 20);
+        Assert.NotNull(deleted.DeletedAt);
+        Assert.Null(deleted.SubmissionData);
         Assert.Null(untouched.SubmissionData);
         Assert.Equal(SubmissionStatus.Draft, untouched.Status);
     }

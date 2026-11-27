@@ -124,16 +124,16 @@ namespace Probate.Api.Controllers
         {
             try
             {
-                var compiledData = await _stepDataService.GetCompiledDataAsync(
+                var compiledSubmission = await _stepDataService.GetCompiledSubmissionDataAsync(
                     id,
                     SubmissionOwner.FromPrincipal(User)!,
                     cancellationToken
                 );
 
                 var result = await _submissionService.FinalizeSubmissionAsync(
-                    id,
+                    compiledSubmission.SubmissionId,
                     SubmissionOwner.FromPrincipal(User)!,
-                    compiledData,
+                    compiledSubmission.Data,
                     cancellationToken
                 );
 
