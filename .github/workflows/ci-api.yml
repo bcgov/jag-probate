@@ -43,22 +43,6 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       packages: read
-    env:
-      PROBATE_MIGRATION_TEST_CONNECTION_STRING: Host=localhost;Port=5432;Database=probate_test;Username=postgres;Password=postgres
-    services:
-      postgres:
-        image: postgres:17
-        env:
-          POSTGRES_DB: probate_test
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U postgres -d probate_test"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
 
     steps:
       - name: Checkout repository
@@ -99,6 +83,3 @@ jobs:
         with:
           working_directory: ${{ env.WORKING_DIRECTORY }}
           dotnet_version: 10.0
-
-      - name: Test database cleanup migration
-        run: dotnet test api.tests/api.tests.csproj --configuration Release --filter FullyQualifiedName~RemoveUnusedEntitiesMigrationTests

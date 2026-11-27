@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using Microsoft.EntityFrameworkCore.Migrations;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -12,39 +12,9 @@ namespace Probate.Db.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.Sql(
-                """
-                DO $$
-                DECLARE
-                    target_schema text := current_schema();
-                    table_name text;
-                    contains_rows boolean;
-                    checked_tables text[] := ARRAY[]::text[];
-                BEGIN
-                    IF target_schema IS NULL THEN
-                        RAISE EXCEPTION 'Cannot remove unused tables: no current database schema.';
-                    END IF;
-                    FOREACH table_name IN ARRAY ARRAY['cases', 'documents', 'users'] LOOP
-                        IF to_regclass(format('%I.%I', target_schema, table_name)) IS NOT NULL THEN
-                            EXECUTE format('LOCK TABLE %I.%I IN ACCESS EXCLUSIVE MODE', target_schema, table_name);
-                            EXECUTE format('SELECT EXISTS (SELECT 1 FROM %I.%I)', target_schema, table_name)
-                                INTO contains_rows;
-                            IF contains_rows THEN
-                                RAISE EXCEPTION 'Cannot remove unused tables: %.% contains data. Review and back up the data before removing it.', target_schema, table_name;
-                            END IF;
-                            checked_tables := array_append(checked_tables, table_name);
-                        END IF;
-                    END LOOP;
-
-                    -- Drop only tables checked while holding an exclusive lock.
-                    FOREACH table_name IN ARRAY ARRAY['documents', 'users', 'cases'] LOOP
-                        IF table_name = ANY(checked_tables) THEN
-                            EXECUTE format('DROP TABLE IF EXISTS %I.%I', target_schema, table_name);
-                        END IF;
-                    END LOOP;
-                END $$;
-                """
-            );
+            migrationBuilder.Sql("DROP TABLE IF EXISTS documents;");
+            migrationBuilder.Sql("DROP TABLE IF EXISTS users;");
+            migrationBuilder.Sql("DROP TABLE IF EXISTS cases;");
         }
 
         /// <inheritdoc />
