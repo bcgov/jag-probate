@@ -59,10 +59,10 @@ docker exec -it jag-probate-db-1 psql -U probate -d probatedb
 \dt
 
 -- Describe table
-\d+ cases
+\d+ submissions
 
--- Show all cases
-SELECT * FROM cases;
+-- Show submissions
+SELECT * FROM submissions;
 
 -- Exit
 \q
