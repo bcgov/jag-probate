@@ -1,11 +1,13 @@
 using System;
 using System.Collections.Generic;
+using System.Security.Claims;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Moq;
 using Probate.Api.Controllers;
+using Probate.Api.Infrastructure.Authentication;
 using Probate.Api.Models;
 using Probate.Api.Services;
 using Xunit;
@@ -16,11 +18,28 @@ public class StepDataControllerTests
 {
     private readonly Mock<IStepDataService> _mockService;
     private readonly StepDataController _controller;
+    private static readonly SubmissionOwner Owner = new("alice-id", "alice");
 
     public StepDataControllerTests()
     {
         _mockService = new Mock<IStepDataService>();
         _controller = new StepDataController(_mockService.Object);
+        _controller.ControllerContext = new ControllerContext
+        {
+            HttpContext = new DefaultHttpContext
+            {
+                User = new ClaimsPrincipal(
+                    new ClaimsIdentity(
+                        new[]
+                        {
+                            new Claim("sub", "alice-id"),
+                            new Claim("preferred_username", "alice"),
+                        },
+                        "TestAuth"
+                    )
+                ),
+            },
+        };
     }
 
     // ── PUT /api/submissions/{publicId}/steps/{formId} ───────────────────
@@ -48,6 +67,7 @@ public class StepDataControllerTests
             .Setup(x =>
                 x.UpsertStepDataAsync(
                     publicId,
+                    Owner,
                     It.IsAny<UpsertStepDataDto>(),
                     It.IsAny<CancellationToken>()
                 )
@@ -73,6 +93,7 @@ public class StepDataControllerTests
             .Setup(x =>
                 x.UpsertStepDataAsync(
                     publicId,
+                    Owner,
                     It.Is<UpsertStepDataDto>(d => d.FormId == "step3"),
                     It.IsAny<CancellationToken>()
                 )
@@ -85,6 +106,7 @@ public class StepDataControllerTests
             x =>
                 x.UpsertStepDataAsync(
                     publicId,
+                    Owner,
                     It.Is<UpsertStepDataDto>(d => d.FormId == "step3"),
                     It.IsAny<CancellationToken>()
                 ),
@@ -102,6 +124,7 @@ public class StepDataControllerTests
             .Setup(x =>
                 x.UpsertStepDataAsync(
                     publicId,
+                    Owner,
                     It.IsAny<UpsertStepDataDto>(),
                     It.IsAny<CancellationToken>()
                 )
@@ -128,7 +151,7 @@ public class StepDataControllerTests
         };
 
         _mockService
-            .Setup(x => x.GetStepDataAsync(publicId, "step1", It.IsAny<CancellationToken>()))
+            .Setup(x => x.GetStepDataAsync(publicId, Owner, "step1", It.IsAny<CancellationToken>()))
             .ReturnsAsync(expected);
 
         var result = await _controller.GetStepData(publicId, "step1");
@@ -145,7 +168,9 @@ public class StepDataControllerTests
         var publicId = Guid.NewGuid();
 
         _mockService
-            .Setup(x => x.GetStepDataAsync(publicId, "step99", It.IsAny<CancellationToken>()))
+            .Setup(x =>
+                x.GetStepDataAsync(publicId, Owner, "step99", It.IsAny<CancellationToken>())
+            )
             .ReturnsAsync((StepDataResponseDto?)null);
 
         var result = await _controller.GetStepData(publicId, "step99");
@@ -167,7 +192,7 @@ public class StepDataControllerTests
         };
 
         _mockService
-            .Setup(x => x.GetAllStepDataAsync(publicId, It.IsAny<CancellationToken>()))
+            .Setup(x => x.GetAllStepDataAsync(publicId, Owner, It.IsAny<CancellationToken>()))
             .ReturnsAsync(steps);
 
         var result = await _controller.GetAllStepData(publicId);
@@ -184,7 +209,7 @@ public class StepDataControllerTests
         var publicId = Guid.NewGuid();
 
         _mockService
-            .Setup(x => x.GetAllStepDataAsync(publicId, It.IsAny<CancellationToken>()))
+            .Setup(x => x.GetAllStepDataAsync(publicId, Owner, It.IsAny<CancellationToken>()))
             .ReturnsAsync(Array.Empty<StepDataResponseDto>());
 
         var result = await _controller.GetAllStepData(publicId);
@@ -204,7 +229,7 @@ public class StepDataControllerTests
         var compiled = "{\"name\":\"test\",\"age\":30}";
 
         _mockService
-            .Setup(x => x.GetCompiledDataAsync(publicId, It.IsAny<CancellationToken>()))
+            .Setup(x => x.GetCompiledDataAsync(publicId, Owner, It.IsAny<CancellationToken>()))
             .ReturnsAsync(compiled);
 
         var result = await _controller.GetCompiledData(publicId);
@@ -221,7 +246,7 @@ public class StepDataControllerTests
         var publicId = Guid.NewGuid();
 
         _mockService
-            .Setup(x => x.GetCompiledDataAsync(publicId, It.IsAny<CancellationToken>()))
+            .Setup(x => x.GetCompiledDataAsync(publicId, Owner, It.IsAny<CancellationToken>()))
             .ThrowsAsync(new KeyNotFoundException());
 
         var result = await _controller.GetCompiledData(publicId);

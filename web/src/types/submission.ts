@@ -2,7 +2,8 @@
 export interface SubmissionResponseDto {
   publicId: string; // Guid
   applicantName: string;
-  createdBy: string;
+  /** Deprecated legacy username; new submissions do not populate it. */
+  createdBy: string | null;
   /** Status code stored by the API; see `SUBMISSION_STATUS_LABELS`. */
   status: string;
   lastUpdatedAt: string;

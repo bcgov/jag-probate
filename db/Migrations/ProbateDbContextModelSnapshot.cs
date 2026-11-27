@@ -215,10 +215,16 @@ namespace Probate.Db.Migrations
                         .HasColumnName("created_at");
 
                     b.Property<string>("CreatedBy")
-                        .IsRequired()
+                        .IsConcurrencyToken()
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)")
                         .HasColumnName("created_by");
+
+                    b.Property<string>("CreatedByUserId")
+                        .IsConcurrencyToken()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)")
+                        .HasColumnName("created_by_user_id");
 
                     b.Property<DateTime?>("DeletedAt")
                         .HasColumnType("timestamp with time zone")
@@ -251,6 +257,9 @@ namespace Probate.Db.Migrations
 
                     b.HasKey("Id")
                         .HasName("pk_submissions");
+
+                    b.HasIndex("CreatedByUserId")
+                        .HasDatabaseName("ix_submissions_created_by_user_id");
 
                     b.ToTable("submissions", (string)null);
                 });

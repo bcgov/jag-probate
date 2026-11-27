@@ -8,32 +8,56 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using Probate.Api.Infrastructure.Authentication;
 using Probate.Api.Models;
 using Probate.Db.Models;
 
 namespace Probate.Api.Services
 {
+    /// <summary>
+    /// Compiled step data bound to the exact owned submission row it came from.
+    /// </summary>
+    public sealed record CompiledSubmissionData(int SubmissionId, string Data);
+
     public interface IStepDataService
     {
+        /// <summary>Atomically claims the owned parent before upserting a step; never writes a new legacy username.</summary>
         Task<StepDataResponseDto> UpsertStepDataAsync(
             Guid submissionPublicId,
+            SubmissionOwner owner,
             UpsertStepDataDto dto,
             CancellationToken cancellationToken = default
         );
 
+        /// <summary>Reads and claims the live parent using its authoritative ID or null-ID legacy fallback.</summary>
         Task<StepDataResponseDto?> GetStepDataAsync(
             Guid submissionPublicId,
+            SubmissionOwner owner,
             string formId,
             CancellationToken cancellationToken = default
         );
 
+        /// <summary>Reads all steps after claiming the owned live parent.</summary>
         Task<IReadOnlyList<StepDataResponseDto>> GetAllStepDataAsync(
             Guid submissionPublicId,
+            SubmissionOwner owner,
             CancellationToken cancellationToken = default
         );
 
+        /// <summary>Claims the owned live parent and compiles its steps; never reads another owner's data.</summary>
         Task<string> GetCompiledDataAsync(
             Guid submissionPublicId,
+            SubmissionOwner owner,
+            CancellationToken cancellationToken = default
+        );
+
+        /// <summary>
+        /// Compiles steps and returns the internal ID of the exact owned submission row.
+        /// Use that ID for subsequent writes instead of resolving a potentially duplicate public ID again.
+        /// </summary>
+        Task<CompiledSubmissionData> GetCompiledSubmissionDataAsync(
+            Guid submissionPublicId,
+            SubmissionOwner owner,
             CancellationToken cancellationToken = default
         );
     }
@@ -49,14 +73,18 @@ namespace Probate.Api.Services
             _logger = logger;
         }
 
+        /// <inheritdoc />
         public async Task<StepDataResponseDto> UpsertStepDataAsync(
             Guid submissionPublicId,
+            SubmissionOwner owner,
             UpsertStepDataDto dto,
             CancellationToken cancellationToken = default
         )
         {
-            var submission = await _db.Submissions.FirstOrDefaultAsync(
-                s => s.PublicId == submissionPublicId && s.DeletedAt == null,
+            var submission = await SubmissionOwnership.FindAndClaimAsync(
+                _db,
+                owner,
+                s => s.PublicId == submissionPublicId,
                 cancellationToken
             ) ?? throw new KeyNotFoundException($"Submission {submissionPublicId} not found.");
 
@@ -107,14 +135,18 @@ namespace Probate.Api.Services
             return existing.Adapt<StepDataResponseDto>();
         }
 
+        /// <inheritdoc />
         public async Task<StepDataResponseDto?> GetStepDataAsync(
             Guid submissionPublicId,
+            SubmissionOwner owner,
             string formId,
             CancellationToken cancellationToken = default
         )
         {
-            var submission = await _db.Submissions.FirstOrDefaultAsync(
-                s => s.PublicId == submissionPublicId && s.DeletedAt == null,
+            var submission = await SubmissionOwnership.FindAndClaimAsync(
+                _db,
+                owner,
+                s => s.PublicId == submissionPublicId,
                 cancellationToken
             );
 
@@ -129,18 +161,22 @@ namespace Probate.Api.Services
             return stepData?.Adapt<StepDataResponseDto>();
         }
 
+        /// <inheritdoc />
         public async Task<IReadOnlyList<StepDataResponseDto>> GetAllStepDataAsync(
             Guid submissionPublicId,
+            SubmissionOwner owner,
             CancellationToken cancellationToken = default
         )
         {
-            var submission = await _db.Submissions.FirstOrDefaultAsync(
-                s => s.PublicId == submissionPublicId && s.DeletedAt == null,
+            var submission = await SubmissionOwnership.FindAndClaimAsync(
+                _db,
+                owner,
+                s => s.PublicId == submissionPublicId,
                 cancellationToken
             );
 
             if (submission == null)
-                return Array.Empty<StepDataResponseDto>();
+                throw new KeyNotFoundException($"Submission {submissionPublicId} not found.");
 
             return await _db
                 .StepData.Where(sd => sd.SubmissionId == submission.Id)
@@ -152,14 +188,28 @@ namespace Probate.Api.Services
         /// <summary>
         /// Merges all step data rows into a single JSON object.
         /// Each step's data is merged at the top level (flat merge, last-write-wins by step order).
+        /// Claims legacy ownership atomically before reading the parent's steps.
         /// </summary>
         public async Task<string> GetCompiledDataAsync(
             Guid submissionPublicId,
+            SubmissionOwner owner,
+            CancellationToken cancellationToken = default
+        ) =>
+            (
+                await GetCompiledSubmissionDataAsync(submissionPublicId, owner, cancellationToken)
+            ).Data;
+
+        /// <inheritdoc />
+        public async Task<CompiledSubmissionData> GetCompiledSubmissionDataAsync(
+            Guid submissionPublicId,
+            SubmissionOwner owner,
             CancellationToken cancellationToken = default
         )
         {
-            var submission = await _db.Submissions.FirstOrDefaultAsync(
-                s => s.PublicId == submissionPublicId && s.DeletedAt == null,
+            var submission = await SubmissionOwnership.FindAndClaimAsync(
+                _db,
+                owner,
+                s => s.PublicId == submissionPublicId,
                 cancellationToken
             ) ?? throw new KeyNotFoundException($"Submission {submissionPublicId} not found.");
 
@@ -195,7 +245,10 @@ namespace Probate.Api.Services
                 }
             }
 
-            return compiled.ToString(Newtonsoft.Json.Formatting.None);
+            return new CompiledSubmissionData(
+                submission.Id,
+                compiled.ToString(Newtonsoft.Json.Formatting.None)
+            );
         }
     }
 }

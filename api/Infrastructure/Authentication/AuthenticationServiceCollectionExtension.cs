@@ -6,6 +6,8 @@ using IdentityModel.Client;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization.Policy;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
@@ -229,6 +231,11 @@ namespace Probate.Api.Infrastructure.Authentication
                         },
                     };
                 });
+
+            services.AddSingleton<
+                IAuthorizationMiddlewareResultHandler,
+                SubmissionApiAuthorizationMiddlewareResultHandler
+            >();
 
             return services;
         }
