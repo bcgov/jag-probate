@@ -196,11 +196,7 @@ namespace Probate.Api.Services
             CancellationToken cancellationToken = default
         ) =>
             (
-                await GetCompiledSubmissionDataAsync(
-                    submissionPublicId,
-                    owner,
-                    cancellationToken
-                )
+                await GetCompiledSubmissionDataAsync(submissionPublicId, owner, cancellationToken)
             ).Data;
 
         /// <inheritdoc />
